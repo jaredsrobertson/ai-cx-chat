@@ -93,3 +93,23 @@
 .chat-messages::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Add to the bottom of styles/globals.css */
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.avatar-user {
+  background-color: #4a5568; /* a neutral gray */
+}
+
+.avatar-bot {
+  background-color: #2c5282; /* banking-navy */
+}
