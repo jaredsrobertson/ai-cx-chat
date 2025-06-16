@@ -1,0 +1,38 @@
+[
+  {
+    "id": "b4a398e7-d6c5-4a39-8e7d-f6c5b4a398e7",
+    "data": [
+      {
+        "text": "What are your hours?",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "updated": 0
+  },
+  {
+    "id": "d6c5b4a3-98e7-4a39-8e7d-f6c5b4a398e7",
+    "data": [
+      {
+        "text": "Where is the nearest branch?",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "updated": 0
+  },
+  {
+    "id": "c5b4a398-e7d6-4a39-8e7d-f6c5b4a398e7",
+    "data": [
+      {
+        "text": "Are you open on Saturdays?",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "updated": 0
+  }
+]

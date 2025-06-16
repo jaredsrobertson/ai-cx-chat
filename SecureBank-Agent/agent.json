@@ -1,0 +1,24 @@
+{
+  "description": "Chatbot for SecureBank.",
+  "language": "en",
+  "activeAssistantAgents": [],
+  "disableInteractionLogging": false,
+  "disableStackdriverLogging": true,
+  "defaultTimezone": "America/Chicago",
+  "webhook": {
+    "url": "",
+    "headers": {
+      "": ""
+    },
+    "available": false
+  },
+  "isPrivate": true,
+  "supportedLanguages": [],
+  "onePlatformApiVersion": "v2",
+  "analyzeQueryTextSentiment": false,
+  "enabledKnowledgeBaseNames": [],
+  "knowledgeServiceConfidenceAdjustment": -0.4,
+  "dialogflowBuilderMode": false,
+  "customClassifierMode": "use.after",
+  "mlMinConfidence": 0.3
+}

@@ -1,0 +1,73 @@
+{
+  "id": "b4a398e7-d6c5-4a39-8e7d-f6c5b4a398e7",
+  "name": "account.transfer",
+  "auto": true,
+  "contexts": [],
+  "responses": [
+    {
+      "resetContexts": false,
+      "affectedContexts": [],
+      "parameters": [
+        {
+          "id": "d6c5b4a3-98e7-4a39-8e7d-f6c5b4a398e7",
+          "required": true,
+          "dataType": "@sys.unit-currency",
+          "name": "amount",
+          "value": "$amount",
+          "prompts": [
+            {
+              "lang": "en",
+              "value": "How much would you like to transfer?"
+            }
+          ],
+          "isList": false
+        },
+        {
+          "id": "e7d6c5b4-a398-4a39-8e7d-f6c5b4a398e7",
+          "required": true,
+          "dataType": "@account-type",
+          "name": "source_account",
+          "value": "$source_account",
+          "prompts": [
+            {
+              "lang": "en",
+              "value": "Which account are you transferring from?"
+            }
+          ],
+          "isList": false
+        },
+        {
+          "id": "f6c5b4a3-98e7-4a39-8e7d-d6c5b4a398e7",
+          "required": true,
+          "dataType": "@account-type",
+          "name": "destination_account",
+          "value": "$destination_account",
+          "prompts": [
+            {
+              "lang": "en",
+              "value": "And which account are you transferring to?"
+            }
+          ],
+          "isList": false
+        }
+      ],
+      "messages": [
+        {
+          "type": 0,
+          "lang": "en",
+          "speech": []
+        }
+      ],
+      "defaultResponsePlatforms": {},
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

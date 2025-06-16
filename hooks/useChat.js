@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 // Central hook to manage all chat state and logic
 export function useChat(activeTab, onLoginRequired) {
   const [messages, setMessages] = useState({
-    banking: [{ id: 1, text: "Hi! I'm your SecureBank assistant. How can I assist you today?", sender: 'bot', timestamp: new Date() }],
+    banking: [{ id: 1, text: "Hi! I'm your SecureBank assistant. I can help check balances, transfer funds, view transaction history, or connect you with a live agent. How can I assist you today?", sender: 'bot', timestamp: new Date() }],
     advisor: [{ id: 1, text: "Hello! I'm your personal financial advisor. What would you like to discuss?", sender: 'bot', timestamp: new Date() }]
   });
   const [inputMessage, setInputMessage] = useState('');

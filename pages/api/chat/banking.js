@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { getUserByUsername } from '../../../data/mockUsers';
 import dialogflowService from '../../../lib/dialogflow';
 
 export default async function handler(req, res) {
@@ -8,93 +7,43 @@ export default async function handler(req, res) {
   }
 
   const { message } = req.body;
-  
   if (!message) {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  // Get user context from JWT token
+  // --- FIX: Get user context from JWT token, not from a file import ---
   let userContext = { user: null };
   const authHeader = req.headers.authorization;
   
   if (authHeader && authHeader.startsWith('Bearer ')) {
     try {
       const token = authHeader.substring(7);
+      // The user object, including accounts, is stored in the token's payload
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = getUserByUsername(decoded.username);
-      if (user) {
-        userContext.user = user;
-      }
+      userContext.user = decoded; // The entire decoded payload is the user object
     } catch (error) {
-      console.log('Invalid token:', error.message);
+      console.log('Invalid token provided to banking API:', error.message);
     }
   }
 
   try {
-    // Generate unique session ID for Dialogflow
-    const sessionId = `banking-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Process with Dialogflow
+    const sessionId = `banking-${Date.now()}`;
     const dialogflowResponse = await dialogflowService.detectIntent(sessionId, message);
     
-    // Handle the banking intent
+    // Handle the banking intent using the user context from the token
     const bankingResponse = await dialogflowService.handleBankingIntent(
       dialogflowResponse.intentName,
       dialogflowResponse.parameters,
       userContext
     );
 
-    // If Dialogflow has a fulfillment text and banking response doesn't require auth,
-    // prefer the Dialogflow response for better natural language
-    let finalResponse = bankingResponse.text;
-    
-    if (dialogflowResponse.fulfillmentText && !bankingResponse.requiresAuth) {
-      // Use Dialogflow's fulfillment text if it's more natural
-      if (dialogflowResponse.fulfillmentText.length > 20) {
-        finalResponse = dialogflowResponse.fulfillmentText;
-      }
-    }
-
-    return res.status(200).json({
-      response: finalResponse,
-      intentName: dialogflowResponse.intentName,
-      confidence: dialogflowResponse.confidence,
-      requiresAuth: bankingResponse.requiresAuth || false,
-      suggestedActions: bankingResponse.suggestedActions || [],
-      parameters: dialogflowService.extractParameters(dialogflowResponse.parameters)
-    });
+    return res.status(200).json({ response: bankingResponse.text });
 
   } catch (error) {
     console.error('Banking chat error:', error);
-    
-    // Fallback to rule-based responses
-    let response = "I'm here to help with your banking needs! This will connect to Dialogflow soon.";
-
-    if (message.toLowerCase().includes('balance')) {
-      if (userContext.user) {
-        const { checking, savings } = userContext.user.accounts;
-        response = `Your current balances are:\n• Checking: ${checking.balance.toLocaleString()}\n• Savings: ${savings.balance.toLocaleString()}`;
-      } else {
-        response = "I'd be happy to check your account balance! For security purposes, please log in to access your account information.";
-      }
-    } else if (message.toLowerCase().includes('transfer')) {
-      if (userContext.user) {
-        response = "I can help you transfer funds between your accounts. How much would you like to transfer and between which accounts?";
-      } else {
-        response = "I can help you transfer funds between your accounts! Please log in first to access this service.";
-      }
-    } else if (message.toLowerCase().includes('hours') || message.toLowerCase().includes('branch')) {
-      response = "Our branches are open Monday-Friday 9:00 AM - 5:00 PM, Saturday 9:00 AM - 2:00 PM. We're closed on Sundays and major holidays.";
-    } else if (message.toLowerCase().includes('help')) {
-      response = "I'm here to help with your banking needs! I can assist you with account balances, transfers, payments, branch hours, and general banking questions. What would you like help with today?";
-    }
-
-    return res.status(200).json({
-      response,
-      intentName: 'fallback',
-      confidence: 0.5,
-      requiresAuth: false,
-      error: 'Dialogflow temporarily unavailable'
+    return res.status(500).json({
+      response: "I'm having trouble connecting to my services right now. Please try again in a moment.",
+      error: 'Dialogflow processing failed'
     });
   }
 }
