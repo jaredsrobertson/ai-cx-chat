@@ -63,18 +63,13 @@ export function useChat(activeTab, onLoginRequired) {
     setIsLoading(false);
   };
 
-  const handleSendMessage = async () => {
-    const trimmedMessage = inputMessage.trim();
+  const handleSendMessage = async (messageOverride) => {
+    // --- MODIFICATION ---
+    const trimmedMessage = (messageOverride || inputMessage).trim();
     if (!trimmedMessage) return;
 
     addMessage(trimmedMessage, 'user');
     setInputMessage('');
-
-    const agentKeywords = ['agent', 'human', 'person', 'representative'];
-    if (agentKeywords.some(keyword => trimmedMessage.toLowerCase().includes(keyword))) {
-      handleAgentHandoff();
-      return;
-    }
 
     const authKeywords = ['balance', 'transfer', 'account', 'payment', 'transactions'];
     if (activeTab === 'banking' && authKeywords.some(keyword => trimmedMessage.toLowerCase().includes(keyword)) && !isAuthenticated) {

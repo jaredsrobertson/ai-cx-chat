@@ -35,24 +35,12 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Financial advisor error:', error);
     
-    // Emergency fallback responses
-    let response = "I'm your financial advisor! This will connect to OpenAI GPT-4 soon.";
-
-    if (message.toLowerCase().includes('budget')) {
-      response = "Creating a budget is essential for financial health! The 50/30/20 rule is a great starting point: 50% for needs, 30% for wants, and 20% for savings and debt repayment. Would you like me to help you create a personalized budget?";
-    } else if (message.toLowerCase().includes('invest')) {
-      response = "Investing is a great way to build long-term wealth! For beginners, I recommend starting with low-cost index funds that provide broad market diversification. The key is to start early, invest regularly, and think long-term. What's your investment timeline and risk tolerance?";
-    } else if (message.toLowerCase().includes('save')) {
-      response = "Building an emergency fund should be your first priority - aim for 3-6 months of expenses in a high-yield savings account. Even small amounts add up over time! What's your current savings goal?";
-    } else if (message.toLowerCase().includes('debt')) {
-      response = "For debt management, consider the debt avalanche method (pay minimums on all debts, extra on highest interest rate) or debt snowball (smallest balance first for motivation). Which approach sounds better for your situation?";
-    }
-
-    return res.status(200).json({
-      response,
+    // --- SIMPLIFIED FALLBACK ---
+    // The openAIService already has robust fallbacks, so we just return a generic error here.
+    return res.status(500).json({
+      response: "I'm sorry, I'm having some trouble connecting to my financial knowledge base. Please try again in a moment.",
       category: 'general',
-      source: 'fallback',
-      error: 'OpenAI temporarily unavailable'
+      source: 'error'
     });
   }
 }

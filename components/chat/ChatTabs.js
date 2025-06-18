@@ -12,6 +12,22 @@ export default function ChatTabs({ activeTab, onLoginRequired }) {
 
   useEffect(scrollToBottom, [messages]);
 
+  useEffect(() => {
+    const handleVoiceInput = (event) => {
+      // Ensure the voice input is for the currently active tab
+      if (event.detail.tab === activeTab) {
+        setInputMessage(event.detail.transcript);
+        // Use a timeout to allow the input field to update before sending
+        setTimeout(() => handleSendMessage(event.detail.transcript), 100);
+      }
+    };
+
+    window.addEventListener('voiceInput', handleVoiceInput);
+    return () => {
+      window.removeEventListener('voiceInput', handleVoiceInput);
+    };
+  }, [activeTab, setInputMessage, handleSendMessage]);
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
