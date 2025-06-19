@@ -16,19 +16,25 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-banking-blue hover:bg-banking-navy text-white font-medium px-6 py-2.5 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md;
+    @apply bg-banking-blue hover:bg-banking-navy text-white font-medium px-6 py-2.5 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md;
   }
   
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-banking-navy font-medium px-6 py-2.5 rounded-lg border border-gray-200 transition-colors duration-200 shadow-sm hover:shadow-md;
+    @apply bg-white hover:bg-gray-50 text-banking-navy font-medium px-6 py-2.5 rounded-lg border border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md;
   }
   
+  /* Adding hover glow effect from our plan */
+  .btn-primary:hover, .btn-secondary:hover {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+  }
+
   .card {
     @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
   }
   
   .chat-message {
-    @apply max-w-xs lg:max-w-md px-4 py-2 rounded-2xl mb-3 animate-fade-in;
+    @apply max-w-xs lg:max-w-md px-4 py-2 rounded-2xl mb-3;
+    animation: fade-in 0.3s ease-out;
   }
   
   .chat-message.user {
@@ -42,37 +48,44 @@
   .input-field {
     @apply w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-banking-blue focus:border-transparent outline-none transition-all duration-200;
   }
-}
 
-/* Chat widget animations */
-.chat-widget {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.chat-widget.open {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-.chat-widget.closed {
-  transform: translateY(20px);
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Voice recording animation */
-.voice-recording {
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
+  .avatar {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0;
   }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
+
+  .avatar-user {
+    @apply bg-gray-500;
+  }
+
+  .avatar-bot {
+    @apply bg-banking-navy;
+  }
+}
+
+.chat-widget-container {
+    @apply fixed bottom-24 right-6 z-30 transition-all duration-300 ease-in-out; /* Positioned above the button */
+}
+  
+.chat-widget-container.closed {
+    @apply opacity-0 transform translate-y-4 pointer-events-none;
+}
+
+.chat-widget-container.open {
+    /* Desktop size */
+    @apply w-96 h-[600px] opacity-100 transform translate-y-0;
+}
+  
+.chat-widget-inner {
+    @apply w-full h-full bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden;
+}
+
+/* Full-Screen Mobile Styles */
+@media (max-width: 767px) {
+  .chat-widget-container.open {
+    @apply inset-0 w-full h-full;
+  }
+  .chat-widget-inner {
+    @apply rounded-none border-none shadow-none;
   }
 }
 
@@ -94,22 +107,34 @@
   background: #94a3b8;
 }
 
-/* Add to the bottom of styles/globals.css */
-.avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  flex-shrink: 0;
+/* Keyframe Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.avatar-user {
-  background-color: #4a5568; /* a neutral gray */
+/* Intermittent glow/bounce for main chat toggle button */
+@keyframes glow-bounce {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px 10px rgba(59, 130, 246, 0);
+  }
+  75% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
 }
 
-.avatar-bot {
-  background-color: #2c5282; /* banking-navy */
+.animate-glow-bounce {
+  animation: glow-bounce 5s infinite ease-in-out;
 }

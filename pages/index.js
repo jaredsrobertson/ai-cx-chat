@@ -3,23 +3,29 @@ import { useState } from 'react';
 import ChatWidget from '../components/chat/ChatWidget';
 import { useAuth } from '../hooks/useAuth';
 
+
 export default function Home() {
   const { user } = useAuth();
   const [showGitHubModal, setShowGitHubModal] = useState(false);
 
   const openChatWidget = () => {
-    // Find and click the chat widget button
     const chatButton = document.querySelector('button[data-chat-toggle="true"]');
     if (chatButton) {
       chatButton.click();
     }
   };
+  
+  const GitHubIcon = (props) => (
+    <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
+      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+    </svg>
+  );
 
   return (
     <>
       <Head>
-        <title>SecureBank - Your Trusted Financial Partner</title>
-        <meta name="description" content="Modern banking with AI-powered assistance" />
+        <title>AI-Powered Chat Assistant | Project Demo</title>
+        <meta name="description" content="A portfolio project demonstrating a dual-mode AI chat assistant with Google Dialogflow and OpenAI GPT-4." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -35,8 +41,8 @@ export default function Home() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-banking-navy">SecureBank</h1>
-                <p className="text-sm text-gray-600">AI-Powered Banking</p>
+                <h1 className="text-2xl font-bold text-banking-navy">AI Chat Demo</h1>
+                <p className="text-sm text-gray-600">A Portfolio Project</p>
               </div>
             </div>
             
@@ -48,7 +54,7 @@ export default function Home() {
                 onClick={openChatWidget}
                 className="btn-primary"
               >
-                {user ? `Welcome, ${user.name.split(' ')[0]}` : 'Try AI Assistant'}
+                {user ? `Welcome, ${user.name.split(' ')[0]}` : 'Launch Assistant'}
               </button>
             </nav>
           </div>
@@ -61,60 +67,65 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-5xl font-bold mb-6 leading-tight">
-                AI-Powered Banking
-                <span className="text-blue-200"> Assistant Demo</span>
+                Dual-Mode AI Assistant
+                <span className="text-blue-200"> Technical Demo</span>
               </h2>
               <p className="text-xl mb-8 text-blue-100 leading-relaxed">
-                Experience next-generation conversational AI for banking. This demo showcases Dialogflow integration, 
-                OpenAI GPT-4 responses, voice recognition, and secure authentication—built with modern web technologies.
+                This project demonstrates a sophisticated conversational AI architecture. It integrates Google Dialogflow for structured, task-oriented dialogue and OpenAI's GPT-4 for generative, open-ended conversation, all within a modern, responsive web application.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button 
                   onClick={openChatWidget}
                   className="btn-primary bg-white text-banking-blue hover:bg-gray-50"
                 >
-                  🤖 Try Live Demo
+                  Launch Assistant
                 </button>
                 <button 
                   onClick={() => setShowGitHubModal(true)}
-                  className="btn-secondary border-blue-200 text-blue-100 hover:bg-blue-700"
+                  className="btn-secondary border-blue-200 text-blue-100 hover:bg-blue-700 flex items-center justify-center gap-2"
                 >
-                  View Source Code
+                  <GitHubIcon className="w-5 h-5" />
+                  View on GitHub
                 </button>
               </div>
             </div>
+            {/* In-Page Demo Section */}
             <div className="relative">
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 border border-white border-opacity-20">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Concierge Example */}
+                      <div className="space-y-3">
+                          <h4 className="font-semibold text-center text-blue-100">SecureBank Concierge</h4>
+                          <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
+                              <p>"What's my checking balance?"</p>
+                          </div>
+                          <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-4 text-sm">
+                              <p>Your checking balance is $2,847.52.</p>
+                          </div>
+                          <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
+                              <p>"Transfer $50 to savings."</p>
+                          </div>
+                          <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-4 text-sm">
+                              <p>The transfer is complete.</p>
+                          </div>
+                      </div>
+                      {/* Advisor Example */}
+                      <div className="space-y-3">
+                          <h4 className="font-semibold text-center text-blue-100">AI Advisor</h4>
+                          <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
+                            <p>"How can I save more money?"</p>
+                          </div>
+                          <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-4 text-sm">
+                              <p>A great way to start is the 50/30/20 budget rule. Can I explain it?</p>
+                          </div>
+                          <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
+                            <p>"What are I-bonds?"</p>
+                          </div>
+                          <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-4 text-sm">
+                              <p>They are a type of US savings bond designed to protect your money from inflation.</p>
+                          </div>
+                      </div>
                   </div>
-                  <span className="font-semibold">AI Banking Assistant</span>
-                </div>
-                <div className="space-y-4 text-sm">
-                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                    <p>"What's my account balance?"</p>
-                  </div>
-                  <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-8">
-                    <p>Your checking balance is $2,847.52</p>
-                  </div>
-                  <div className="bg-white bg-opacity-10 rounded-lg p-3">
-                    <p>"Help me create a budget"</p>
-                  </div>
-                  <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-8">
-                    <p>I'd recommend the 50/30/20 rule...</p>
-                  </div>
-                </div>
-                <div className="mt-6 text-center">
-                  <button 
-                    onClick={openChatWidget}
-                    className="bg-white text-banking-blue px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-lg animate-pulse"
-                  >
-                    🚀 Try Now - Click Here!
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -265,173 +276,37 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Demo Section */}
-      <section id="demo" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h3 className="text-4xl font-bold text-gray-900 mb-4">
-              Live Interactive Demo
-            </h3>
-            <p className="text-xl text-gray-600">
-              Experience the AI assistant in action - try both banking and financial advisory modes
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="space-y-6">
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="font-bold text-banking-blue mb-3">🏦 Banking Assistant</h4>
-                  <div className="space-y-3 text-sm">
-                    <div className="bg-white rounded-lg p-3 border-l-4 border-banking-blue">
-                      <p className="font-medium">Try asking:</p>
-                      <p className="text-gray-600">"What's my account balance?"</p>
-                      <p className="text-gray-600">"Transfer $500 to savings"</p>
-                      <p className="text-gray-600">"Show my recent transactions"</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="font-bold text-green-600 mb-3">💡 Financial Advisor</h4>
-                  <div className="space-y-3 text-sm">
-                    <div className="bg-white rounded-lg p-3 border-l-4 border-green-500">
-                      <p className="font-medium">Try asking:</p>
-                      <p className="text-gray-600">"Help me create a budget"</p>
-                      <p className="text-gray-600">"Investment advice for beginners"</p>
-                      <p className="text-gray-600">"How to build an emergency fund"</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="bg-gradient-to-br from-banking-navy to-banking-blue rounded-2xl p-8 text-white">
-                <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                  </svg>
-                </div>
-                <h4 className="text-2xl font-bold mb-4">Ready to Experience AI Banking?</h4>
-                <p className="mb-6 text-blue-100">
-                  Click the enlarged chat icon below to start your conversation with our AI assistant
-                </p>
-                <button 
-                  onClick={openChatWidget}
-                  className="bg-white text-banking-blue px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-50 transition-colors shadow-lg"
-                >
-                  🚀 Launch AI Demo
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h3 className="text-4xl font-bold text-gray-900 mb-4">
-              Complete Banking Services
-            </h3>
-            <p className="text-xl text-gray-600">
-              Everything you need to manage your finances in one place
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { icon: "💳", title: "Digital Accounts", desc: "Checking & Savings with competitive rates" },
-              { icon: "🏠", title: "Home Loans", desc: "Mortgages with AI-assisted pre-approval" },
-              { icon: "🚗", title: "Auto Financing", desc: "Quick approvals for new and used vehicles" },
-              { icon: "📈", title: "Investment Services", desc: "Grow your wealth with expert guidance" },
-              { icon: "💼", title: "Business Banking", desc: "Solutions for small and large businesses" },
-              { icon: "🎓", title: "Student Loans", desc: "Education financing with flexible terms" },
-              { icon: "💰", title: "Personal Loans", desc: "Fast funding for your personal needs" },
-              { icon: "🛡️", title: "Insurance", desc: "Protect what matters most to you" }
-            ].map((service, index) => (
-              <div key={index} className="bg-white rounded-lg p-6 text-center hover:shadow-lg transition-shadow">
-                <div className="text-3xl mb-4">{service.icon}</div>
-                <h4 className="font-bold text-gray-900 mb-2">{service.title}</h4>
-                <p className="text-sm text-gray-600">{service.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
-      <footer className="bg-banking-navy text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 bg-banking-blue rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </div>
-                <span className="text-xl font-bold">SecureBank</span>
+      <footer className="bg-banking-navy text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="w-10 h-10 bg-banking-blue rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
               </div>
-              <p className="text-blue-200 mb-4">
-                Empowering your financial future with intelligent banking solutions.
-              </p>
+              <span className="text-xl font-bold">AI Chat Demo</span>
             </div>
-            
-            <div>
-              <h5 className="font-bold mb-4">Banking</h5>
-              <ul className="space-y-2 text-blue-200">
-                <li><a href="#" className="hover:text-white">Checking</a></li>
-                <li><a href="#" className="hover:text-white">Savings</a></li>
-                <li><a href="#" className="hover:text-white">Credit Cards</a></li>
-                <li><a href="#" className="hover:text-white">Loans</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h5 className="font-bold mb-4">Support</h5>
-              <ul className="space-y-2 text-blue-200">
-                <li><a href="#" className="hover:text-white">Help Center</a></li>
-                <li><a href="#" className="hover:text-white">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white">Security</a></li>
-                <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h5 className="font-bold mb-4">Connect</h5>
-              <ul className="space-y-2 text-blue-200">
-                <li><a href="#" className="hover:text-white">Mobile App</a></li>
-                <li><a href="#" className="hover:text-white">Online Banking</a></li>
-                <li><a href="#" className="hover:text-white">Find ATMs</a></li>
-                <li><a href="#" className="hover:text-white">Branch Locator</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-blue-800 mt-8 pt-8 text-center text-blue-200">
-            <p>&copy; 2024 SecureBank. All rights reserved. Member FDIC.</p>
-          </div>
+            <p className="text-blue-200">
+              © 2024 Jared S. Robertson. All rights reserved.
+            </p>
         </div>
       </footer>
 
       {/* Chat Widget */}
       <ChatWidget />
 
-      {/* GitHub Modal */}
+      {/* GitHub Modal (content updated for project focus) */}
       {showGitHubModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
           <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 animate-slide-up">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
+                <GitHubIcon className="w-8 h-8 text-white"/>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">View Source Code</h2>
-              <p className="text-gray-600 mt-2">Would you like to view this project on GitHub?</p>
+              <h2 className="text-2xl font-bold text-gray-900">View Project on GitHub</h2>
+              <p className="text-gray-600 mt-2">The repository contains the complete source code and configuration for this demo.</p>
             </div>
 
             <div className="bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded-lg mb-6">

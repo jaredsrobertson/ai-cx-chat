@@ -1,46 +1,66 @@
 import openAIService from '../../../lib/openai';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+// Tell Next.js to use the Edge Runtime for optimal streaming performance
+export const config = {
+  runtime: 'edge',
+};
 
-  const { message, conversationHistory = [] } = req.body;
-  
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
+export default async function handler(req) {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
-    // Get financial advice from OpenAI GPT-4
-    const aiResponse = await openAIService.getFinancialAdvice(message, conversationHistory);
-    
-    if (aiResponse.success) {
-      return res.status(200).json({
-        response: aiResponse.response,
-        category: openAIService.categorizeFinancialQuery(message),
-        usage: aiResponse.usage,
-        source: 'openai'
-      });
-    } else {
-      // Return fallback response if OpenAI fails
-      return res.status(200).json({
-        response: aiResponse.response,
-        category: openAIService.categorizeFinancialQuery(message),
-        source: 'fallback',
-        error: aiResponse.error
+    const { messageHistory } = await req.json();
+
+    if (!messageHistory) {
+      return new Response(JSON.stringify({ error: 'Message history is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    // Create a streaming response using the ReadableStream API
+    const stream = new ReadableStream({
+      async start(controller) {
+        // A simple wrapper to abstract the controller's enqueue method
+        const streamWrapper = {
+          write(data) {
+            controller.enqueue(new TextEncoder().encode(data));
+          },
+          close() {
+            controller.close();
+          }
+        };
+
+        try {
+          await openAIService.getFinancialAdviceStream(messageHistory, streamWrapper);
+        } catch (error) {
+          console.error("Error during OpenAI stream:", error);
+          const errorPayload = `data: ${JSON.stringify({ error: "Sorry, I encountered an error." })}\n\n`;
+          controller.enqueue(new TextEncoder().encode(errorPayload));
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+
   } catch (error) {
-    console.error('Financial advisor error:', error);
-    
-    // --- SIMPLIFIED FALLBACK ---
-    // The openAIService already has robust fallbacks, so we just return a generic error here.
-    return res.status(500).json({
-      response: "I'm sorry, I'm having some trouble connecting to my financial knowledge base. Please try again in a moment.",
-      category: 'general',
-      source: 'error'
+    console.error('Financial advisor API error:', error);
+    return new Response(JSON.stringify({ response: "I'm having trouble connecting right now." }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

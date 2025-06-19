@@ -1,76 +1,124 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { speakText } from '../lib/tts';
 
-// Central hook to manage all chat state and logic
-export function useChat(activeTab, onLoginRequired) {
+export function useChat(activeTab, onLoginRequired, isTtsEnabled) {
   const [messages, setMessages] = useState({
-    banking: [{ id: 1, text: "Hi! I'm your SecureBank assistant. I can help check balances, transfer funds, view transaction history, or connect you with a live agent. How can I assist you today?", sender: 'bot', timestamp: new Date() }],
-    advisor: [{ id: 1, text: "Hello! I'm your personal financial advisor. What would you like to discuss?", sender: 'bot', timestamp: new Date() }]
+    banking: [{ id: 1, text: "Welcome to the SecureBank Concierge. I can help with account tasks like checking balances or making transfers. How can I assist?", sender: 'bot', timestamp: new Date() }],
+    advisor: [{ id: 1, text: "Welcome to the AI Advisor. I can help with financial planning, budgeting, and investment questions. What's on your mind?", sender: 'bot', timestamp: new Date() }]
   });
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRequest, setPendingRequest] = useState(null);
+  const [sessionIds, setSessionIds] = useState({ banking: null, advisor: null });
   const { user, isAuthenticated } = useAuth();
 
-  // Handle pending requests after a user logs in
   useEffect(() => {
     if (isAuthenticated && pendingRequest) {
-      processMessage(pendingRequest);
-      setPendingRequest(null);
+      handleSendMessage(pendingRequest, true);
     }
   }, [isAuthenticated, pendingRequest]);
 
-  // Helper to add a message to the UI
-  const addMessage = (text, sender) => {
+  // Updated addMessage to be more robust
+  const addMessage = (data, sender, id = null) => {
+    const messageId = id || Date.now() + Math.random();
+    
+    let textContent = '';
+    let confidentialContent = null;
+
+    // Check if the data is a structured object from our API
+    if (typeof data === 'object' && data !== null && data.hasOwnProperty('speakableText')) {
+        textContent = data.speakableText;
+        confidentialContent = data.confidentialData || null;
+    } else {
+        // Fallback for simple strings (like user messages)
+        textContent = data;
+    }
+
     const message = {
-      id: Date.now() + Math.random(),
-      text,
+      id: messageId,
+      text: textContent,
+      confidentialData: confidentialContent,
       sender,
       timestamp: new Date()
     };
+
     setMessages(prev => ({
       ...prev,
       [activeTab]: [...prev[activeTab], message]
     }));
-  };
-
-  // --- Mock Live Agent Handoff ---
-  const handleAgentHandoff = async () => {
-    setIsLoading(true);
-    addMessage("I understand. Let me connect you to a live agent.", 'bot');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    addMessage("It looks like all our agents are busy. Would you like to request a callback?", 'bot');
-    setIsLoading(false);
-  };
-
-  // --- Central Message Processing Logic ---
-  const processMessage = async (messageToProcess) => {
-    setIsLoading(true);
-    try {
-      const endpoint = activeTab === 'banking' ? '/api/chat/banking' : '/api/chat/financial-advisor';
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': `Bearer ${token}` }) },
-        body: JSON.stringify({ message: messageToProcess })
-      });
-      const data = await response.json();
-      addMessage(data.response, 'bot');
-    } catch (error) {
-      console.error('Error processing message:', error);
-      addMessage("I'm sorry, I'm having trouble connecting right now. Please try again in a moment.", 'bot');
+    
+    if (sender === 'bot' && isTtsEnabled && textContent) {
+      speakText(textContent);
     }
-    setIsLoading(false);
+    return messageId;
+  };
+  
+  const updateMessageContent = (id, newContent) => {
+    setMessages(prev => ({
+      ...prev,
+      [activeTab]: prev[activeTab].map(msg => msg.id === id ? { ...msg, text: newContent } : msg)
+    }));
   };
 
-  const handleSendMessage = async (messageOverride) => {
-    // --- MODIFICATION ---
-    const trimmedMessage = (messageOverride || inputMessage).trim();
+  const processMessage = async (messageToProcess) => {
+    const messageHistory = messages[activeTab].slice(1).map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }));
+    messageHistory.push(messageToProcess);
+
+    setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        if (activeTab === 'advisor') {
+          const response = await fetch('/api/chat/financial-advisor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageHistory }) });
+          setIsLoading(false);
+          const messageId = addMessage({ speakableText: "" }, 'bot');
+          let fullText = "";
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.substring(6));
+                  if (data.content) {
+                    fullText += data.content;
+                    updateMessageContent(messageId, fullText);
+                  }
+                } catch (e) { console.error("Failed to parse stream data chunk:", line) }
+              }
+            }
+          }
+          if (isTtsEnabled && fullText) {
+            setTimeout(() => { speakText(fullText); }, 300);
+          }
+        } else {
+          const token = localStorage.getItem('authToken');
+          const response = await fetch('/api/chat/banking', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': `Bearer ${token}` }) }, body: JSON.stringify({ message: messageToProcess.content, sessionId: sessionIds[activeTab] }) });
+          setIsLoading(false);
+          const data = await response.json();
+          if (data.sessionId) { setSessionIds(prev => ({ ...prev, [activeTab]: data.sessionId })); }
+          addMessage(data.response, 'bot');
+        }
+      } catch (error) {
+        console.error('Error processing message:', error);
+        addMessage("I'm sorry, I'm having trouble connecting right now.", 'bot');
+        setIsLoading(false);
+      }
+    }, 500);
+  };
+
+  const handleSendMessage = async (messageOverride, isPending = false) => {
+    const messageContent = messageOverride || inputMessage;
+    const trimmedMessage = messageContent.trim();
     if (!trimmedMessage) return;
-
-    addMessage(trimmedMessage, 'user');
-    setInputMessage('');
-
+    if (!isPending) {
+      addMessage(trimmedMessage, 'user'); // User messages are now passed as simple strings
+      setInputMessage('');
+    }
     const authKeywords = ['balance', 'transfer', 'account', 'payment', 'transactions'];
     if (activeTab === 'banking' && authKeywords.some(keyword => trimmedMessage.toLowerCase().includes(keyword)) && !isAuthenticated) {
       addMessage("For security, please log in to access your account details.", 'bot');
@@ -78,15 +126,8 @@ export function useChat(activeTab, onLoginRequired) {
       onLoginRequired();
       return;
     }
-
-    processMessage(trimmedMessage);
+    processMessage({ role: 'user', content: trimmedMessage });
   };
 
-  return {
-    messages: messages[activeTab],
-    inputMessage,
-    isLoading,
-    setInputMessage,
-    handleSendMessage
-  };
+  return { messages: messages[activeTab], inputMessage, isLoading, setInputMessage, handleSendMessage };
 }

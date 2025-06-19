@@ -1,15 +1,11 @@
 import { speakText } from '../../lib/tts';
+import { SpeakerWaveIcon } from '@heroicons/react/24/solid';
+import ConfidentialDisplay from './ConfidentialDisplay';
 
-// A simple avatar component to avoid cluttering the main component
-const Avatar = ({ sender }) => {
-  const isUser = sender === 'user';
-  // User initials or a bot icon
-  const content = isUser ? 'U' : 'B'; 
-  const avatarClass = isUser ? 'avatar-user' : 'avatar-bot';
-
+const Avatar = () => {
   return (
-    <div className={`avatar ${avatarClass}`}>
-      <span className="text-sm font-semibold">{content}</span>
+    <div className="avatar avatar-bot">
+      <span className="text-xl">🤖</span>
     </div>
   );
 };
@@ -17,34 +13,43 @@ const Avatar = ({ sender }) => {
 export default function ChatMessage({ message }) {
   const isUser = message.sender === 'user';
 
-  return (
-    <div className={`flex items-end gap-3 my-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
-      {/* Bot Avatar */}
-      {!isUser && <Avatar sender="bot" />}
-
-      {/* Message Bubble */}
-      <div className={`chat-message ${message.sender}`}>
-        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-        <span className="text-xs opacity-70 mt-1 block">
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
+  // User message bubble
+  if (isUser) {
+    return (
+      <div className="flex justify-end my-2">
+        <div className="chat-message user">
+          <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+          <span className="text-xs opacity-70 mt-1 block text-right">
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
       </div>
+    );
+  }
 
-      {/* User Avatar */}
-      {isUser && <Avatar sender="user" />}
-
-      {/* TTS Button for Bot Messages */}
-      {!isUser && (
-        <button 
-          onClick={() => speakText(message.text)}
-          className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-banking-blue transition-colors self-center"
-          aria-label="Read message aloud"
-        >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M8.25 3.75a.75.75 0 01.75.75v10.5a.75.75 0 01-1.5 0V4.5a.75.75 0 01.75-.75zM12.25 5.25a.75.75 0 01.75.75v7.5a.75.75 0 01-1.5 0V6a.75.75 0 01.75-.75zM4.25 6.75a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0V7.5a.75.75 0 01.75-.75zM16.25 6.75a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0V7.5a.75.75 0 01.75-.75z"></path>
-          </svg>
-        </button>
-      )}
+  // Bot message bubble
+  return (
+    <div className="flex items-start gap-2.5 my-2">
+      <Avatar />
+      <div className="chat-message bot">
+        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+        
+        {/* Conditionally render the secure box for confidential data */}
+        {message.confidentialData && <ConfidentialDisplay data={message.confidentialData} />}
+        
+        <div className="flex items-center justify-between mt-1.5">
+          <span className="text-xs opacity-70">
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <button 
+            onClick={() => speakText(message.text)}
+            className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-banking-blue transition-colors"
+            aria-label="Read message aloud"
+          >
+            <SpeakerWaveIcon className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
