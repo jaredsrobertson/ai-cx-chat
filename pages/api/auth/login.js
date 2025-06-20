@@ -1,6 +1,34 @@
 import jwt from 'jsonwebtoken';
 import { mockUsers } from '../../../lib/mockData';
 
+// Simple rate limiting
+const attempts = new Map();
+
+function rateLimit(identifier, maxAttempts = 5, windowMs = 60000) {
+  const now = Date.now();
+  const userAttempts = attempts.get(identifier) || { count: 0, resetTime: now + windowMs };
+  
+  if (now > userAttempts.resetTime) {
+    userAttempts.count = 0;
+    userAttempts.resetTime = now + windowMs;
+  }
+  
+  userAttempts.count++;
+  attempts.set(identifier, userAttempts);
+  
+  return userAttempts.count <= maxAttempts;
+}
+
+// Input sanitization
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return '';
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/javascript:/gi, '')
+    .trim()
+    .substring(0, 100); // Limit length
+}
+
 // Restored the original, correct validation logic
 const validateUser = (username, pin) => {
   const user = mockUsers[username];
@@ -18,11 +46,30 @@ export default function handler(req, res) {
     return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
   }
 
+  // Validate JWT_SECRET
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    console.error('JWT_SECRET must be set and at least 32 characters long');
+    return res.status(500).json({ success: false, error: 'Server configuration error' });
+  }
+
   try {
-    const { username, pin } = req.body;
+    let { username, pin } = req.body;
+
+    // Sanitize inputs
+    username = sanitizeInput(username);
+    pin = sanitizeInput(pin);
 
     if (!username || !pin) {
       return res.status(400).json({ success: false, error: 'Username and PIN are required' });
+    }
+
+    // Rate limiting by IP
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    if (!rateLimit(clientIP)) {
+      return res.status(429).json({ 
+        success: false, 
+        error: 'Too many login attempts. Please try again later.' 
+      });
     }
 
     const user = validateUser(username, pin);

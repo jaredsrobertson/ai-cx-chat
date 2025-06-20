@@ -6,28 +6,43 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Helper function to clear auth state
+  const clearAuthState = useCallback(() => {
+    localStorage.removeItem('authToken');
+    setUser(null);
+  }, []);
+
   // This function correctly verifies the token on page load
   const checkAuthStatus = useCallback(async () => {
     setIsLoading(true);
     const token = localStorage.getItem('authToken');
-    if (token) {
-      try {
-        const response = await fetch('/api/auth/verify', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-        if (data.success) {
-          setUser(data.data.user);
-        } else {
-          localStorage.removeItem('authToken');
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        localStorage.removeItem('authToken');
-      }
+    
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
-    setIsLoading(false);
-  }, []);
+
+    try {
+      const response = await fetch('/api/auth/verify', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setUser(data.data.user);
+      } else {
+        // Clear invalid token and reset state
+        console.warn('Invalid token removed:', data.error);
+        clearAuthState();
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      clearAuthState();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [clearAuthState]);
 
   useEffect(() => {
     checkAuthStatus();
@@ -40,25 +55,40 @@ export function AuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, pin }),
       });
+      
       const data = await response.json();
-      if (data.success) {
+      
+      if (response.ok && data.success) {
         localStorage.setItem('authToken', data.data.token);
         setUser(data.data.user);
         return { success: true };
       } else {
-        return { success: false, error: data.error };
+        // Don't store token if login failed
+        return { success: false, error: data.error || 'Login failed' };
       }
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, error: 'A network error occurred.' };
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    setUser(null);
-  };
+  const logout = useCallback(() => {
+    clearAuthState();
+  }, [clearAuthState]);
 
-  const value = { user, isLoading, login, logout, isAuthenticated: !!user };
+  // Force refresh auth status (useful after token might have expired)
+  const refreshAuth = useCallback(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  const value = { 
+    user, 
+    isLoading, 
+    login, 
+    logout, 
+    refreshAuth,
+    isAuthenticated: !!user 
+  };
 
   return (
     <AuthContext.Provider value={value}>

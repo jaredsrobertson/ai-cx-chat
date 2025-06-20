@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import ChatTabs from './ChatTabs';
 import LoginModal from '../auth/LoginModal';
+import ErrorBoundary from '../ErrorBoundary';
 import { useAuth } from '../../hooks/useAuth';
 import BotSelection from './BotSelection';
 // Import the new TTSProvider
@@ -21,7 +22,7 @@ const ChatWidgetInner = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isTtsEnabled, setIsTtsEnabled] = useState(false);
   const { user, logout } = useAuth();
-  const { stop } = useTTS(); // Access the stop function from the context
+  const { stop, clearCache, error: ttsError } = useTTS(); // Access the stop function and error state
 
   // When the global auto-speak toggle is turned off, stop any current playback.
   useEffect(() => {
@@ -30,6 +31,13 @@ const ChatWidgetInner = () => {
     }
   }, [isTtsEnabled, stop]);
 
+  // Clear TTS cache when component unmounts
+  useEffect(() => {
+    return () => {
+      clearCache();
+    };
+  }, [clearCache]);
+
   const handleBotSelection = (bot) => {
     setSelectedBot(bot);
     setActiveTab(bot);
@@ -37,13 +45,17 @@ const ChatWidgetInner = () => {
 
   const handleClose = () => {
     setIsOpen(false);
+    stop(); // Stop any playing audio when closing
     setTimeout(() => {
       setSelectedBot(null);
     }, 300);
   };
   
   const handleOpen = () => setIsOpen(true);
-  const backToSelection = () => setSelectedBot(null);
+  const backToSelection = () => {
+    setSelectedBot(null);
+    stop(); // Stop audio when going back
+  };
 
   return (
     <>
@@ -51,53 +63,100 @@ const ChatWidgetInner = () => {
         data-chat-toggle="true"
         onClick={isOpen ? handleClose : handleOpen}
         className={`fixed bottom-6 right-6 w-16 h-16 bg-banking-blue hover:bg-banking-navy text-white rounded-full shadow-2xl hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 ${!isOpen ? 'animate-glow-bounce' : ''}`}
+        aria-label={isOpen ? 'Close chat assistant' : 'Open chat assistant'}
       >
-        {isOpen ? <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> : <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>}
+        {isOpen ? (
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        )}
       </button>
+      
       <div className={`chat-widget-container ${isOpen ? 'open' : 'closed'}`}>
         <div className="chat-widget-inner">
-            <div className="bg-banking-blue text-white p-3 flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center space-x-2">
-                  <ShieldCheckIcon className="w-6 h-6" />
-                  <h3 className="font-semibold text-lg">SecureBank Assistant</h3>
-                </div>
-                <div className="flex items-center space-x-1">
-                    {selectedBot && (
-                        <button onClick={backToSelection} className="p-2 rounded-full hover:bg-white/20" title="Back"><BackIcon className="w-5 h-5" /></button>
-                    )}
-                    <button onClick={() => setIsTtsEnabled(prev => !prev)} className="p-2 rounded-full hover:bg-white/20" title={isTtsEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}>
-                        {isTtsEnabled ? <TTSOnIcon className="w-5 h-5" /> : <TTSOffIcon className="w-5 h-5" />}
-                    </button>
-                    {user && (
-                        <button onClick={logout} className="p-2 rounded-full hover:bg-white/20" title="Logout"><LogoutIcon className="w-5 h-5" /></button>
-                    )}
-                </div>
+          <div className="bg-banking-blue text-white p-3 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center space-x-2">
+              <ShieldCheckIcon className="w-6 h-6" />
+              <h3 className="font-semibold text-lg">SecureBank Assistant</h3>
             </div>
-            <div className="flex-grow overflow-hidden bg-gray-50">
-                {!selectedBot ? (
-                    <BotSelection onSelect={handleBotSelection} />
-                ) : (
-                    <ChatTabs 
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                        isTtsEnabled={isTtsEnabled}
-                        onLoginRequired={() => setShowLoginModal(true)}
-                    />
-                )}
+            <div className="flex items-center space-x-1">
+              {selectedBot && (
+                <button 
+                  onClick={backToSelection} 
+                  className="p-2 rounded-full hover:bg-white/20 transition-colors" 
+                  title="Back to bot selection"
+                  aria-label="Back to bot selection"
+                >
+                  <BackIcon className="w-5 h-5" />
+                </button>
+              )}
+              <button 
+                onClick={() => setIsTtsEnabled(prev => !prev)} 
+                className="p-2 rounded-full hover:bg-white/20 transition-colors" 
+                title={isTtsEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
+                aria-label={isTtsEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
+              >
+                {isTtsEnabled ? <TTSOnIcon className="w-5 h-5" /> : <TTSOffIcon className="w-5 h-5" />}
+              </button>
+              {user && (
+                <button 
+                  onClick={logout} 
+                  className="p-2 rounded-full hover:bg-white/20 transition-colors" 
+                  title="Logout"
+                  aria-label="Logout"
+                >
+                  <LogoutIcon className="w-5 h-5" />
+                </button>
+              )}
             </div>
+          </div>
+          
+          {/* TTS Error Display */}
+          {ttsError && (
+            <div className="bg-yellow-50 border-b border-yellow-200 p-2">
+              <p className="text-yellow-800 text-xs">
+                Audio: {ttsError}
+              </p>
+            </div>
+          )}
+          
+          <div className="flex-grow overflow-hidden bg-gray-50">
+            <ErrorBoundary>
+              {!selectedBot ? (
+                <BotSelection onSelect={handleBotSelection} />
+              ) : (
+                <ChatTabs 
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  isTtsEnabled={isTtsEnabled}
+                  onLoginRequired={() => setShowLoginModal(true)}
+                />
+              )}
+            </ErrorBoundary>
+          </div>
         </div>
       </div>
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onSuccess={() => setShowLoginModal(false)} />
+      
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+        onSuccess={() => setShowLoginModal(false)} 
+      />
     </>
   );
 };
-
 
 // The main export wraps the component in the provider
 export default function ChatWidget() {
   return (
     <TTSProvider>
-      <ChatWidgetInner />
+      <ErrorBoundary>
+        <ChatWidgetInner />
+      </ErrorBoundary>
     </TTSProvider>
   );
 }
