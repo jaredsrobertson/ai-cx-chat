@@ -39,7 +39,6 @@ export default function ConfidentialDisplay({ data }) {
                 ))}
             </ul>
         );
-      // New case to render the transfer confirmation details
       case 'transfer_confirmation':
         const { details } = data;
         return (
