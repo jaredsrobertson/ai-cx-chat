@@ -9,21 +9,22 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "tailwindcss": "^3.3.0",
-    "@headlessui/react": "^1.7.17",
-    "@heroicons/react": "^2.0.18",
-    "openai": "^4.20.0",
     "@google-cloud/dialogflow": "^6.0.0",
-    "uuid": "^9.0.1",
-    "jsonwebtoken": "^9.0.2"
+    "@headlessui/react": "^2.2.4",
+    "@heroicons/react": "^2.2.0",
+    "ai": "^4.3.16",
+    "jsonwebtoken": "^9.0.2",
+    "next": "^15.3.4",
+    "openai": "^4.20.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^3.3.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.31",
     "eslint": "^8.52.0",
-    "eslint-config-next": "14.0.0"
+    "eslint-config-next": "^15.3.4",
+    "postcss": "^8.4.31"
   }
 }

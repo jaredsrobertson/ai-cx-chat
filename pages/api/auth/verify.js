@@ -12,12 +12,13 @@ const getUserByUsername = (username) => {
 
 export default function handler(req, res) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader('Allow', ['GET']);
+    return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
   }
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
+    return res.status(401).json({ success: false, error: 'No token provided' });
   }
 
   const token = authHeader.substring(7);
@@ -27,20 +28,16 @@ export default function handler(req, res) {
     const user = getUserByUsername(decoded.username);
     
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      return res.status(401).json({ success: false, error: 'User not found' });
     }
 
     res.status(200).json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        username: decoded.username,
-        accounts: user.accounts
+      data: {
+        user: { id: user.id, name: user.name, email: user.email, username: decoded.username, accounts: user.accounts }
       }
     });
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ success: false, error: 'Invalid token' });
   }
 }

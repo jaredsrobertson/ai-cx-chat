@@ -38,7 +38,26 @@ export default function ConfidentialDisplay({ data }) {
                     </li>
                 ))}
             </ul>
-        )
+        );
+      // New case to render the transfer confirmation details
+      case 'transfer_confirmation':
+        const { details } = data;
+        return (
+          <ul className="space-y-2 text-sm">
+            <li className="flex justify-between items-center">
+              <span className="text-gray-600">Amount</span>
+              <span className="font-medium text-red-600">{formatCurrency(details.amount)}</span>
+            </li>
+            <li className="flex justify-between items-center">
+              <span className="text-gray-600">From</span>
+              <span className="font-medium text-gray-800 capitalize">{details.fromAccount}</span>
+            </li>
+            <li className="flex justify-between items-center">
+              <span className="text-gray-600">To</span>
+              <span className="font-medium text-gray-800 capitalize">{details.toAccount}</span>
+            </li>
+          </ul>
+        );
       default:
         return null;
     }
@@ -48,7 +67,7 @@ export default function ConfidentialDisplay({ data }) {
     <div className="mt-2 border-t border-gray-200 pt-3">
       <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
         <LockClosedIcon className="w-4 h-4" />
-        <span>Secure Information</span>
+        <span>Secure</span>
       </div>
       {renderContent()}
     </div>

@@ -1,24 +1,34 @@
-import { useState, forwardRef } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import ChatTabs from './ChatTabs';
 import LoginModal from '../auth/LoginModal';
 import { useAuth } from '../../hooks/useAuth';
 import BotSelection from './BotSelection';
-import { SpeakerWaveIcon, SpeakerXMarkIcon, ArrowUturnLeftIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
+// Import the new TTSProvider
+import { TTSProvider, useTTS } from '../../contexts/TTSContext';
+import { SpeakerWaveIcon, SpeakerXMarkIcon, ArrowUturnLeftIcon, ArrowLeftOnRectangleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 const BackIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.ArrowUturnLeftIcon), { ssr: false });
 const LogoutIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.ArrowLeftOnRectangleIcon), { ssr: false });
 const TTSOnIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.SpeakerWaveIcon), { ssr: false });
 const TTSOffIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.SpeakerXMarkIcon), { ssr: false });
 
-
-const ChatWidget = forwardRef((props, ref) => {
+// A small inner component to access the TTS context
+const ChatWidgetInner = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('banking');
   const [selectedBot, setSelectedBot] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isTtsEnabled, setIsTtsEnabled] = useState(false); // State is now managed here
+  const [isTtsEnabled, setIsTtsEnabled] = useState(false);
   const { user, logout } = useAuth();
+  const { stop } = useTTS(); // Access the stop function from the context
+
+  // When the global auto-speak toggle is turned off, stop any current playback.
+  useEffect(() => {
+    if (!isTtsEnabled) {
+      stop();
+    }
+  }, [isTtsEnabled, stop]);
 
   const handleBotSelection = (bot) => {
     setSelectedBot(bot);
@@ -32,13 +42,8 @@ const ChatWidget = forwardRef((props, ref) => {
     }, 300);
   };
   
-  const handleOpen = () => {
-    setIsOpen(true);
-  };
-
-  const backToSelection = () => {
-    setSelectedBot(null);
-  };
+  const handleOpen = () => setIsOpen(true);
+  const backToSelection = () => setSelectedBot(null);
 
   return (
     <>
@@ -53,13 +58,14 @@ const ChatWidget = forwardRef((props, ref) => {
         <div className="chat-widget-inner">
             <div className="bg-banking-blue text-white p-3 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center space-x-2">
+                  <ShieldCheckIcon className="w-6 h-6" />
                   <h3 className="font-semibold text-lg">SecureBank Assistant</h3>
                 </div>
                 <div className="flex items-center space-x-1">
                     {selectedBot && (
-                        <button onClick={backToSelection} className="p-2 rounded-full hover:bg-white/20" title="Back to selection"><BackIcon className="w-5 h-5" /></button>
+                        <button onClick={backToSelection} className="p-2 rounded-full hover:bg-white/20" title="Back"><BackIcon className="w-5 h-5" /></button>
                     )}
-                    <button onClick={() => setIsTtsEnabled(!isTtsEnabled)} className="p-2 rounded-full hover:bg-white/20" title={isTtsEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}>
+                    <button onClick={() => setIsTtsEnabled(prev => !prev)} className="p-2 rounded-full hover:bg-white/20" title={isTtsEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}>
                         {isTtsEnabled ? <TTSOnIcon className="w-5 h-5" /> : <TTSOffIcon className="w-5 h-5" />}
                     </button>
                     {user && (
@@ -74,7 +80,7 @@ const ChatWidget = forwardRef((props, ref) => {
                     <ChatTabs 
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
-                        isTtsEnabled={isTtsEnabled} // Pass state down
+                        isTtsEnabled={isTtsEnabled}
                         onLoginRequired={() => setShowLoginModal(true)}
                     />
                 )}
@@ -84,7 +90,14 @@ const ChatWidget = forwardRef((props, ref) => {
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onSuccess={() => setShowLoginModal(false)} />
     </>
   );
-});
+};
 
-ChatWidget.displayName = 'ChatWidget';
-export default ChatWidget;
+
+// The main export wraps the component in the provider
+export default function ChatWidget() {
+  return (
+    <TTSProvider>
+      <ChatWidgetInner />
+    </TTSProvider>
+  );
+}

@@ -1,7 +1,7 @@
-import dynamic from 'next/dynamic'; // Import next/dynamic
+import dynamic from 'next/dynamic';
 
-// Dynamically import icons with SSR turned off
-const ChatAlt2Icon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.ChatAlt2Icon), { ssr: false });
+// Update the dynamic imports to use CloudIcon
+const CloudIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.CloudIcon), { ssr: false });
 const SparklesIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.SparklesIcon), { ssr: false });
 
 export default function BotSelection({ onSelect }) {
@@ -18,10 +18,11 @@ export default function BotSelection({ onSelect }) {
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-banking-blue text-white rounded-lg flex items-center justify-center flex-shrink-0">
-              <ChatAlt2Icon className="w-7 h-7" />
+              {/* Replace the old icon with the CloudIcon */}
+              <CloudIcon className="w-7 h-7" />
             </div>
             <div>
-              <h3 className="font-bold text-banking-navy group-hover:text-banking-blue">SecureBank Concierge</h3>
+              <h3 className="font-bold text-banking-navy group-hover:text-banking-blue">CloudBank Concierge</h3>
               <p className="text-sm text-gray-600 mt-1">
                 For everyday banking tasks. Powered by Google Dialogflow for structured queries.
               </p>

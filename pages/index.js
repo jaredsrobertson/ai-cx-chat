@@ -2,6 +2,14 @@ import Head from 'next/head';
 import { useState } from 'react';
 import ChatWidget from '../components/chat/ChatWidget';
 import { useAuth } from '../hooks/useAuth';
+import { CloudIcon } from '@heroicons/react/24/outline';
+
+// 1. Define the SVG for the new favicon style
+const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path fill="#FFFFFF" stroke="#3b82f6" stroke-width="1" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+</svg>`;
+// Create a data URI from the new SVG string
+const faviconDataUri = `data:image/svg+xml;base64,${Buffer.from(faviconSvg).toString('base64')}`;
 
 
 export default function Home() {
@@ -27,7 +35,8 @@ export default function Home() {
         <title>AI-Powered Chat Assistant | Project Demo</title>
         <meta name="description" content="A portfolio project demonstrating a dual-mode AI chat assistant with Google Dialogflow and OpenAI GPT-4." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        {/* 2. The link tag automatically uses the new favicon */}
+        <link rel="icon" href={faviconDataUri} />
       </Head>
 
       {/* Header */}
@@ -36,13 +45,11 @@ export default function Home() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <div className="w-10 h-10 bg-banking-blue rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
+                <CloudIcon className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-banking-navy">AI Chat Demo</h1>
-                <p className="text-sm text-gray-600">A Portfolio Project</p>
+                <h1 className="text-2xl font-bold text-banking-navy">CloudBank</h1>
+                <p className="text-sm text-gray-600">AI CX Chat Demo</p>
               </div>
             </div>
             

@@ -1,133 +1,158 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './useAuth';
-import { speakText } from '../lib/tts';
 
-export function useChat(activeTab, onLoginRequired, isTtsEnabled) {
+export function useChat(initialTab, onLoginRequired) {
   const [messages, setMessages] = useState({
-    banking: [{ id: 1, text: "Welcome to the SecureBank Concierge. I can help with account tasks like checking balances or making transfers. How can I assist?", sender: 'bot', timestamp: new Date() }],
-    advisor: [{ id: 1, text: "Welcome to the AI Advisor. I can help with financial planning, budgeting, and investment questions. What's on your mind?", sender: 'bot', timestamp: new Date() }]
+    banking: [{ 
+      id: uuidv4(), 
+      author: 'bot', 
+      type: 'structured', 
+      content: { speakableText: "Welcome to the SecureBank Concierge. I can help you with account balances, transaction history, and fund transfers. I can also provide branch hours. If you need more help, just ask to speak with a live agent. How can I assist you today?" },
+      timestamp: new Date()
+    }],
+    advisor: [{ 
+      id: uuidv4(), 
+      author: 'bot', 
+      type: 'structured', 
+      content: { speakableText: "Welcome to the AI Advisor. I can help with financial planning, budgeting, and investment questions. What's on your mind?" },
+      timestamp: new Date()
+    }]
   });
-  const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const { isAuthenticated, user } = useAuth();
   const [pendingRequest, setPendingRequest] = useState(null);
-  const [sessionIds, setSessionIds] = useState({ banking: null, advisor: null });
-  const { user, isAuthenticated } = useAuth();
+  const fallbackCount = useRef(0);
+
+  const addMessage = useCallback((tab, author, type, content) => {
+    const fallbackText = "I'm sorry, I didn't quite understand.";
+    const agentOfferText = "It seems I'm still having trouble. Would you like to speak with a live agent?";
+
+    setMessages(prev => {
+      let newMessagesForTab = [...prev[tab], { 
+        id: uuidv4(), 
+        author, 
+        type, 
+        content, 
+        timestamp: new Date() 
+      }];
+
+      if (author === 'bot' && content.speakableText) {
+        if (content.speakableText.startsWith(fallbackText)) {
+          fallbackCount.current += 1;
+        } else {
+          fallbackCount.current = 0;
+        }
+
+        if (fallbackCount.current >= 2) {
+          newMessagesForTab.push({ 
+            id: uuidv4(), 
+            author: 'bot', 
+            type: 'structured', 
+            content: { speakableText: agentOfferText }, 
+            timestamp: new Date() 
+          });
+          fallbackCount.current = 0;
+        }
+      }
+      return { ...prev, [tab]: newMessagesForTab };
+    });
+  }, []);
+
+  const updateMessageContent = useCallback((tab, messageId, newContent) => {
+    setMessages(prev => ({
+      ...prev,
+      [tab]: prev[tab].map(msg => msg.id === messageId ? { ...msg, content: newContent } : msg),
+    }));
+  }, []);
+
+  const processMessage = useCallback(async (message, tab) => {
+    setLoading(true);
+
+    try {
+      if (tab === 'advisor') {
+        addMessage(tab, 'user', 'text', message);
+        const messageHistory = messages.advisor.map(msg => ({
+          role: msg.author === 'user' ? 'user' : 'assistant',
+          content: msg.type === 'text' ? msg.content : msg.content.speakableText
+        }));
+
+        const response = await fetch('/api/chat/financial-advisor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: [...messageHistory, { role: 'user', content: message }] })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Failed to fetch');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let streamedContent = '';
+        const placeholderId = uuidv4();
+        addMessage(tab, 'bot', 'text', '...');
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          streamedContent += decoder.decode(value, { stream: true });
+          updateMessageContent(tab, placeholderId, { speakableText: streamedContent });
+        }
+
+      } else { // Banking Bot
+        const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`);
+        const token = localStorage.getItem('authToken');
+
+        const response = await fetch('/api/chat/banking', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          },
+          body: JSON.stringify({ message, sessionId }),
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          const responsePayload = data.data.response;
+          const intentsRequiringAuth = ['account.balance', 'account.transfer', 'account.transactions', 'account.transfer - yes'];
+          
+          if (intentsRequiringAuth.includes(responsePayload.intentName) && !isAuthenticated) {
+            onLoginRequired();
+            setPendingRequest({ message, tab });
+            setLoading(false);
+            return;
+          }
+
+          addMessage(tab, 'user', 'text', message);
+          addMessage(tab, 'bot', 'structured', responsePayload);
+          if (data.data.sessionId) {
+            localStorage.setItem(`sessionId_${user?.id || 'guest'}`, data.data.sessionId);
+          }
+        } else {
+            addMessage(tab, 'user', 'text', message);
+            addMessage(tab, 'bot', 'structured', { speakableText: data.error });
+        }
+      }
+    } catch (error) {
+      console.error("Chat processing error:", error);
+      addMessage(tab, 'user', 'text', message);
+      addMessage(tab, 'bot', 'structured', { speakableText: "Sorry, I encountered an error. Please try again." });
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, user, messages, onLoginRequired, addMessage, updateMessageContent]);
 
   useEffect(() => {
     if (isAuthenticated && pendingRequest) {
-      handleSendMessage(pendingRequest, true);
+      processMessage(pendingRequest.message, pendingRequest.tab);
+      setPendingRequest(null);
     }
-  }, [isAuthenticated, pendingRequest]);
+  }, [isAuthenticated, pendingRequest, processMessage]);
 
-  // Updated addMessage to be more robust
-  const addMessage = (data, sender, id = null) => {
-    const messageId = id || Date.now() + Math.random();
-    
-    let textContent = '';
-    let confidentialContent = null;
-
-    // Check if the data is a structured object from our API
-    if (typeof data === 'object' && data !== null && data.hasOwnProperty('speakableText')) {
-        textContent = data.speakableText;
-        confidentialContent = data.confidentialData || null;
-    } else {
-        // Fallback for simple strings (like user messages)
-        textContent = data;
-    }
-
-    const message = {
-      id: messageId,
-      text: textContent,
-      confidentialData: confidentialContent,
-      sender,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => ({
-      ...prev,
-      [activeTab]: [...prev[activeTab], message]
-    }));
-    
-    if (sender === 'bot' && isTtsEnabled && textContent) {
-      speakText(textContent);
-    }
-    return messageId;
-  };
-  
-  const updateMessageContent = (id, newContent) => {
-    setMessages(prev => ({
-      ...prev,
-      [activeTab]: prev[activeTab].map(msg => msg.id === id ? { ...msg, text: newContent } : msg)
-    }));
-  };
-
-  const processMessage = async (messageToProcess) => {
-    const messageHistory = messages[activeTab].slice(1).map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }));
-    messageHistory.push(messageToProcess);
-
-    setTimeout(async () => {
-      setIsLoading(true);
-      try {
-        if (activeTab === 'advisor') {
-          const response = await fetch('/api/chat/financial-advisor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageHistory }) });
-          setIsLoading(false);
-          const messageId = addMessage({ speakableText: "" }, 'bot');
-          let fullText = "";
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.substring(6));
-                  if (data.content) {
-                    fullText += data.content;
-                    updateMessageContent(messageId, fullText);
-                  }
-                } catch (e) { console.error("Failed to parse stream data chunk:", line) }
-              }
-            }
-          }
-          if (isTtsEnabled && fullText) {
-            setTimeout(() => { speakText(fullText); }, 300);
-          }
-        } else {
-          const token = localStorage.getItem('authToken');
-          const response = await fetch('/api/chat/banking', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': `Bearer ${token}` }) }, body: JSON.stringify({ message: messageToProcess.content, sessionId: sessionIds[activeTab] }) });
-          setIsLoading(false);
-          const data = await response.json();
-          if (data.sessionId) { setSessionIds(prev => ({ ...prev, [activeTab]: data.sessionId })); }
-          addMessage(data.response, 'bot');
-        }
-      } catch (error) {
-        console.error('Error processing message:', error);
-        addMessage("I'm sorry, I'm having trouble connecting right now.", 'bot');
-        setIsLoading(false);
-      }
-    }, 500);
-  };
-
-  const handleSendMessage = async (messageOverride, isPending = false) => {
-    const messageContent = messageOverride || inputMessage;
-    const trimmedMessage = messageContent.trim();
-    if (!trimmedMessage) return;
-    if (!isPending) {
-      addMessage(trimmedMessage, 'user'); // User messages are now passed as simple strings
-      setInputMessage('');
-    }
-    const authKeywords = ['balance', 'transfer', 'account', 'payment', 'transactions'];
-    if (activeTab === 'banking' && authKeywords.some(keyword => trimmedMessage.toLowerCase().includes(keyword)) && !isAuthenticated) {
-      addMessage("For security, please log in to access your account details.", 'bot');
-      setPendingRequest(trimmedMessage);
-      onLoginRequired();
-      return;
-    }
-    processMessage({ role: 'user', content: trimmedMessage });
-  };
-
-  return { messages: messages[activeTab], inputMessage, isLoading, setInputMessage, handleSendMessage };
+  return { messages, loading, processMessage, activeTab, setActiveTab };
 }
