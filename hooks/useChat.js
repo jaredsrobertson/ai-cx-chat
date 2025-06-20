@@ -1,20 +1,21 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './useAuth';
+import { useTTS } from '../contexts/TTSContext';
 
 export function useChat(initialTab, onLoginRequired) {
   const [messages, setMessages] = useState({
-    banking: [{ 
-      id: uuidv4(), 
-      author: 'bot', 
-      type: 'structured', 
+    banking: [{
+      id: uuidv4(),
+      author: 'bot',
+      type: 'structured',
       content: { speakableText: "Welcome to the SecureBank Concierge. I can help you with account balances, transaction history, and fund transfers. I can also provide branch hours. If you need more help, just ask to speak with a live agent. How can I assist you today?" },
       timestamp: new Date()
     }],
-    advisor: [{ 
-      id: uuidv4(), 
-      author: 'bot', 
-      type: 'structured', 
+    advisor: [{
+      id: uuidv4(),
+      author: 'bot',
+      type: 'structured',
       content: { speakableText: "Welcome to the AI Advisor. I can help with financial planning, budgeting, and investment questions. What's on your mind?" },
       timestamp: new Date()
     }]
@@ -24,18 +25,19 @@ export function useChat(initialTab, onLoginRequired) {
   const { isAuthenticated, user } = useAuth();
   const [pendingRequest, setPendingRequest] = useState(null);
   const fallbackCount = useRef(0);
+  const { play, isAutoResponseEnabled } = useTTS();
 
-  const addMessage = useCallback((tab, author, type, content) => {
+  const addMessage = useCallback((tab, author, type, content, id = uuidv4()) => {
     const fallbackText = "I'm sorry, I didn't quite understand.";
     const agentOfferText = "It seems I'm still having trouble. Would you like to speak with a live agent?";
 
     setMessages(prev => {
-      let newMessagesForTab = [...prev[tab], { 
-        id: uuidv4(), 
-        author, 
-        type, 
-        content, 
-        timestamp: new Date() 
+      let newMessagesForTab = [...prev[tab], {
+        id: id,
+        author,
+        type,
+        content,
+        timestamp: new Date()
       }];
 
       if (author === 'bot' && content.speakableText) {
@@ -46,12 +48,12 @@ export function useChat(initialTab, onLoginRequired) {
         }
 
         if (fallbackCount.current >= 2) {
-          newMessagesForTab.push({ 
-            id: uuidv4(), 
-            author: 'bot', 
-            type: 'structured', 
-            content: { speakableText: agentOfferText }, 
-            timestamp: new Date() 
+          newMessagesForTab.push({
+            id: uuidv4(),
+            author: 'bot',
+            type: 'structured',
+            content: { speakableText: agentOfferText },
+            timestamp: new Date()
           });
           fallbackCount.current = 0;
         }
@@ -93,13 +95,17 @@ export function useChat(initialTab, onLoginRequired) {
         const decoder = new TextDecoder();
         let streamedContent = '';
         const placeholderId = uuidv4();
-        addMessage(tab, 'bot', 'text', '...');
+        addMessage(tab, 'bot', 'text', '...', placeholderId);
 
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
           streamedContent += decoder.decode(value, { stream: true });
           updateMessageContent(tab, placeholderId, { speakableText: streamedContent });
+        }
+
+        if (isAutoResponseEnabled) {
+          play(streamedContent, placeholderId);
         }
 
       } else { // Banking Bot
@@ -116,11 +122,11 @@ export function useChat(initialTab, onLoginRequired) {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
           const responsePayload = data.data.response;
           const intentsRequiringAuth = ['account.balance', 'account.transfer', 'account.transactions', 'account.transfer - yes'];
-          
+
           if (intentsRequiringAuth.includes(responsePayload.intentName) && !isAuthenticated) {
             onLoginRequired();
             setPendingRequest({ message, tab });
@@ -145,7 +151,7 @@ export function useChat(initialTab, onLoginRequired) {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, user, messages, onLoginRequired, addMessage, updateMessageContent]);
+  }, [isAuthenticated, user, messages, onLoginRequired, addMessage, updateMessageContent, isAutoResponseEnabled, play]);
 
   useEffect(() => {
     if (isAuthenticated && pendingRequest) {

@@ -1,38 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import ChatTabs from './ChatTabs';
 import LoginModal from '../auth/LoginModal';
 import ErrorBoundary from '../ErrorBoundary';
 import { useAuth } from '../../hooks/useAuth';
 import BotSelection from './BotSelection';
-// Import the new TTSProvider
 import { TTSProvider, useTTS } from '../../contexts/TTSContext';
 import { SpeakerWaveIcon, SpeakerXMarkIcon, ArrowUturnLeftIcon, ArrowLeftOnRectangleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 
 const BackIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.ArrowUturnLeftIcon), { ssr: false });
 const LogoutIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.ArrowLeftOnRectangleIcon), { ssr: false });
 const TTSOnIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.SpeakerWaveIcon), { ssr: false });
 const TTSOffIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.SpeakerXMarkIcon), { ssr: false });
 
-// A small inner component to access the TTS context
 const ChatWidgetInner = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('banking');
   const [selectedBot, setSelectedBot] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isTtsEnabled, setIsTtsEnabled] = useState(false);
   const { user, logout } = useAuth();
-  const { stop, clearCache, error: ttsError } = useTTS(); // Access the stop function and error state
+  const { stop, clearCache, error: ttsError, isAutoResponseEnabled, toggleAutoResponse } = useTTS();
 
-  // When the global auto-speak toggle is turned off, stop any current playback.
   useEffect(() => {
-    if (!isTtsEnabled) {
-      stop();
-    }
-  }, [isTtsEnabled, stop]);
-
-  // Clear TTS cache when component unmounts
-  useEffect(() => {
+    // This effect is no longer needed as the toggle in context handles it
+    // but we keep the clearCache for component unmount
     return () => {
       clearCache();
     };
@@ -50,7 +42,7 @@ const ChatWidgetInner = () => {
       setSelectedBot(null);
     }, 300);
   };
-  
+
   const handleOpen = () => setIsOpen(true);
   const backToSelection = () => {
     setSelectedBot(null);
@@ -95,12 +87,12 @@ const ChatWidgetInner = () => {
                 </button>
               )}
               <button 
-                onClick={() => setIsTtsEnabled(prev => !prev)} 
+                onClick={toggleAutoResponse} 
                 className="p-2 rounded-full hover:bg-white/20 transition-colors" 
-                title={isTtsEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
-                aria-label={isTtsEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
+                title={isAutoResponseEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
+                aria-label={isAutoResponseEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
               >
-                {isTtsEnabled ? <TTSOnIcon className="w-5 h-5" /> : <TTSOffIcon className="w-5 h-5" />}
+                {isAutoResponseEnabled ? <TTSOnIcon className="w-5 h-5" /> : <TTSOffIcon className="w-5 h-5" />}
               </button>
               {user && (
                 <button 
@@ -115,7 +107,6 @@ const ChatWidgetInner = () => {
             </div>
           </div>
           
-          {/* TTS Error Display */}
           {ttsError && (
             <div className="bg-yellow-50 border-b border-yellow-200 p-2">
               <p className="text-yellow-800 text-xs">
@@ -132,7 +123,6 @@ const ChatWidgetInner = () => {
                 <ChatTabs 
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
-                  isTtsEnabled={isTtsEnabled}
                   onLoginRequired={() => setShowLoginModal(true)}
                 />
               )}
@@ -150,7 +140,6 @@ const ChatWidgetInner = () => {
   );
 };
 
-// The main export wraps the component in the provider
 export default function ChatWidget() {
   return (
     <TTSProvider>

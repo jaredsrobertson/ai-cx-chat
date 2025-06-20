@@ -6,8 +6,9 @@ export const TTSProvider = ({ children }) => {
   const [nowPlayingId, setNowPlayingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isAutoResponseEnabled, setIsAutoResponseEnabled] = useState(false); // State is now managed here
   const audioRef = useRef(null);
-  const audioCache = useRef(new Map()); // Simple in-memory cache for audio
+  const audioCache = useRef(new Map());
 
   const stop = useCallback(() => {
     if (audioRef.current) {
@@ -17,28 +18,21 @@ export const TTSProvider = ({ children }) => {
     }
     setNowPlayingId(null);
     setIsLoading(false);
-    setError(null);
+    // Do not clear the error on stop, so it can be seen
   }, []);
 
   const play = useCallback(async (text, messageId) => {
-    // If the requested message is already playing, do nothing.
-    // To stop it, the user will click the button again, which calls stop().
     if (nowPlayingId === messageId) return;
-
-    // Stop any currently playing audio before starting the new one.
     stop();
-
-    // Clear any previous errors
     setError(null);
     setIsLoading(true);
+    setNowPlayingId(messageId);
 
     try {
-      // Check cache first
-      const cacheKey = text.substring(0, 100); // Use first 100 chars as cache key
+      const cacheKey = text.substring(0, 100);
       let audioUrl = audioCache.current.get(cacheKey);
 
       if (!audioUrl) {
-        // Fetch new audio from API
         const response = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -53,9 +47,7 @@ export const TTSProvider = ({ children }) => {
         const blob = await response.blob();
         audioUrl = URL.createObjectURL(blob);
         
-        // Cache the audio URL (limit cache size to prevent memory issues)
         if (audioCache.current.size >= 10) {
-          // Remove oldest entry
           const firstKey = audioCache.current.keys().next().value;
           const oldUrl = audioCache.current.get(firstKey);
           URL.revokeObjectURL(oldUrl);
@@ -66,75 +58,65 @@ export const TTSProvider = ({ children }) => {
 
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
-      
-      setNowPlayingId(messageId);
       setIsLoading(false);
-
-      // Set up event listeners
-      audio.onloadstart = () => {
-        setIsLoading(true);
-      };
-
-      audio.oncanplay = () => {
-        setIsLoading(false);
-      };
 
       audio.onended = () => {
         setNowPlayingId(null);
-        setIsLoading(false);
       };
 
       audio.onerror = (e) => {
         console.error("Audio playback error:", e);
-        setError("Failed to play audio");
+        setError("Failed to play audio.");
         setNowPlayingId(null);
-        setIsLoading(false);
       };
 
-      // Start playback
       await audio.play();
 
-    } catch (error) {
-      console.error("Error playing TTS:", error);
-      setError(error.message || "Failed to generate speech");
+    } catch (err) {
+      console.error("Error playing TTS:", err);
+      setError(err.message || "Failed to generate speech.");
       setNowPlayingId(null);
       setIsLoading(false);
     }
   }, [stop, nowPlayingId]);
 
-  // Cleanup function to revoke all cached URLs
   const clearCache = useCallback(() => {
     audioCache.current.forEach(url => URL.revokeObjectURL(url));
     audioCache.current.clear();
   }, []);
 
-  // Enhanced retry function for failed TTS requests
-  const retryPlay = useCallback(async (text, messageId, maxRetries = 2) => {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        await play(text, messageId);
-        return; // Success, exit retry loop
-      } catch (error) {
-        if (attempt === maxRetries) {
-          setError(`Failed after ${maxRetries} attempts: ${error.message}`);
-          return;
-        }
-        console.warn(`TTS attempt ${attempt} failed, retrying...`, error.message);
-        // Wait before retry (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-      }
+  const retryPlay = useCallback((text, messageId) => {
+    // Invalidate cache for this item and retry
+    const cacheKey = text.substring(0, 100);
+    const oldUrl = audioCache.current.get(cacheKey);
+    if (oldUrl) {
+        URL.revokeObjectURL(oldUrl);
+        audioCache.current.delete(cacheKey);
     }
+    play(text, messageId);
   }, [play]);
 
-  const value = { 
-    play, 
-    stop, 
+  const toggleAutoResponse = useCallback(() => {
+    setIsAutoResponseEnabled(prev => {
+        // If turning off, stop any current playback
+        if (!prev === false) {
+            stop();
+        }
+        return !prev;
+    });
+  }, [stop]);
+
+  const value = {
+    play,
+    stop,
     retryPlay,
     clearCache,
-    nowPlayingId, 
-    isPlaying: !!nowPlayingId, 
+    nowPlayingId,
+    isPlaying: !!nowPlayingId,
     isLoading,
-    error
+    error,
+    isAutoResponseEnabled,
+    toggleAutoResponse,
   };
 
   return <TTSContext.Provider value={value}>{children}</TTSContext.Provider>;

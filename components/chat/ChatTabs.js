@@ -4,7 +4,6 @@ import { PaperAirplaneIcon, MicrophoneIcon } from '@heroicons/react/24/solid';
 import { useChat } from '../../hooks/useChat';
 import { useTTS } from '../../contexts/TTSContext';
 
-// Custom debounce function since lodash isn't available
 function debounce(func, delay) {
   let timeoutId;
   return function (...args) {
@@ -13,41 +12,40 @@ function debounce(func, delay) {
   };
 }
 
-export default function ChatTabs({ activeTab, setActiveTab, isTtsEnabled, onLoginRequired }) {
+export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired }) {
   const { messages, loading, processMessage } = useChat(activeTab, onLoginRequired);
-  const { play } = useTTS();
+  const { play, isAutoResponseEnabled } = useTTS();
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const lastSpokenId = useRef(null);
-  const isTtsEnabledRef = useRef(isTtsEnabled);
-  const inputRef = useRef(null); // Ref for the text input
+  const messageCounts = useRef({ banking: 0, advisor: 0 });
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    isTtsEnabledRef.current = isTtsEnabled;
-  }, [isTtsEnabled]);
+    const currentMessages = messages[activeTab] || [];
+    const lastMessage = currentMessages[currentMessages.length - 1];
 
-  const currentMessages = messages[activeTab] || [];
-
-  useEffect(() => {
-    if (currentMessages.length > 0) {
-      const lastMessage = currentMessages[currentMessages.length - 1];
-      if (lastMessage.author === 'bot' && lastMessage.id !== lastSpokenId.current) {
-        if (isTtsEnabledRef.current) {
-          const textToSpeak = lastMessage.content.speakableText || lastMessage.content;
-          play(textToSpeak, lastMessage.id);
-          lastSpokenId.current = lastMessage.id;
-        }
+    if (
+      activeTab === 'banking' &&
+      isAutoResponseEnabled &&
+      lastMessage?.author === 'bot' &&
+      currentMessages.length > messageCounts.current[activeTab]
+    ) {
+      const textToSpeak = lastMessage.content.speakableText || lastMessage.content;
+      if (textToSpeak) {
+        play(textToSpeak, lastMessage.id);
       }
     }
-  }, [currentMessages, play]);
+    
+    messageCounts.current[activeTab] = currentMessages.length;
+  }, [messages, activeTab, isAutoResponseEnabled, play]);
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentMessages]);
+  }, [messages, activeTab]);
 
-  // This new effect ensures the input is focused when loading is finished
   useEffect(() => {
     if (!loading) {
       inputRef.current?.focus();
@@ -55,7 +53,7 @@ export default function ChatTabs({ activeTab, setActiveTab, isTtsEnabled, onLogi
   }, [loading]);
 
   const setupSpeechRecognition = useCallback(() => {
-    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window)) {
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition'in window)) {
       const recognition = new window.webkitSpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
@@ -82,7 +80,6 @@ export default function ChatTabs({ activeTab, setActiveTab, isTtsEnabled, onLogi
     setupSpeechRecognition();
   }, [setupSpeechRecognition]);
 
-  // Create debounced speech start function
   const debouncedSpeechStart = useMemo(
     () => debounce(() => {
       if (recognitionRef.current && !isRecording) {
@@ -110,14 +107,11 @@ export default function ChatTabs({ activeTab, setActiveTab, isTtsEnabled, onLogi
     }
   };
 
-  // Add keyboard shortcuts
   const handleKeyDown = (e) => {
-    // Ctrl/Cmd + Enter to send message
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       handleSubmit(e);
     }
-    // Escape to clear input
     if (e.key === 'Escape') {
       setInput('');
     }
@@ -126,15 +120,15 @@ export default function ChatTabs({ activeTab, setActiveTab, isTtsEnabled, onLogi
   return (
     <div className="flex flex-col h-full bg-white">
       <div className="flex border-b border-gray-200 flex-shrink-0">
-        <button 
-          onClick={() => setActiveTab('banking')} 
+        <button
+          onClick={() => setActiveTab('banking')}
           className={`flex-1 py-3 px-4 text-sm font-medium text-center border-b-2 transition-colors ${activeTab === 'banking' ? 'border-banking-blue text-banking-blue bg-blue-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
           aria-label="Switch to SecureBank Concierge"
         >
           SecureBank Concierge
         </button>
-        <button 
-          onClick={() => setActiveTab('advisor')} 
+        <button
+          onClick={() => setActiveTab('advisor')}
           className={`flex-1 py-3 px-4 text-sm font-medium text-center border-b-2 transition-colors ${activeTab === 'advisor' ? 'border-green-500 text-green-600 bg-green-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
           aria-label="Switch to AI Advisor"
         >
@@ -177,8 +171,8 @@ export default function ChatTabs({ activeTab, setActiveTab, isTtsEnabled, onLogi
             type="button"
             onClick={handleMicClick}
             className={`p-3 rounded-full text-white transition-all ${
-              isRecording 
-                ? 'bg-red-500 animate-pulse shadow-lg' 
+              isRecording
+                ? 'bg-red-500 animate-pulse shadow-lg'
                 : 'bg-gray-400 hover:bg-gray-500 hover:shadow-md'
             }`}
             title={isRecording ? 'Stop recording (click to stop)' : 'Start voice recording'}
@@ -187,8 +181,8 @@ export default function ChatTabs({ activeTab, setActiveTab, isTtsEnabled, onLogi
           >
             <MicrophoneIcon className="w-6 h-6" />
           </button>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="p-3 bg-banking-blue text-white rounded-full hover:bg-banking-navy disabled:bg-gray-300 transition-all hover:shadow-md"
             disabled={loading || !input.trim()}
             aria-label="Send message"
@@ -196,7 +190,6 @@ export default function ChatTabs({ activeTab, setActiveTab, isTtsEnabled, onLogi
             <PaperAirplaneIcon className="w-6 h-6" />
           </button>
         </form>
-        {/* Add helpful keyboard shortcut hints */}
         <div className="mt-2 text-xs text-gray-400 text-center">
           Press Ctrl+Enter to send • Esc to clear • Click mic for voice input
         </div>
