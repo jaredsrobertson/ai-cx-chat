@@ -49,7 +49,6 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-banking-navy">CloudBank</h1>
-                <p className="text-sm text-gray-600">AI CX Chat Demo</p>
               </div>
             </div>
             
@@ -102,7 +101,7 @@ export default function Home() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Concierge Example */}
                       <div className="space-y-3">
-                          <h4 className="font-semibold text-center text-blue-100">SecureBank Concierge</h4>
+                          <h4 className="font-semibold text-center text-blue-100">CloudBank Concierge</h4>
                           <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
                               <p>"What's my checking balance?"</p>
                           </div>

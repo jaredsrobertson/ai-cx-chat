@@ -73,7 +73,7 @@ const ChatWidgetInner = () => {
           <div className="bg-banking-blue text-white p-3 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center space-x-2">
               <ShieldCheckIcon className="w-6 h-6" />
-              <h3 className="font-semibold text-lg">SecureBank Assistant</h3>
+              <h3 className="font-semibold text-lg">CloudBank</h3>
             </div>
             <div className="flex items-center space-x-1">
               {selectedBot && (

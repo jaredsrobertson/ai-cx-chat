@@ -11,11 +11,21 @@ const Avatar = () => (
 export default function ChatMessage({ id, author, type, content, timestamp }) {
   const { play, stop, retryPlay, nowPlayingId, isLoading, error } = useTTS();
   const isUser = author === 'user';
+  
+  // This function safely determines the text to be spoken or rendered.
+  const getSafeContent = (rawContent) => {
+    const isObject = typeof rawContent === 'object' && rawContent !== null && !Array.isArray(rawContent);
+    if (isObject) {
+      // Prioritize speakableText, otherwise stringify the object to prevent crashing.
+      return rawContent.speakableText || JSON.stringify(rawContent, null, 2);
+    }
+    // If it's not an object, return it as is.
+    return rawContent;
+  };
+
+  const textToSpeak = getSafeContent(content);
   const isThisMessagePlaying = nowPlayingId === id;
 
-  const textToSpeak = content.speakableText || content;
-
-  // Handles all play/stop scenarios for this specific message
   const handleSpeakButtonClick = () => {
     if (isThisMessagePlaying) {
       stop();
@@ -24,12 +34,10 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
     }
   };
 
-  // Handle retry for failed TTS
   const handleRetry = () => {
     retryPlay(textToSpeak, id);
   };
 
-  // Add keyboard support
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -37,12 +45,12 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
     }
   };
 
-  // Handling for user messages
   if (isUser) {
     return (
       <div className="flex justify-end my-2" role="group" aria-label="User message">
         <div className="chat-message user">
-          <p className="text-sm whitespace-pre-wrap">{content}</p>
+          {/* Add a safe guard here as well, just in case. */}
+          <p className="text-sm whitespace-pre-wrap">{getSafeContent(content)}</p>
           <span className="text-xs opacity-70 mt-1 block text-right">
             {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
@@ -51,7 +59,6 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
     );
   }
 
-  // Handling for bot messages, with enhanced accessibility and error handling
   return (
     <div className="flex items-start gap-2.5 my-2" role="group" aria-label="Assistant message">
       <Avatar />
@@ -67,7 +74,6 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
           </span>
           
           <div className="flex items-center gap-1">
-            {/* TTS Error and Retry */}
             {error && nowPlayingId === id && (
               <button
                 onClick={handleRetry}
@@ -79,7 +85,6 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
               </button>
             )}
             
-            {/* Main TTS Button */}
             <button 
               onClick={handleSpeakButtonClick}
               onKeyDown={handleKeyDown}

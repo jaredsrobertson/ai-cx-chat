@@ -9,7 +9,7 @@ export function useChat(initialTab, onLoginRequired) {
       id: uuidv4(),
       author: 'bot',
       type: 'structured',
-      content: { speakableText: "Welcome to the SecureBank Concierge. I can help you with account balances, transaction history, and fund transfers. I can also provide branch hours. If you need more help, just ask to speak with a live agent. How can I assist you today?" },
+      content: { speakableText: "Welcome to the SecureBank Concierge. I can help you with account balances, transaction history, and fund transfers. You can also ask to speak with a live agent. How can I assist you today?" },
       timestamp: new Date()
     }],
     advisor: [{
@@ -125,7 +125,7 @@ export function useChat(initialTab, onLoginRequired) {
 
         if (data.success) {
           const responsePayload = data.data.response;
-          const intentsRequiringAuth = ['account.balance', 'account.transfer', 'account.transactions', 'account.transfer - yes'];
+          const intentsRequiringAuth = ['account.balance', 'account.transfer', 'account.transfer - yes', 'account.transactions'];
 
           if (intentsRequiringAuth.includes(responsePayload.intentName) && !isAuthenticated) {
             onLoginRequired();
