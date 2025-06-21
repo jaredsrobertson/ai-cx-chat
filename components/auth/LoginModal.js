@@ -13,18 +13,52 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
     setIsLoading(true);
     setError('');
 
-    const result = await login(username, pin);
-    
-    if (result.success) {
-      onSuccess?.();
-      onClose();
-      setUsername('demo123');
-      setPin('1234');
-    } else {
-      setError(result.error);
+    console.log('Attempting login with credentials:', { username, pin: '****' });
+
+    try {
+      const result = await login(username, pin);
+      
+      console.log('Login result:', { success: result.success, error: result.error });
+      
+      if (result.success) {
+        console.log('Login successful, calling success handlers');
+        
+        // FIXED: Call success callback first, then close
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        // Small delay to ensure auth state propagates
+        setTimeout(() => {
+          onClose();
+          // Reset form
+          setUsername('demo123');
+          setPin('1234');
+          setError('');
+        }, 100);
+        
+      } else {
+        console.error('Login failed:', result.error);
+        setError(result.error);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // FIXED: Handle modal close properly
+  const handleClose = () => {
+    console.log('Login modal closed/cancelled');
     
+    // Reset form state
+    setError('');
     setIsLoading(false);
+    
+    // Call the close handler
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -54,6 +88,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               className="input-field"
               placeholder="Enter username"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -69,6 +104,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               placeholder="Enter 4-digit PIN"
               maxLength="4"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -88,7 +124,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
           <div className="flex space-x-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 btn-secondary"
               disabled={isLoading}
             >
