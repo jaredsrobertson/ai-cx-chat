@@ -1,30 +1,29 @@
-import { useEffect } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 import ChatTabs from './ChatTabs';
 import LoginModal from '../auth/LoginModal';
 import ErrorBoundary from '../ErrorBoundary';
-import { useAuth } from '../../hooks/useAuth';
 import BotSelection from './BotSelection';
+import { useAuth } from '../../hooks/useAuth';
 import { TTSProvider, useTTS } from '../../contexts/TTSContext';
-import { SpeakerWaveIcon, SpeakerXMarkIcon, ArrowUturnLeftIcon, ArrowLeftOnRectangleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
-import { useState } from 'react';
-
-const BackIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.ArrowUturnLeftIcon), { ssr: false });
-const LogoutIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.ArrowLeftOnRectangleIcon), { ssr: false });
-const TTSOnIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.SpeakerWaveIcon), { ssr: false });
-const TTSOffIcon = dynamic(() => import('@heroicons/react/24/outline').then(mod => mod.SpeakerXMarkIcon), { ssr: false });
+import { 
+  SpeakerWaveIcon, 
+  SpeakerXMarkIcon, 
+  ArrowUturnLeftIcon, 
+  ArrowLeftOnRectangleIcon, 
+  ShieldCheckIcon 
+} from '../ui/Icons';
 
 const ChatWidgetInner = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('banking');
   const [selectedBot, setSelectedBot] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  
   const { user, logout } = useAuth();
   const { stop, clearCache, error: ttsError, isAutoResponseEnabled, toggleAutoResponse } = useTTS();
 
+  // Cleanup on unmount
   useEffect(() => {
-    // This effect is no longer needed as the toggle in context handles it
-    // but we keep the clearCache for component unmount
     return () => {
       clearCache();
     };
@@ -44,13 +43,33 @@ const ChatWidgetInner = () => {
   };
 
   const handleOpen = () => setIsOpen(true);
+  
   const backToSelection = () => {
     setSelectedBot(null);
     stop(); // Stop audio when going back
   };
 
+  // Handle login requirement from chat
+  const handleLoginRequired = () => {
+    console.log('🔐 Login required, showing modal');
+    setShowLoginModal(true);
+  };
+
+  // Handle successful login
+  const handleLoginSuccess = () => {
+    console.log('✅ Login successful, closing modal');
+    setShowLoginModal(false);
+  };
+
+  // Handle login modal close
+  const handleLoginClose = () => {
+    console.log('❌ Login modal closed');
+    setShowLoginModal(false);
+  };
+
   return (
     <>
+      {/* Toggle Button */}
       <button
         data-chat-toggle="true"
         onClick={isOpen ? handleClose : handleOpen}
@@ -68,13 +87,17 @@ const ChatWidgetInner = () => {
         )}
       </button>
       
+      {/* Chat Widget Container */}
       <div className={`chat-widget-container ${isOpen ? 'open' : 'closed'}`}>
         <div className="chat-widget-inner">
+          {/* Header */}
           <div className="bg-banking-blue text-white p-3 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center space-x-2">
               <ShieldCheckIcon className="w-6 h-6" />
               <h3 className="font-semibold text-lg">CloudBank</h3>
             </div>
+            
+            {/* Header Controls */}
             <div className="flex items-center space-x-1">
               {selectedBot && (
                 <button 
@@ -83,7 +106,7 @@ const ChatWidgetInner = () => {
                   title="Back to bot selection"
                   aria-label="Back to bot selection"
                 >
-                  <BackIcon className="w-5 h-5" />
+                  <ArrowUturnLeftIcon className="w-5 h-5" />
                 </button>
               )}
               <button 
@@ -92,7 +115,10 @@ const ChatWidgetInner = () => {
                 title={isAutoResponseEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
                 aria-label={isAutoResponseEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}
               >
-                {isAutoResponseEnabled ? <TTSOnIcon className="w-5 h-5" /> : <TTSOffIcon className="w-5 h-5" />}
+                {isAutoResponseEnabled ? 
+                  <SpeakerWaveIcon className="w-5 h-5" /> : 
+                  <SpeakerXMarkIcon className="w-5 h-5" />
+                }
               </button>
               {user && (
                 <button 
@@ -101,12 +127,13 @@ const ChatWidgetInner = () => {
                   title="Logout"
                   aria-label="Logout"
                 >
-                  <LogoutIcon className="w-5 h-5" />
+                  <ArrowLeftOnRectangleIcon className="w-5 h-5" />
                 </button>
               )}
             </div>
           </div>
           
+          {/* TTS Error Banner */}
           {ttsError && (
             <div className="bg-yellow-50 border-b border-yellow-200 p-2">
               <p className="text-yellow-800 text-xs">
@@ -115,6 +142,17 @@ const ChatWidgetInner = () => {
             </div>
           )}
           
+          {/* Debug Info (remove in production) */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-gray-100 border-b border-gray-200 p-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span>Auth: {user ? user.name : 'Not logged in'}</span>
+                <span>Modal: {showLoginModal ? 'Open' : 'Closed'}</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Main Content */}
           <div className="flex-grow overflow-hidden bg-gray-50">
             <ErrorBoundary>
               {!selectedBot ? (
@@ -123,7 +161,7 @@ const ChatWidgetInner = () => {
                 <ChatTabs 
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
-                  onLoginRequired={() => setShowLoginModal(true)}
+                  onLoginRequired={handleLoginRequired}
                 />
               )}
             </ErrorBoundary>
@@ -131,10 +169,11 @@ const ChatWidgetInner = () => {
         </div>
       </div>
       
+      {/* Login Modal */}
       <LoginModal 
         isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)} 
-        onSuccess={() => setShowLoginModal(false)} 
+        onClose={handleLoginClose} 
+        onSuccess={handleLoginSuccess} 
       />
     </>
   );

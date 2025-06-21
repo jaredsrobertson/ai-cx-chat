@@ -1,4 +1,4 @@
-import { SpeakerWaveIcon } from '@heroicons/react/24/solid';
+import { SpeakerWaveIcon } from '../ui/Icons';
 import ConfidentialDisplay from './ConfidentialDisplay';
 import { useTTS } from '../../contexts/TTSContext';
 
@@ -12,20 +12,18 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
   const { play, stop, retryPlay, nowPlayingId, isLoading, error } = useTTS();
   const isUser = author === 'user';
   
-  // This function safely determines the text to be spoken or rendered.
+  // Safely extract text content
   const getSafeContent = (rawContent) => {
-    const isObject = typeof rawContent === 'object' && rawContent !== null && !Array.isArray(rawContent);
-    if (isObject) {
-      // Prioritize speakableText, otherwise stringify the object to prevent crashing.
+    if (typeof rawContent === 'object' && rawContent !== null && !Array.isArray(rawContent)) {
       return rawContent.speakableText || JSON.stringify(rawContent, null, 2);
     }
-    // If it's not an object, return it as is.
-    return rawContent;
+    return rawContent || '';
   };
 
   const textToSpeak = getSafeContent(content);
   const isThisMessagePlaying = nowPlayingId === id;
 
+  // Handle TTS controls
   const handleSpeakButtonClick = () => {
     if (isThisMessagePlaying) {
       stop();
@@ -45,11 +43,11 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
     }
   };
 
+  // Render user message
   if (isUser) {
     return (
       <div className="flex justify-end my-2" role="group" aria-label="User message">
         <div className="chat-message user">
-          {/* Add a safe guard here as well, just in case. */}
           <p className="text-sm whitespace-pre-wrap">{getSafeContent(content)}</p>
           <span className="text-xs opacity-70 mt-1 block text-right">
             {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -59,20 +57,25 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
     );
   }
 
+  // Render bot message
   return (
     <div className="flex items-start gap-2.5 my-2" role="group" aria-label="Assistant message">
       <Avatar />
       <div className="chat-message bot">
         <p className="text-sm whitespace-pre-wrap">{textToSpeak}</p>
+        
+        {/* Confidential data display */}
         {type === 'structured' && content.confidentialData && (
           <ConfidentialDisplay data={content.confidentialData} />
         )}
         
+        {/* Message footer */}
         <div className="flex items-center justify-between mt-1.5">
           <span className="text-xs opacity-70">
             {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           
+          {/* TTS Controls */}
           <div className="flex items-center gap-1">
             {error && nowPlayingId === id && (
               <button

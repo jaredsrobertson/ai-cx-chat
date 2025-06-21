@@ -1,4 +1,4 @@
-import { LockClosedIcon } from '@heroicons/react/24/solid';
+import { LockClosedIcon } from '../ui/Icons';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-US', {

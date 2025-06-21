@@ -13,7 +13,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
     setIsLoading(true);
     setError('');
 
-    console.log('Attempting login with credentials:', { username, pin: '****' });
+    console.log('Attempting demo login with credentials:', { username, pin: '****' });
 
     try {
       const result = await login(username, pin);
@@ -21,21 +21,22 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
       console.log('Login result:', { success: result.success, error: result.error });
       
       if (result.success) {
-        console.log('Login successful, calling success handlers');
+        console.log('Login successful, triggering callbacks');
         
-        // FIXED: Call success callback first, then close
+        // Reset form state
+        setUsername('demo123');
+        setPin('1234');
+        setError('');
+        
+        // Call success callback first
         if (onSuccess) {
           onSuccess();
         }
         
-        // Small delay to ensure auth state propagates
+        // Close modal after small delay to ensure auth state propagates
         setTimeout(() => {
           onClose();
-          // Reset form
-          setUsername('demo123');
-          setPin('1234');
-          setError('');
-        }, 100);
+        }, 200);
         
       } else {
         console.error('Login failed:', result.error);
@@ -49,7 +50,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  // FIXED: Handle modal close properly
   const handleClose = () => {
     console.log('Login modal closed/cancelled');
     
@@ -72,14 +72,25 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Secure Login</h2>
-          <p className="text-gray-600 mt-2">Please enter your credentials to access your account</p>
+          <h2 className="text-2xl font-bold text-gray-900">Demo Login</h2>
+          <p className="text-gray-600 mt-2">This is a demonstration with mock credentials</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Demo Warning Banner */}
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-6">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm font-medium">Demo Mode</p>
+          </div>
+          <p className="text-sm mt-1">These are test credentials for demonstration purposes only.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4" id="demo-login-form">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Username
+              Demo Username
             </label>
             <input
               type="text"
@@ -89,12 +100,16 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               placeholder="Enter username"
               required
               disabled={isLoading}
+              autoComplete="username"
+              data-testid="demo-username"
+              name="demo-username"
+              form="demo-login-form"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              PIN
+              Demo PIN
             </label>
             <input
               type="password"
@@ -105,6 +120,10 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               maxLength="4"
               required
               disabled={isLoading}
+              autoComplete="current-password"
+              data-testid="demo-pin"
+              name="demo-pin"
+              form="demo-login-form"
             />
           </div>
 
@@ -115,10 +134,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
           )}
 
           <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
-            <p className="font-medium mb-1">Demo Credentials:</p>
-            <p>Username: demo123, PIN: 1234</p>
-            <p>Username: sarah456, PIN: 9876</p>
-            <p>Username: mike789, PIN: 5555</p>
+            <p className="font-medium mb-1">Available Demo Accounts:</p>
+            <div className="space-y-1">
+              <p>👤 Username: demo123, PIN: 1234</p>
+              <p>👤 Username: sarah456, PIN: 9876</p>
+              <p>👤 Username: mike789, PIN: 5555</p>
+            </div>
           </div>
 
           <div className="flex space-x-3 pt-4">
@@ -134,6 +155,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               type="submit"
               className="flex-1 btn-primary"
               disabled={isLoading}
+              form="demo-login-form"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -141,7 +163,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
                   Signing In...
                 </div>
               ) : (
-                'Sign In'
+                'Demo Sign In'
               )}
             </button>
           </div>

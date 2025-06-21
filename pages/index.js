@@ -2,7 +2,8 @@ import Head from 'next/head';
 import { useState } from 'react';
 import ChatWidget from '../components/chat/ChatWidget';
 import { useAuth } from '../hooks/useAuth';
-import { CloudIcon } from '@heroicons/react/24/outline';
+// import { CloudIcon } from '@heroicons/react/24/outline';
+import { CloudIcon } from '../components/ui/Icons';
 
 // 1. Define the SVG for the new favicon style
 const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -35,6 +36,8 @@ export default function Home() {
         <title>AI-Powered Chat Assistant | Project Demo</title>
         <meta name="description" content="A portfolio project demonstrating a dual-mode AI chat assistant with Google Dialogflow and OpenAI GPT-4." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="password-manager" content="demo" />
+        <meta name="demo-app" content="true" />
         {/* 2. The link tag automatically uses the new favicon */}
         <link rel="icon" href={faviconDataUri} />
       </Head>

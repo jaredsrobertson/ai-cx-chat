@@ -6,18 +6,28 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Helper function to clear auth state
-  const clearAuthState = useCallback(() => {
+  // Debug: Log all auth state changes
+  useEffect(() => {
+    console.log('🔐 Auth state updated:', { 
+      user: user?.name || null, 
+      isAuthenticated: !!user,
+      isLoading 
+    });
+  }, [user, isLoading]);
+
+  // Simplified token management
+  const clearAuth = useCallback(() => {
+    console.log('🧹 Clearing auth state');
     localStorage.removeItem('authToken');
     setUser(null);
   }, []);
 
-  // This function correctly verifies the token on page load
-  const checkAuthStatus = useCallback(async () => {
-    setIsLoading(true);
+  // Streamlined auth verification
+  const verifyToken = useCallback(async () => {
+    console.log('🔍 Verifying token...');
     const token = localStorage.getItem('authToken');
-    
     if (!token) {
+      console.log('❌ No token found');
       setIsLoading(false);
       return;
     }
@@ -27,28 +37,35 @@ export function AuthProvider({ children }) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setUser(data.data.user);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log('✅ Token verified, setting user:', data.data.user.name);
+          setUser(data.data.user);
+        } else {
+          console.log('❌ Token verification failed:', data.error);
+          clearAuth();
+        }
       } else {
-        // Clear invalid token and reset state
-        console.warn('Invalid token removed:', data.error);
-        clearAuthState();
+        console.log('❌ Token verification request failed:', response.status);
+        clearAuth();
       }
     } catch (error) {
-      console.error("Auth check failed:", error);
-      clearAuthState();
+      console.error('❌ Auth verification error:', error);
+      clearAuth();
     } finally {
       setIsLoading(false);
     }
-  }, [clearAuthState]);
+  }, [clearAuth]);
 
+  // Initialize auth on mount
   useEffect(() => {
-    checkAuthStatus();
-  }, [checkAuthStatus]);
+    verifyToken();
+  }, [verifyToken]);
 
+  // Simplified login function
   const login = async (username, pin) => {
+    console.log('🔑 Attempting login for:', username);
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -59,34 +76,38 @@ export function AuthProvider({ children }) {
       const data = await response.json();
       
       if (response.ok && data.success) {
+        console.log('✅ Login successful, storing token and setting user');
         localStorage.setItem('authToken', data.data.token);
         setUser(data.data.user);
+        
+        // Force a small delay to ensure state propagation
+        setTimeout(() => {
+          console.log('✅ Auth state should now be updated');
+        }, 100);
+        
         return { success: true };
       } else {
-        // Don't store token if login failed
+        console.log('❌ Login failed:', data.error);
         return { success: false, error: data.error || 'Login failed' };
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login network error:', error);
       return { success: false, error: 'A network error occurred.' };
     }
   };
 
+  // Simplified logout
   const logout = useCallback(() => {
-    clearAuthState();
-  }, [clearAuthState]);
-
-  // Force refresh auth status (useful after token might have expired)
-  const refreshAuth = useCallback(() => {
-    checkAuthStatus();
-  }, [checkAuthStatus]);
+    console.log('🚪 User logout:', user?.username);
+    clearAuth();
+  }, [clearAuth, user?.username]);
 
   const value = { 
     user, 
     isLoading, 
     login, 
     logout, 
-    refreshAuth,
+    refreshAuth: verifyToken,
     isAuthenticated: !!user 
   };
 
