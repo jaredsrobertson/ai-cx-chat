@@ -21,22 +21,17 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
       console.log('Login result:', { success: result.success, error: result.error });
       
       if (result.success) {
-        console.log('Login successful, triggering callbacks');
+        console.log('Login successful, triggering success callback.');
         
         // Reset form state
         setUsername('demo123');
         setPin('1234');
         setError('');
         
-        // Call success callback first
+        // The onSuccess handler in the parent is responsible for closing the modal
         if (onSuccess) {
           onSuccess();
         }
-        
-        // Close modal after small delay to ensure auth state propagates
-        setTimeout(() => {
-          onClose();
-        }, 200);
         
       } else {
         console.error('Login failed:', result.error);

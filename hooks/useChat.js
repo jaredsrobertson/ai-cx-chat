@@ -28,18 +28,7 @@ export function useChat(initialTab, onLoginRequired) {
   const { play, isAutoResponseEnabled } = useTTS();
   
   const fallbackCount = useRef(0);
-  const previousAuthState = useRef(false);
-
-  // Debug: Log auth state changes
-  useEffect(() => {
-    console.log('🔍 Auth state changed:', { 
-      isAuthenticated, 
-      user: user?.name, 
-      hasPendingRequest: !!pendingRequest,
-      previousAuth: previousAuthState.current
-    });
-    previousAuthState.current = isAuthenticated;
-  }, [isAuthenticated, user, pendingRequest]);
+  const previousIsAuthenticated = useRef(isAuthenticated);
 
   // Intents that require authentication
   const AUTH_REQUIRED_INTENTS = [
@@ -152,56 +141,30 @@ export function useChat(initialTab, onLoginRequired) {
     }
   }, [addMessage, user]);
 
-  // Separate effect for handling login success specifically
+  // Combined effect to handle authentication state transitions
   useEffect(() => {
-    console.log('🔍 Checking for pending request processing...', {
-      isAuthenticated,
-      hasPendingRequest: !!pendingRequest,
-      pendingIntent: pendingRequest?.intentName
-    });
-
-    // Only process if we just became authenticated and have a pending request
-    if (isAuthenticated && pendingRequest && !previousAuthState.current) {
-      console.log('🔐 User just authenticated, processing pending request...');
+    // Check for login: transition from false to true
+    if (!previousIsAuthenticated.current && isAuthenticated && pendingRequest) {
+      console.log('🔐 Login transition detected. Processing pending request...');
       
-      // Delay to ensure everything is ready
       const timer = setTimeout(() => {
-        processPendingRequest(pendingRequest);
-        setPendingRequest(null);
-      }, 1000); // Increased delay
-      
+          processPendingRequest(pendingRequest);
+          setPendingRequest(null);
+      }, 100);
+
       return () => clearTimeout(timer);
     }
+
+    // Check for logout: transition from true to false
+    if (previousIsAuthenticated.current && !isAuthenticated && pendingRequest) {
+      console.log('🚪 Logout transition detected. Clearing pending request.');
+      setPendingRequest(null);
+    }
+
+    // IMPORTANT: Update the ref at the end of the effect for the next render cycle.
+    previousIsAuthenticated.current = isAuthenticated;
+
   }, [isAuthenticated, pendingRequest, processPendingRequest]);
-
-  // Separate effect for clearing pending requests on logout
-  useEffect(() => {
-    if (!isAuthenticated && pendingRequest && previousAuthState.current) {
-      console.log('🚪 User logged out, clearing pending request');
-      setPendingRequest(null);
-    }
-  }, [isAuthenticated, pendingRequest]);
-
-  // Manual trigger function for debugging
-  const triggerPendingRequest = useCallback(() => {
-    if (pendingRequest && isAuthenticated) {
-      console.log('🔧 Manually triggering pending request...');
-      processPendingRequest(pendingRequest);
-      setPendingRequest(null);
-    } else {
-      console.log('🔧 Cannot trigger - no pending request or not authenticated', {
-        hasPending: !!pendingRequest,
-        isAuth: isAuthenticated
-      });
-    }
-  }, [pendingRequest, isAuthenticated, processPendingRequest]);
-
-  // Expose trigger function globally for debugging
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.triggerPendingRequest = triggerPendingRequest;
-    }
-  }, [triggerPendingRequest]);
 
   // Process chat messages
   const processMessage = useCallback(async (message, tab) => {
@@ -270,12 +233,12 @@ export function useChat(initialTab, onLoginRequired) {
         if (data.success) {
           const responsePayload = data.data.response;
           
+          // Add the user's message to the chat here for a better UI experience
+          addMessage(tab, 'user', 'text', message);
+          
           // Check if authentication is required
           if (AUTH_REQUIRED_INTENTS.includes(responsePayload.intentName) && !isAuthenticated) {
             console.log('🔒 Authentication required for intent:', responsePayload.intentName);
-            
-            // Add user message
-            addMessage(tab, 'user', 'text', message);
             
             // Show contextual login message
             const loginMessage = getLoginMessage(responsePayload.intentName);
@@ -300,7 +263,6 @@ export function useChat(initialTab, onLoginRequired) {
           }
 
           // Normal response flow
-          addMessage(tab, 'user', 'text', message);
           addMessage(tab, 'bot', 'structured', responsePayload);
           
           // Store session ID
@@ -321,14 +283,11 @@ export function useChat(initialTab, onLoginRequired) {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, user, messages, onLoginRequired, addMessage, updateMessageContent, isAutoResponseEnabled, play]);
+  }, [isAuthenticated, user, messages, onLoginRequired, addMessage, updateMessageContent, isAutoResponseEnabled, play, processPendingRequest]);
 
   return { 
     messages, 
     loading, 
-    processMessage,
-    hasPendingRequest: !!pendingRequest,
-    pendingRequest, // Expose for debugging
-    triggerPendingRequest // Expose for manual debugging
+    processMessage
   };
 }

@@ -79,12 +79,7 @@ export function AuthProvider({ children }) {
         console.log('✅ Login successful, storing token and setting user');
         localStorage.setItem('authToken', data.data.token);
         setUser(data.data.user);
-        
-        // Force a small delay to ensure state propagation
-        setTimeout(() => {
-          console.log('✅ Auth state should now be updated');
-        }, 100);
-        
+        console.log('✅ Auth state will update on the next render.');
         return { success: true };
       } else {
         console.log('❌ Login failed:', data.error);
