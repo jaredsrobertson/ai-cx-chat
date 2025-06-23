@@ -2,9 +2,9 @@ import { CloudIcon, SparklesIcon } from '../ui/Icons';
 
 export default function BotSelection({ onSelect }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full p-8 bg-gray-50 text-center">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose an Assistant</h2>
-      <p className="text-gray-600 mb-8 max-w-sm">
+    <div className="flex flex-col items-center justify-start h-full p-8 pt-12 bg-white text-center">
+      <h2 className="text-xl font-bold text-gray-800 mb-2">Choose an Assistant</h2>
+      <p className="text-gray-500 mb-8 max-w-sm">
         Select a specialized assistant to get started. Each is tailored for different tasks.
       </p>
       
@@ -12,17 +12,17 @@ export default function BotSelection({ onSelect }) {
         {/* Banking Assistant */}
         <button
           onClick={() => onSelect('banking')}
-          className="w-full text-left p-6 bg-white border border-gray-200 rounded-lg hover:border-banking-blue hover:bg-blue-50 transition-all duration-300 group"
+          className="w-full text-left p-4 bg-white border border-gray-200 rounded-xl hover:border-banking-blue hover:bg-blue-50 transition-all duration-300 group"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-banking-blue text-white rounded-lg flex items-center justify-center flex-shrink-0">
               <CloudIcon className="w-7 h-7" />
             </div>
             <div>
-              <h3 className="font-bold text-banking-navy group-hover:text-banking-blue">
+              <h3 className="font-bold text-banking-blue group-hover:text-banking-blue">
                 CloudBank Concierge
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-500 mt-1">
                 For everyday banking tasks. Powered by Google Dialogflow for structured queries.
               </p>
             </div>
@@ -32,17 +32,17 @@ export default function BotSelection({ onSelect }) {
         {/* AI Advisor */}
         <button
           onClick={() => onSelect('advisor')}
-          className="w-full text-left p-6 bg-white border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-300 group"
+          className="w-full text-left p-4 bg-white border border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-300 group"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-green-600 text-white rounded-lg flex items-center justify-center flex-shrink-0">
               <SparklesIcon className="w-7 h-7" />
             </div>
             <div>
-              <h3 className="font-bold text-green-800 group-hover:text-green-600">
+              <h3 className="font-bold text-green-700 group-hover:text-green-600">
                 AI Advisor
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-500 mt-1">
                 For financial advice and planning. Powered by OpenAI GPT-4 for generative insights.
               </p>
             </div>

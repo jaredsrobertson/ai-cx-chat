@@ -165,16 +165,17 @@ export function useChat(initialTab, onLoginRequired) {
     previousIsAuthenticated.current = isAuthenticated;
 
   }, [isAuthenticated, pendingRequest, processPendingRequest]);
-
+  
   // Process chat messages
   const processMessage = useCallback(async (message, tab) => {
     setLoading(true);
 
+    // Optimistically add the user's message for all tabs
+    addMessage(tab, 'user', 'text', message);
+
     try {
       if (tab === 'advisor') {
         // Handle AI Advisor with streaming
-        addMessage(tab, 'user', 'text', message);
-        
         const messageHistory = messages.advisor.map(msg => ({
           role: msg.author === 'user' ? 'user' : 'assistant',
           content: msg.type === 'text' ? msg.content : msg.content.speakableText
@@ -233,9 +234,6 @@ export function useChat(initialTab, onLoginRequired) {
         if (data.success) {
           const responsePayload = data.data.response;
           
-          // Add the user's message to the chat here for a better UI experience
-          addMessage(tab, 'user', 'text', message);
-          
           // Check if authentication is required
           if (AUTH_REQUIRED_INTENTS.includes(responsePayload.intentName) && !isAuthenticated) {
             console.log('🔒 Authentication required for intent:', responsePayload.intentName);
@@ -270,13 +268,11 @@ export function useChat(initialTab, onLoginRequired) {
             localStorage.setItem(`sessionId_${user?.id || 'guest'}`, data.data.sessionId);
           }
         } else {
-          addMessage(tab, 'user', 'text', message);
           addMessage(tab, 'bot', 'structured', { speakableText: data.error });
         }
       }
     } catch (error) {
       console.error('❌ Chat processing error:', error);
-      addMessage(tab, 'user', 'text', message);
       addMessage(tab, 'bot', 'structured', { 
         speakableText: "Sorry, I encountered an error. Please try again." 
       });

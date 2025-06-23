@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 const AuthContext = createContext();
 
@@ -97,14 +97,14 @@ export function AuthProvider({ children }) {
     clearAuth();
   }, [clearAuth, user?.username]);
 
-  const value = { 
+  const value = useMemo(() => ({ 
     user, 
     isLoading, 
     login, 
     logout, 
     refreshAuth: verifyToken,
     isAuthenticated: !!user 
-  };
+  }), [user, isLoading, login, logout, verifyToken]);
 
   return (
     <AuthContext.Provider value={value}>

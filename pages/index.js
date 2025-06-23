@@ -2,10 +2,9 @@ import Head from 'next/head';
 import { useState } from 'react';
 import ChatWidget from '../components/chat/ChatWidget';
 import { useAuth } from '../hooks/useAuth';
-// import { CloudIcon } from '@heroicons/react/24/outline';
 import { CloudIcon } from '../components/ui/Icons';
 
-// 1. Define the SVG for the new favicon style
+// Define the SVG for the new favicon style
 const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
   <path fill="#FFFFFF" stroke="#3b82f6" stroke-width="1" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
 </svg>`;
@@ -14,10 +13,16 @@ const faviconDataUri = `data:image/svg+xml;base64,${Buffer.from(faviconSvg).toSt
 
 
 export default function Home() {
-  const { user } = useAuth();
   const [showGitHubModal, setShowGitHubModal] = useState(false);
 
   const openChatWidget = () => {
+    // Check if the chat widget is already open by looking for the 'open' class
+    const chatContainer = document.querySelector('.chat-widget-container');
+    if (chatContainer && chatContainer.classList.contains('open')) {
+      return; // Do nothing if the chat is already open
+    }
+    
+    // If it's not open, find the toggle button and click it
     const chatButton = document.querySelector('button[data-chat-toggle="true"]');
     if (chatButton) {
       chatButton.click();
@@ -36,9 +41,6 @@ export default function Home() {
         <title>AI-Powered Chat Assistant | Project Demo</title>
         <meta name="description" content="A portfolio project demonstrating a dual-mode AI chat assistant with Google Dialogflow and OpenAI GPT-4." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="password-manager" content="demo" />
-        <meta name="demo-app" content="true" />
-        {/* 2. The link tag automatically uses the new favicon */}
         <link rel="icon" href={faviconDataUri} />
       </Head>
 
@@ -63,7 +65,7 @@ export default function Home() {
                 onClick={openChatWidget}
                 className="btn-primary"
               >
-                {user ? `Welcome, ${user.name.split(' ')[0]}` : 'Launch Assistant'}
+                Try AI Chat
               </button>
             </nav>
           </div>
@@ -71,7 +73,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-banking-navy via-banking-blue to-blue-600 text-white">
+      <section id="demo" className="bg-gradient-to-br from-banking-navy via-banking-blue to-blue-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
@@ -80,18 +82,18 @@ export default function Home() {
                 <span className="text-blue-200"> Technical Demo</span>
               </h2>
               <p className="text-xl mb-8 text-blue-100 leading-relaxed">
-                This project demonstrates a sophisticated conversational AI architecture. It integrates Google Dialogflow for structured, task-oriented dialogue and OpenAI's GPT-4 for generative, open-ended conversation, all within a modern, responsive web application.
+                A technical demonstration for a customer-facing AI role, showcasing the design and delivery of a custom conversational AI solution. This project integrates Google Dialogflow for task-oriented dialogue with fulfillment via custom webhooks, alongside a generative AI for open-ended consultation, simulating a multi-bot environment for a modern customer experience platform.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button 
                   onClick={openChatWidget}
                   className="btn-primary bg-white text-banking-blue hover:bg-gray-50"
                 >
-                  Launch Assistant
+                  Try AI Chat
                 </button>
                 <button 
                   onClick={() => setShowGitHubModal(true)}
-                  className="btn-secondary border-blue-200 text-blue-100 hover:bg-blue-700 flex items-center justify-center gap-2"
+                  className="bg-white/10 text-white font-medium px-6 py-2.5 rounded-lg border border-white/20 hover:bg-white/20 transition-all duration-300 shadow-sm hover:shadow-md flex items-center justify-center gap-2"
                 >
                   <GitHubIcon className="w-5 h-5" />
                   View on GitHub
@@ -100,41 +102,49 @@ export default function Home() {
             </div>
             {/* In-Page Demo Section */}
             <div className="relative">
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Concierge Example */}
-                      <div className="space-y-3">
-                          <h4 className="font-semibold text-center text-blue-100">CloudBank Concierge</h4>
-                          <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
-                              <p>"What's my checking balance?"</p>
-                          </div>
-                          <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-4 text-sm">
-                              <p>Your checking balance is $2,847.52.</p>
-                          </div>
-                          <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
-                              <p>"Transfer $50 to savings."</p>
-                          </div>
-                          <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-4 text-sm">
-                              <p>The transfer is complete.</p>
-                          </div>
-                      </div>
-                      {/* Advisor Example */}
-                      <div className="space-y-3">
-                          <h4 className="font-semibold text-center text-blue-100">AI Advisor</h4>
-                          <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
-                            <p>"How can I save more money?"</p>
-                          </div>
-                          <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-4 text-sm">
-                              <p>A great way to start is the 50/30/20 budget rule. Can I explain it?</p>
-                          </div>
-                          <div className="bg-white bg-opacity-10 rounded-lg p-3 text-sm">
-                            <p>"What are I-bonds?"</p>
-                          </div>
-                          <div className="bg-blue-500 bg-opacity-30 rounded-lg p-3 ml-4 text-sm">
-                              <p>They are a type of US savings bond designed to protect your money from inflation.</p>
-                          </div>
-                      </div>
-                  </div>
+              <div className="w-full max-w-3xl mx-auto bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg p-6 min-h-[420px]">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-x-6">
+                    {/* Column 1: Concierge */}
+                    <div className="flex flex-col">
+                        <h4 className="font-bold text-center text-lg tracking-wide text-white pb-3 mb-4 border-b border-white/10">CloudBank Concierge</h4>
+                        <div className="space-y-4">
+                            <div className="bg-white text-gray-800 font-medium p-3 text-sm rounded-2xl rounded-br-none shadow-md ml-auto max-w-[95%]">
+                                <p>"What's my checking balance?"</p>
+                            </div>
+                            <div className="bg-banking-blue text-white p-3 text-sm rounded-2xl rounded-bl-none shadow-md mr-auto max-w-[95%]">
+                                <p>Your checking balance is $2,847.52.</p>
+                            </div>
+                            <div className="bg-white text-gray-800 font-medium p-3 text-sm rounded-2xl rounded-br-none shadow-md ml-auto max-w-[95%]">
+                                <p>"Transfer $50 to savings."</p>
+                            </div>
+                            <div className="bg-banking-blue text-white p-3 text-sm rounded-2xl rounded-bl-none shadow-md mr-auto max-w-[95%]">
+                                <p>The transfer is complete.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="w-px bg-white/20"></div>
+
+                    {/* Column 2: Advisor */}
+                    <div className="flex flex-col">
+                        <h4 className="font-bold text-center text-lg tracking-wide text-white pb-3 mb-4 border-b border-white/10">AI Advisor</h4>
+                        <div className="space-y-4">
+                             <div className="bg-white text-gray-800 font-medium p-3 text-sm rounded-2xl rounded-br-none shadow-md ml-auto max-w-[95%]">
+                                <p>"How can I save more money?"</p>
+                            </div>
+                            <div className="bg-banking-blue text-white p-3 text-sm rounded-2xl rounded-bl-none shadow-md mr-auto max-w-[95%]">
+                                <p>A great way to start is the 50/30/20 budget rule. Can I explain it?</p>
+                            </div>
+                             <div className="bg-white text-gray-800 font-medium p-3 text-sm rounded-2xl rounded-br-none shadow-md ml-auto max-w-[95%]">
+                                <p>"What are I-bonds?"</p>
+                            </div>
+                            <div className="bg-banking-blue text-white p-3 text-sm rounded-2xl rounded-bl-none shadow-md mr-auto max-w-[95%]">
+                                <p>They are a type of US savings bond designed to protect your money from inflation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
               </div>
             </div>
           </div>
@@ -162,7 +172,7 @@ export default function Home() {
               </div>
               <h4 className="text-xl font-bold text-gray-900 mb-4">Google Dialogflow</h4>
               <p className="text-gray-600 leading-relaxed">
-                Intent recognition, entity extraction, and conversation management for structured banking queries.
+                Demonstrates expertise in a leading bot platform, handling intent recognition, entity extraction, and conversation management with custom webhook fulfillment for transactional queries.
               </p>
             </div>
 
@@ -184,9 +194,9 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
               </div>
-              <h4 className="text-xl font-bold text-gray-900 mb-4">Web Speech API</h4>
+              <h4 className="text-xl font-bold text-gray-900 mb-4">ASR & Cloud TTS</h4>
               <p className="text-gray-600 leading-relaxed">
-                Browser-native speech recognition and synthesis for hands-free voice interactions.
+                 Integration of browser-native ASR (Automatic Speech Recognition) for voice input and the ElevenLabs API for dynamic, high-quality TTS responses.
               </p>
             </div>
 
@@ -208,9 +218,9 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                 </svg>
               </div>
-              <h4 className="text-xl font-bold text-gray-900 mb-4">Next.js & React</h4>
+              <h4 className="text-xl font-bold text-gray-900 mb-4">Full-Stack Web & API Architecture</h4>
               <p className="text-gray-600 leading-relaxed">
-                Modern React framework with serverless API routes and optimized performance.
+                An end-to-end solution built on a modern web stack, featuring serverless API routes, client-side state management, and operational diagnostics via a dedicated health check endpoint.
               </p>
             </div>
 
@@ -237,8 +247,7 @@ export default function Home() {
               AI Assistant Capabilities
             </h3>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Dual-mode conversational AI that demonstrates both structured banking operations 
-              and intelligent financial advisory through advanced NLP integration.
+              This interactive demo showcases a multi-bot architecture, routing users to the appropriate AI skill based on their needs—a core concept in designing effective customer service solutions.
             </p>
           </div>
 
