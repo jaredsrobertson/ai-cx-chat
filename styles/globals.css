@@ -22,11 +22,6 @@
   .btn-secondary {
     @apply bg-white hover:bg-gray-50 text-banking-navy font-medium px-6 py-2.5 rounded-lg border border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md;
   }
-  
-  /* Adding hover glow effect from our plan */
-  .btn-primary:hover, .btn-secondary:hover {
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-  }
 
   .card {
     @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
@@ -60,10 +55,24 @@
   .avatar-bot {
     @apply bg-banking-navy;
   }
+
+  /* Shine Animation Class */
+  .animate-shine::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: rotate(45deg);
+    animation: shine-effect 5s infinite;
+    animation-delay: 2s; /* Start after a small delay */
+  }
 }
 
 .chat-widget-container {
-    @apply fixed bottom-28 right-6 z-30 transition-all duration-300 ease-in-out; /* Positioned above the button */
+    @apply fixed bottom-28 right-6 z-30 transition-all duration-300 ease-in-out;
 }
   
 .chat-widget-container.closed {
@@ -134,23 +143,12 @@
   animation: cta-slide-in 0.5s ease-out forwards;
 }
 
-
-/* Intermittent glow/bounce for main chat toggle button */
-@keyframes glow-bounce {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+/* Light Reflection (Shine) Animation */
+@keyframes shine-effect {
+  0% {
+    left: -100%;
   }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px 10px rgba(59, 130, 246, 0);
+  50%, 100% {
+    left: 150%;
   }
-  75% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-  }
-}
-
-.animate-glow-bounce {
-  animation: glow-bounce 5s infinite ease-in-out;
 }
