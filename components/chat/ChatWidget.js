@@ -94,9 +94,9 @@ const ChatWidgetInner = () => {
 
   return (
     <>
-      {/* CTA Bubble */}
+      {/* CTA Bubble - Updated positioning */}
       {showCta && !isOpen && (
-        <div className="fixed bottom-10 right-36 w-64 animate-cta-slide-in z-40">
+        <div className="chat-cta w-64 animate-cta-slide-in">
           <div className="bg-white p-4 rounded-lg shadow-2xl border border-gray-100 relative">
             <p className="text-gray-800 font-medium text-center">Hey there! Let's chat!</p>
             <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white transform rotate-45"></div>
@@ -104,18 +104,19 @@ const ChatWidgetInner = () => {
         </div>
       )}
 
-      {/* Floating Action Button */}
+      {/* Floating Action Button - Updated with proper classes */}
       <button
         onClick={handleOpen}
-        className={`fixed bottom-6 right-6 w-24 h-24 bg-banking-blue hover:bg-banking-navy text-white rounded-full shadow-2xl hover:shadow-xl transition-all duration-300 flex items-center justify-center z-40 relative overflow-hidden group ${!isOpen ? 'animate-shine' : ''}`}
+        className={`chat-fab w-24 h-24 bg-banking-blue hover:bg-banking-navy text-white rounded-full shadow-2xl hover:shadow-xl flex items-center justify-center relative overflow-hidden group ${!isOpen ? 'animate-shine' : ''}`}
         aria-label="Open chat assistant"
+        data-chat-toggle="true"
       >
         <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
       </button>
       
-      {/* Chat Widget Container */}
+      {/* Chat Widget Container - Updated classes */}
       <div className={`chat-widget-container ${isOpen ? 'open' : 'closed'}`}>
         <div className="chat-widget-inner">
           {/* Header */}

@@ -71,30 +71,74 @@
   }
 }
 
+/* Chat Widget Container - Fixed positioning */
 .chat-widget-container {
-    @apply fixed bottom-28 right-6 z-30 transition-all duration-300 ease-in-out;
+  @apply fixed z-30 transition-all duration-300 ease-in-out;
+  bottom: 7rem; /* Space for FAB below */
+  right: 1.5rem;
 }
   
 .chat-widget-container.closed {
-    @apply opacity-0 transform translate-y-4 pointer-events-none;
+  @apply opacity-0 transform translate-y-4 pointer-events-none;
 }
 
 .chat-widget-container.open {
-    /* Desktop size */
-    @apply w-96 h-[600px] opacity-100 transform translate-y-0;
+  /* Desktop size */
+  @apply w-96 h-[600px] opacity-100 transform translate-y-0;
 }
   
 .chat-widget-inner {
-    @apply w-full h-full bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden;
+  @apply w-full h-full bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden;
+  /* Enhanced shadow for floating effect */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
+              0 10px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Floating Action Button - Proper positioning */
+.chat-fab {
+  @apply fixed z-40 transition-all duration-300;
+  bottom: 1.5rem;
+  right: 1.5rem;
+}
+
+.chat-fab:hover {
+  transform: scale(1.05);
+}
+
+.chat-fab:focus {
+  @apply outline-none ring-4 ring-blue-500 ring-opacity-50;
+}
+
+/* CTA positioning relative to FAB */
+.chat-cta {
+  @apply fixed z-40;
+  bottom: 2.5rem;
+  right: 9rem; /* To the left of FAB */
 }
 
 /* Full-Screen Mobile Styles */
 @media (max-width: 767px) {
   .chat-widget-container.open {
     @apply inset-0 w-full h-full;
+    bottom: 0;
+    right: 0;
   }
+  
   .chat-widget-inner {
     @apply rounded-none border-none shadow-none;
+  }
+  
+  /* Hide FAB on mobile when chat is open */
+  .chat-widget-container.open ~ .chat-fab {
+    @apply hidden;
+  }
+  
+  /* Adjust CTA for mobile */
+  .chat-cta {
+    bottom: 2rem;
+    right: 2rem;
+    left: 2rem;
+    width: auto;
   }
 }
 
