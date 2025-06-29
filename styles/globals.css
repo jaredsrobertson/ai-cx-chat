@@ -56,11 +56,13 @@
     @apply bg-banking-navy;
   }
 
-  .animate-fab {
-    animation: spin-effect 3.5s infinite linear;
+  /* Combined Bounce and Shine Animation */
+  .animate-bounce-shine {
+    animation: bounce-effect 3s infinite 3s;
+    animation-timing-function: cubic-bezier(0.280, 0.840, 0.420, 1);
   }
-  
-  .animate-fab::after {
+
+  .animate-bounce-shine::after {
     content: '';
     position: absolute;
     top: -50%;
@@ -69,14 +71,11 @@
     height: 200%;
     background: rgba(255, 255, 255, 0.4);
     transform: rotate(45deg);
-    animation: shine-effect 3.5s infinite;
-  }
-  
-  .animate-fab .chat-fab-icon {
-    animation: counter-spin-effect 3.5s infinite linear;
+    animation: shine-effect 3s infinite 3s; /* Apply shine with the same delay */
   }
 }
 
+/* Chat Widget Container - Fixed positioning */
 .chat-widget-container {
   @apply fixed z-30 ease-in-out;
   transition-property: opacity, transform;
@@ -101,25 +100,28 @@
               0 10px 20px -5px rgba(0, 0, 0, 0.1);
 }
 
+/* Floating Action Button */
 .chat-fab {
   @apply fixed z-40 transition-all duration-150;
   bottom: 1.5rem;
   right: 1.5rem;
-  transform-style: preserve-3d;
 }
 
 .chat-fab:hover {
   transform: scale(1.05);
+  animation-play-state: paused;
 }
 
 .chat-fab:focus {
   @apply outline-none ring-4 ring-blue-500 ring-opacity-50;
 }
 
+/* Hide FAB when chat is open */
 .chat-widget-container.open ~ .chat-fab {
   @apply opacity-0 transform scale-90 pointer-events-none;
 }
 
+/* CTA Popup */
 .chat-cta {
   @apply fixed z-40;
   bottom: 8rem;
@@ -140,6 +142,7 @@
   border-radius: 2px;
 }
 
+/* Full-Screen Mobile Styles */
 @media (max-width: 767px) {
   .chat-widget-container.open {
     @apply inset-0 w-full h-full;
@@ -163,6 +166,7 @@
   }
 }
 
+/* Scrollbar styling */
 .chat-messages::-webkit-scrollbar {
   width: 4px;
 }
@@ -180,6 +184,7 @@
   background: #94a3b8;
 }
 
+/* Keyframe Animations */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -207,33 +212,27 @@
 }
 
 @keyframes shine-effect {
-  0%, 71.4% {
-    transform: translateX(-300px) rotate(45deg);
+  0%, 20% {
+    left: -100%;
     opacity: 0;
   }
-  71.41% {
+  40% {
     opacity: 1;
   }
-  100% {
-    transform: translateX(300px) rotate(45deg);
-    opacity: 1;
+  60%, 100% {
+    left: 150%;
+    opacity: 0;
   }
 }
 
-@keyframes spin-effect {
-  0%, 71.4% {
-    transform: rotateY(0deg);
+@keyframes bounce-effect {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
   }
-  100% {
-    transform: rotateY(180deg);
+  40% {
+    transform: translateY(-10px);
   }
-}
-
-@keyframes counter-spin-effect {
-  0%, 71.4% {
-    transform: rotateY(0deg);
-  }
-  100% {
-    transform: rotateY(-180deg);
+  60% {
+    transform: translateY(-5px);
   }
 }
