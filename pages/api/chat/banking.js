@@ -5,13 +5,11 @@ import { createApiHandler, sanitizeInput, logger, CONFIG } from '../../../lib/ut
 const bankingHandler = async (req, res, user) => {
   let { message, sessionId } = req.body;
   
-  // Generate session ID if not provided
   if (!sessionId) {
     sessionId = uuidv4();
   }
 
-  // Sanitize and validate message
-  message = sanitizeInput(message, CONFIG.MAX_MESSAGE_LENGTH);
+  message = sanitizeInput(message, 1000);
   if (!message) {
     return res.status(400).json({
       success: false,
@@ -20,10 +18,8 @@ const bankingHandler = async (req, res, user) => {
   }
 
   try {
-    // Build user context
     const userContext = { user };
 
-    // Process with Dialogflow
     const dialogflowResponse = await dialogflowService.detectIntent(sessionId, message);
     const bankingResponse = await dialogflowService.handleBankingIntent(
       dialogflowResponse,
@@ -38,10 +34,8 @@ const bankingHandler = async (req, res, user) => {
 
     return res.status(200).json({ 
       success: true, 
-      data: {
-        response: bankingResponse,
-        sessionId: dialogflowResponse.session?.split('/').pop() || sessionId 
-      }
+      response: bankingResponse,
+      sessionId: dialogflowResponse.session?.split('/').pop() || sessionId 
     });
 
   } catch (error) {
@@ -53,8 +47,7 @@ const bankingHandler = async (req, res, user) => {
   }
 };
 
-// Export with middleware
 export default createApiHandler(bankingHandler, {
   allowedMethods: ['POST'],
-  rateLimit: { max: CONFIG.MAX_REQUESTS_PER_MINUTE.BANKING, window: 60000 }
+  rateLimit: { max: 20, window: 60000 }
 });

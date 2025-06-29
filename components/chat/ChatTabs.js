@@ -13,8 +13,8 @@ function debounce(func, delay) {
   };
 }
 
-export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired }) {
-  const { messages, loading, processMessage } = useChat(activeTab, onLoginRequired);
+export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, notificationAudioRef }) {
+  const { messages, loading, processMessage } = useChat(activeTab, onLoginRequired, notificationAudioRef);
   const { play, isAutoResponseEnabled } = useTTS();
   
   const [input, setInput] = useState('');
@@ -121,17 +121,6 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired }) {
     }
   }, [input, loading, processMessage, activeTab]);
 
-  // Handle keyboard shortcuts
-  const handleKeyDown = useCallback((e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-    if (e.key === 'Escape') {
-      setInput('');
-    }
-  }, [handleSubmit]);
-
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Tab Headers */}
@@ -161,7 +150,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired }) {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-grow p-4 space-y-4 overflow-y-auto" role="log" aria-label="Chat messages">
+      <div className="flex-grow px-2 py-4 space-y-4 overflow-y-auto chat-messages" role="log" aria-label="Chat messages">
         {messages[activeTab].map(msg => (
           <ChatMessage key={msg.id} {...msg} />
         ))}
@@ -193,9 +182,8 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired }) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message... (Ctrl+Enter to send, Esc to clear)"
-            className="flex-grow p-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-banking-blue"
+            placeholder="Type your message..."
+            className="flex-grow p-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-banking-blue"
             disabled={loading}
             maxLength={1000}
             aria-label="Type your message"
@@ -205,7 +193,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired }) {
           <button
             type="button"
             onClick={handleMicClick}
-            className={`p-3 rounded-full text-white transition-all ${
+            className={`p-2 rounded-full text-white transition-all ${
               isRecording
                 ? 'bg-red-500 animate-pulse shadow-lg'
                 : 'bg-gray-400 hover:bg-gray-500 hover:shadow-md'
@@ -214,24 +202,19 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired }) {
             aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
             disabled={loading}
           >
-            <MicrophoneIcon className="w-6 h-6" />
+            <MicrophoneIcon className="w-4 h-4" />
           </button>
           
           {/* Send Button */}
           <button
             type="submit"
-            className="p-3 bg-banking-blue text-white rounded-full hover:bg-banking-navy disabled:bg-gray-300 transition-all hover:shadow-md"
+            className="p-2 bg-banking-blue text-white rounded-full hover:bg-banking-navy disabled:bg-gray-300 transition-all hover:shadow-md"
             disabled={loading || !input.trim()}
             aria-label="Send message"
           >
-            <PaperAirplaneIcon className="w-6 h-6" />
+            <PaperAirplaneIcon className="w-4 h-4" />
           </button>
         </form>
-        
-        {/* Help Text */}
-        <div className="mt-2 text-xs text-gray-400 text-center">
-          Press Ctrl+Enter to send • Esc to clear • Click mic for voice input
-        </div>
       </div>
     </div>
   );

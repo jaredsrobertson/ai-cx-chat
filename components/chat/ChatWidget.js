@@ -11,7 +11,9 @@ import {
   ArrowUturnLeftIcon, 
   ArrowLeftOnRectangleIcon, 
   ShieldCheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  BellIcon,
+  BellSlashIcon
 } from '../ui/Icons';
 
 const ChatWidgetInner = () => {
@@ -21,25 +23,22 @@ const ChatWidgetInner = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCta, setShowCta] = useState(false);
   const ctaShownRef = useRef(false);
+  const notificationAudioRef = useRef(null);
 
   const { user, logout } = useAuth();
-  const { stop, clearCache, error: ttsError, isAutoResponseEnabled, toggleAutoResponse } = useTTS();
+  const { stop, clearCache, error: ttsError, isAutoResponseEnabled, toggleAutoResponse, isNotificationEnabled, toggleNotificationSound } = useTTS();
 
-  // --- CTA Logic ---
   const triggerCta = useCallback(() => {
     if (ctaShownRef.current || isOpen) return;
     ctaShownRef.current = true;
     setShowCta(true);
-    setTimeout(() => setShowCta(false), 7000); // Show CTA for 7 seconds
   }, [isOpen]);
 
-  // Timed CTA trigger
   useEffect(() => {
     const timer = setTimeout(triggerCta, 7000);
     return () => clearTimeout(timer);
   }, [triggerCta]);
 
-  // Scroll-based CTA trigger
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 200) {
@@ -49,7 +48,6 @@ const ChatWidgetInner = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [triggerCta]);
-  // --- End CTA Logic ---
 
   useEffect(() => {
     return () => {
@@ -72,7 +70,7 @@ const ChatWidgetInner = () => {
 
   const handleOpen = () => {
     setIsOpen(true);
-    setShowCta(false); // Hide CTA when widget is opened
+    setShowCta(false);
   };
   
   const backToSelection = () => {
@@ -94,32 +92,18 @@ const ChatWidgetInner = () => {
 
   return (
     <>
-      {/* CTA Bubble - Updated positioning */}
+      <audio ref={notificationAudioRef} src="/notify.mp3" preload="auto" />
+      
       {showCta && !isOpen && (
-        <div className="chat-cta w-64 animate-cta-slide-in">
-          <div className="bg-white p-4 rounded-lg shadow-2xl border border-gray-100 relative">
-            <p className="text-gray-800 font-medium text-center">Hey there! Let's chat!</p>
-            <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white transform rotate-45"></div>
+        <div className="chat-cta animate-cta-slide-in">
+          <div className="chat-cta-inner">
+            <p className="font-medium text-center">Hey there! Let's chat!</p>
           </div>
         </div>
       )}
 
-      {/* Floating Action Button - Updated with proper classes */}
-      <button
-        onClick={handleOpen}
-        className={`chat-fab w-24 h-24 bg-banking-blue hover:bg-banking-navy text-white rounded-full shadow-2xl hover:shadow-xl flex items-center justify-center relative overflow-hidden group ${!isOpen ? 'animate-shine' : ''}`}
-        aria-label="Open chat assistant"
-        data-chat-toggle="true"
-      >
-        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-      </button>
-      
-      {/* Chat Widget Container - Updated classes */}
       <div className={`chat-widget-container ${isOpen ? 'open' : 'closed'}`}>
         <div className="chat-widget-inner">
-          {/* Header */}
           <div className="bg-banking-blue text-white p-3 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center space-x-2">
               <ShieldCheckIcon className="w-6 h-6" />
@@ -127,11 +111,13 @@ const ChatWidgetInner = () => {
             </div>
             
             <div className="flex items-center space-x-1">
-              {/* Conditional controls */}
               {selectedBot && (
                 <>
                   <button onClick={backToSelection} className="p-2 rounded-full hover:bg-white/20 transition-colors" title="Back to bot selection">
                     <ArrowUturnLeftIcon className="w-5 h-5" />
+                  </button>
+                  <button onClick={toggleNotificationSound} className="p-2 rounded-full hover:bg-white/20 transition-colors" title={isNotificationEnabled ? "Mute Notifications" : "Unmute Notifications"}>
+                    {isNotificationEnabled ? <BellIcon className="w-5 h-5" /> : <BellSlashIcon className="w-5 h-5" />}
                   </button>
                   <button onClick={toggleAutoResponse} className="p-2 rounded-full hover:bg-white/20 transition-colors" title={isAutoResponseEnabled ? "Disable Auto-Speak" : "Enable Auto-Speak"}>
                     {isAutoResponseEnabled ? <SpeakerWaveIcon className="w-5 h-5" /> : <SpeakerXMarkIcon className="w-5 h-5" />}
@@ -143,21 +129,18 @@ const ChatWidgetInner = () => {
                   )}
                 </>
               )}
-              {/* Close button is always available */}
               <button onClick={handleClose} className="p-2 rounded-full hover:bg-white/20 transition-colors" title="Close Chat">
                 <XMarkIcon className="w-6 h-6" />
               </button>
             </div>
           </div>
           
-          {/* TTS Error Banner */}
           {ttsError && (
             <div className="bg-yellow-50 border-b border-yellow-200 p-2">
               <p className="text-yellow-800 text-xs">Audio: {ttsError}</p>
             </div>
           )}
           
-          {/* Main Content */}
           <div className="flex-grow overflow-hidden bg-white">
             <ErrorBoundary>
               {!selectedBot ? (
@@ -167,6 +150,7 @@ const ChatWidgetInner = () => {
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
                   onLoginRequired={handleLoginRequired}
+                  notificationAudioRef={notificationAudioRef}
                 />
               )}
             </ErrorBoundary>
@@ -174,7 +158,17 @@ const ChatWidgetInner = () => {
         </div>
       </div>
       
-      {/* Login Modal */}
+      <button
+        onClick={handleOpen}
+        className={`chat-fab w-24 h-24 bg-banking-blue hover:bg-banking-navy text-white rounded-full shadow-2xl hover:shadow-xl flex items-center justify-center relative overflow-hidden group animate-fab`}
+        aria-label="Open chat assistant"
+        data-chat-toggle="true"
+      >
+        <svg className="w-12 h-12 chat-fab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </button>
+
       <LoginModal 
         isOpen={showLoginModal} 
         onClose={handleLoginClose} 

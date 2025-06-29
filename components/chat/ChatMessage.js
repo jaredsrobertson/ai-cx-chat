@@ -1,6 +1,7 @@
 import { SpeakerWaveIcon } from '../ui/Icons';
 import ConfidentialDisplay from './ConfidentialDisplay';
 import { useTTS } from '../../contexts/TTSContext';
+import React, { memo } from 'react';
 
 const Avatar = () => (
   <div className="w-8 h-8 rounded-full flex items-center justify-center bg-banking-navy flex-shrink-0">
@@ -8,11 +9,10 @@ const Avatar = () => (
   </div>
 );
 
-export default function ChatMessage({ id, author, type, content, timestamp }) {
+function ChatMessage({ id, author, type, content, timestamp }) {
   const { play, stop, retryPlay, nowPlayingId, isLoading, error } = useTTS();
   const isUser = author === 'user';
   
-  // Safely extract text content
   const getSafeContent = (rawContent) => {
     if (typeof rawContent === 'object' && rawContent !== null && !Array.isArray(rawContent)) {
       return rawContent.speakableText || JSON.stringify(rawContent, null, 2);
@@ -23,7 +23,6 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
   const textToSpeak = getSafeContent(content);
   const isThisMessagePlaying = nowPlayingId === id;
 
-  // Handle TTS controls
   const handleSpeakButtonClick = () => {
     if (isThisMessagePlaying) {
       stop();
@@ -43,7 +42,6 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
     }
   };
 
-  // Render user message
   if (isUser) {
     return (
       <div className="flex justify-end my-2" role="group" aria-label="User message">
@@ -57,25 +55,21 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
     );
   }
 
-  // Render bot message
   return (
-    <div className="flex items-start gap-2.5 my-2" role="group" aria-label="Assistant message">
+    <div className="flex items-start gap-2 my-2" role="group" aria-label="Assistant message">
       <Avatar />
       <div className="chat-message bot">
         <p className="text-sm whitespace-pre-wrap">{textToSpeak}</p>
         
-        {/* Confidential data display */}
         {type === 'structured' && content.confidentialData && (
           <ConfidentialDisplay data={content.confidentialData} />
         )}
         
-        {/* Message footer */}
         <div className="flex items-center justify-between mt-1.5">
           <span className="text-xs opacity-70">
             {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           
-          {/* TTS Controls */}
           <div className="flex items-center gap-1">
             {error && nowPlayingId === id && (
               <button
@@ -131,3 +125,5 @@ export default function ChatMessage({ id, author, type, content, timestamp }) {
     </div>
   );
 }
+
+export default memo(ChatMessage);

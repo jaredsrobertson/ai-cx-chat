@@ -8,11 +8,11 @@ export const TTSProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isAutoResponseEnabled, setIsAutoResponseEnabled] = useState(false);
+  const [isNotificationEnabled, setIsNotificationEnabled] = useState(true);
   
   const audioRef = useRef(null);
   const audioCache = useRef(new Map());
 
-  // Cleanup audio resources
   const cleanupAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -21,7 +21,6 @@ export const TTSProvider = ({ children }) => {
     }
   }, []);
 
-  // Clear audio cache with proper cleanup
   const clearCache = useCallback(() => {
     audioCache.current.forEach(url => {
       try {
@@ -33,7 +32,6 @@ export const TTSProvider = ({ children }) => {
     audioCache.current.clear();
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       cleanupAudio();
@@ -59,7 +57,6 @@ export const TTSProvider = ({ children }) => {
       const cacheKey = text.substring(0, 100);
       let audioUrl = audioCache.current.get(cacheKey);
 
-      // Fetch audio if not cached
       if (!audioUrl) {
         const response = await fetch('/api/tts', {
           method: 'POST',
@@ -75,7 +72,6 @@ export const TTSProvider = ({ children }) => {
         const blob = await response.blob();
         audioUrl = URL.createObjectURL(blob);
         
-        // Cache management - remove oldest if cache is full
         if (audioCache.current.size >= CONFIG.TTS.CACHE_SIZE) {
           const firstKey = audioCache.current.keys().next().value;
           const oldUrl = audioCache.current.get(firstKey);
@@ -86,12 +82,10 @@ export const TTSProvider = ({ children }) => {
         audioCache.current.set(cacheKey, audioUrl);
       }
 
-      // Play audio
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       setIsLoading(false);
 
-      // Setup event handlers
       audio.onended = () => {
         setNowPlayingId(null);
         audioRef.current = null;
@@ -116,7 +110,6 @@ export const TTSProvider = ({ children }) => {
   }, [stop, nowPlayingId]);
 
   const retryPlay = useCallback((text, messageId) => {
-    // Invalidate cache for this item and retry
     const cacheKey = text.substring(0, 100);
     const oldUrl = audioCache.current.get(cacheKey);
     if (oldUrl) {
@@ -130,12 +123,16 @@ export const TTSProvider = ({ children }) => {
     setIsAutoResponseEnabled(prev => {
       const newValue = !prev;
       if (!newValue) {
-        stop(); // Stop current playback when disabling auto-response
+        stop();
       }
       logger.debug('Auto-response toggled', { enabled: newValue });
       return newValue;
     });
   }, [stop]);
+
+  const toggleNotificationSound = useCallback(() => {
+    setIsNotificationEnabled(prev => !prev);
+  }, []);
 
   const value = {
     play,
@@ -148,6 +145,8 @@ export const TTSProvider = ({ children }) => {
     error,
     isAutoResponseEnabled,
     toggleAutoResponse,
+    isNotificationEnabled,
+    toggleNotificationSound
   };
 
   return <TTSContext.Provider value={value}>{children}</TTSContext.Provider>;

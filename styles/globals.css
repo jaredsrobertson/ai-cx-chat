@@ -56,8 +56,11 @@
     @apply bg-banking-navy;
   }
 
-  /* Shine Animation Class */
-  .animate-shine::after {
+  .animate-fab {
+    animation: spin-effect 3.5s infinite linear;
+  }
+  
+  .animate-fab::after {
     content: '';
     position: absolute;
     top: -50%;
@@ -66,39 +69,43 @@
     height: 200%;
     background: rgba(255, 255, 255, 0.4);
     transform: rotate(45deg);
-    animation: shine-effect 5s infinite;
-    animation-delay: 2s; /* Start after a small delay */
+    animation: shine-effect 3.5s infinite;
+  }
+  
+  .animate-fab .chat-fab-icon {
+    animation: counter-spin-effect 3.5s infinite linear;
   }
 }
 
-/* Chat Widget Container - Fixed positioning */
 .chat-widget-container {
-  @apply fixed z-30 transition-all duration-300 ease-in-out;
-  bottom: 7rem; /* Space for FAB below */
+  @apply fixed z-30 ease-in-out;
+  transition-property: opacity, transform;
+  transition-duration: 300ms;
+  bottom: 1.5rem;
   right: 1.5rem;
 }
   
 .chat-widget-container.closed {
   @apply opacity-0 transform translate-y-4 pointer-events-none;
+  transition-delay: 0ms;
 }
 
 .chat-widget-container.open {
-  /* Desktop size */
-  @apply w-96 h-[600px] opacity-100 transform translate-y-0;
+  @apply w-[400px] h-[700px] opacity-100 transform translate-y-0;
+  transition-delay: 150ms;
 }
   
 .chat-widget-inner {
   @apply w-full h-full bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden;
-  /* Enhanced shadow for floating effect */
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
               0 10px 20px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* Floating Action Button - Proper positioning */
 .chat-fab {
-  @apply fixed z-40 transition-all duration-300;
+  @apply fixed z-40 transition-all duration-150;
   bottom: 1.5rem;
   right: 1.5rem;
+  transform-style: preserve-3d;
 }
 
 .chat-fab:hover {
@@ -109,14 +116,30 @@
   @apply outline-none ring-4 ring-blue-500 ring-opacity-50;
 }
 
-/* CTA positioning relative to FAB */
-.chat-cta {
-  @apply fixed z-40;
-  bottom: 2.5rem;
-  right: 9rem; /* To the left of FAB */
+.chat-widget-container.open ~ .chat-fab {
+  @apply opacity-0 transform scale-90 pointer-events-none;
 }
 
-/* Full-Screen Mobile Styles */
+.chat-cta {
+  @apply fixed z-40;
+  bottom: 8rem;
+  right: 8rem;
+}
+.chat-cta-inner {
+  @apply bg-banking-blue/80 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-white/20 relative;
+}
+.chat-cta-inner::after {
+  content: '';
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  background-color: rgba(59, 130, 246, 0.8);
+  bottom: -0.5rem;
+  right: 1rem;
+  transform: translateY(0) rotate(45deg);
+  border-radius: 2px;
+}
+
 @media (max-width: 767px) {
   .chat-widget-container.open {
     @apply inset-0 w-full h-full;
@@ -128,21 +151,18 @@
     @apply rounded-none border-none shadow-none;
   }
   
-  /* Hide FAB on mobile when chat is open */
-  .chat-widget-container.open ~ .chat-fab {
-    @apply hidden;
-  }
-  
-  /* Adjust CTA for mobile */
   .chat-cta {
     bottom: 2rem;
     right: 2rem;
     left: 2rem;
     width: auto;
   }
+
+  .chat-cta-inner::after {
+    display: none;
+  }
 }
 
-/* Scrollbar styling */
 .chat-messages::-webkit-scrollbar {
   width: 4px;
 }
@@ -160,7 +180,6 @@
   background: #94a3b8;
 }
 
-/* Keyframe Animations */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -187,12 +206,34 @@
   animation: cta-slide-in 0.5s ease-out forwards;
 }
 
-/* Light Reflection (Shine) Animation */
 @keyframes shine-effect {
-  0% {
-    left: -100%;
+  0%, 71.4% {
+    transform: translateX(-300px) rotate(45deg);
+    opacity: 0;
   }
-  50%, 100% {
-    left: 150%;
+  71.41% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(300px) rotate(45deg);
+    opacity: 1;
+  }
+}
+
+@keyframes spin-effect {
+  0%, 71.4% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes counter-spin-effect {
+  0%, 71.4% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(-180deg);
   }
 }
