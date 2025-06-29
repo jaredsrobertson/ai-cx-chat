@@ -73,7 +73,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section id="demo" className="bg-gradient-to-br from-banking-navy via-banking-blue to-blue-600 text-white">
+      <section id="demo" className="bg-gradient-to-br from-banking-navy via-banking-blue to-blue-600 text-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
@@ -152,7 +152,7 @@ export default function Home() {
       </section>
 
       {/* Technology Section */}
-      <section id="tech" className="py-20 bg-white">
+      <section id="tech" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h3 className="text-4xl font-bold text-gray-900 mb-4">
@@ -271,7 +271,7 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <h4 className="text-2xl font-bold text-gray-900 mb-4">Voice Integration</h4>
+              <h4 className="text-xl font-bold text-gray-900 mb-4">Voice Integration</h4>
               <p className="text-gray-600 leading-relaxed">
                 Hands-free interaction using Web Speech API with real-time voice recognition 
                 and text-to-speech responses for accessibility.
