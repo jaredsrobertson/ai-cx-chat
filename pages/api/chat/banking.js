@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import dialogflowService from '../../../lib/dialogflow';
+import dialogflowService from '@/lib/dialogflow';
 import { createApiHandler, sanitizeInput, logger, CONFIG } from '../../../lib/utils';
 
 const bankingHandler = async (req, res, user) => {

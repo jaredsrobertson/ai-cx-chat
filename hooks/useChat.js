@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './useAuth';
 import { useTTS } from '../contexts/TTSContext';
+import { logger } from '../lib/utils';
 
 export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
   const [messages, setMessages] = useState({
@@ -36,8 +37,8 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
 
   const playNotificationSound = useCallback(() => {
     if (isNotificationEnabled && notificationAudioRef.current) {
-      notificationAudioRef.current.play().catch(e => console.error("Error playing notification sound:", e));
-      return new Promise(resolve => setTimeout(resolve, 500)); // Wait for sound to play
+      notificationAudioRef.current.play().catch(e => logger.error("Error playing notification sound", e));
+      return new Promise(resolve => setTimeout(resolve, 500));
     }
     return Promise.resolve();
   }, [isNotificationEnabled, notificationAudioRef]);
@@ -72,13 +73,13 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
   };
 
   const processPendingRequest = useCallback(async (request) => {
-    console.log('🔄 Processing pending request:', request.intentName);
+    logger.debug('Processing pending request', { intent: request.intentName });
     
     try {
       const token = localStorage.getItem('authToken');
       
       if (!token) {
-        console.error('❌ No auth token found when processing pending request');
+        logger.error('No auth token found when processing pending request');
         return;
       }
 
@@ -95,7 +96,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
       });
 
       const data = await response.json();
-      console.log('🔄 Pending request API response:', data);
+      logger.debug('Pending request API response', data);
 
       if (data.success) {
         await playNotificationSound();
@@ -105,16 +106,16 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
           localStorage.setItem(`sessionId_${user?.id || 'guest'}`, data.sessionId);
         }
         
-        console.log('✅ Pending request completed successfully');
+        logger.debug('Pending request completed successfully');
       } else {
         await playNotificationSound();
         addMessage(request.tab, 'bot', 'structured', { 
           speakableText: data.error 
         });
-        console.error('❌ Pending request failed:', data.error);
+        logger.error('Pending request failed', { error: data.error });
       }
     } catch (error) {
-      console.error('❌ Error processing pending request:', error);
+      logger.error('Error processing pending request', error);
       await playNotificationSound();
       addMessage(request.tab, 'bot', 'structured', { 
         speakableText: "I'm sorry, there was an issue processing your request. Please try again." 
@@ -124,7 +125,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
 
   useEffect(() => {
     if (isAuthenticated && pendingRequest) {
-      console.log('🔐 Login detected. Processing pending request...');
+      logger.debug('Login detected. Processing pending request...');
       
       const timer = setTimeout(() => {
           processPendingRequest(pendingRequest);
@@ -201,7 +202,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
           const responsePayload = data.response;
           
           if (AUTH_REQUIRED_INTENTS.includes(responsePayload.intentName) && !isAuthenticated) {
-            console.log('🔒 Authentication required for intent:', responsePayload.intentName);
+            logger.warn('Authentication required for intent', { intent: responsePayload.intentName });
             
             const loginMessage = getLoginMessage(responsePayload.intentName);
             addMessage(tab, 'bot', 'structured', { speakableText: loginMessage });
@@ -214,7 +215,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
               timestamp: new Date()
             };
             
-            console.log('💾 Storing pending request:', pending);
+            logger.debug('Storing pending request', pending);
             setPendingRequest(pending);
             
             onLoginRequired();
@@ -232,7 +233,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
         }
       }
     } catch (error) {
-      console.error('❌ Chat processing error:', error);
+      logger.error('Chat processing error', error);
       await playNotificationSound();
       addMessage(tab, 'bot', 'structured', { 
         speakableText: "Sorry, I encountered an error. Please try again." 

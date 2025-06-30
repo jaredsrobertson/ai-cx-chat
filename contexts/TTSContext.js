@@ -92,7 +92,7 @@ export const TTSProvider = ({ children }) => {
       };
 
       audio.onerror = (e) => {
-        logger.error('Audio playback error:', e);
+        logger.error('Audio playback error', e);
         setError('Failed to play audio.');
         setNowPlayingId(null);
         audioRef.current = null;
@@ -102,7 +102,7 @@ export const TTSProvider = ({ children }) => {
       logger.debug('TTS playback started', { messageId, textLength: text.length });
 
     } catch (err) {
-      logger.error('TTS generation failed:', err, { messageId, textLength: text.length });
+      logger.error('TTS generation failed', err, { messageId, textLength: text.length });
       setError(err.message || 'Failed to generate speech.');
       setNowPlayingId(null);
       setIsLoading(false);

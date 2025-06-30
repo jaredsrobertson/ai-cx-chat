@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { logger } from '../lib/utils';
 
 const AuthContext = createContext();
 
@@ -6,28 +7,25 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Debug: Log all auth state changes
   useEffect(() => {
-    console.log('🔐 Auth state updated:', { 
+    logger.debug('Auth state updated', { 
       user: user?.name || null, 
       isAuthenticated: !!user,
       isLoading 
     });
   }, [user, isLoading]);
 
-  // Simplified token management
   const clearAuth = useCallback(() => {
-    console.log('🧹 Clearing auth state');
+    logger.debug('Clearing auth state');
     localStorage.removeItem('authToken');
     setUser(null);
   }, []);
 
-  // Streamlined auth verification
   const verifyToken = useCallback(async () => {
-    console.log('🔍 Verifying token...');
+    logger.debug('Verifying token...');
     const token = localStorage.getItem('authToken');
     if (!token) {
-      console.log('❌ No token found');
+      logger.debug('No token found');
       setIsLoading(false);
       return;
     }
@@ -40,32 +38,30 @@ export function AuthProvider({ children }) {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          console.log('✅ Token verified, setting user:', data.data.user.name);
+          logger.debug('Token verified, setting user', { userName: data.data.user.name });
           setUser(data.data.user);
         } else {
-          console.log('❌ Token verification failed:', data.error);
+          logger.warn('Token verification failed', { error: data.error });
           clearAuth();
         }
       } else {
-        console.log('❌ Token verification request failed:', response.status);
+        logger.warn('Token verification request failed', { status: response.status });
         clearAuth();
       }
     } catch (error) {
-      console.error('❌ Auth verification error:', error);
+      logger.error('Auth verification error', error);
       clearAuth();
     } finally {
       setIsLoading(false);
     }
   }, [clearAuth]);
 
-  // Initialize auth on mount
   useEffect(() => {
     verifyToken();
   }, [verifyToken]);
 
-  // Simplified login function
   const login = async (username, pin) => {
-    console.log('🔑 Attempting login for:', username);
+    logger.debug('Attempting login', { username });
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -76,24 +72,22 @@ export function AuthProvider({ children }) {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        console.log('✅ Login successful, storing token and setting user');
+        logger.info('Login successful, storing token and setting user');
         localStorage.setItem('authToken', data.data.token);
         setUser(data.data.user);
-        console.log('✅ Auth state will update on the next render.');
         return { success: true };
       } else {
-        console.log('❌ Login failed:', data.error);
+        logger.warn('Login failed', { error: data.error });
         return { success: false, error: data.error || 'Login failed' };
       }
     } catch (error) {
-      console.error('❌ Login network error:', error);
+      logger.error('Login network error', error);
       return { success: false, error: 'A network error occurred.' };
     }
   };
 
-  // Simplified logout
   const logout = useCallback(() => {
-    console.log('🚪 User logout:', user?.username);
+    logger.info('User logout', { username: user?.username });
     clearAuth();
   }, [clearAuth, user?.username]);
 

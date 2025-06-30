@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { mockUsers } from '../../../lib/mockData';
+import { mockUsers } from '@/lib/mockData';
 import { createApiHandler, sanitizeCredentials, logger, CONFIG } from '../../../lib/utils';
 
 const validateUser = (username, pin) => {
@@ -14,7 +14,6 @@ const validateUser = (username, pin) => {
 const loginHandler = async (req, res) => {
   const { username: rawUsername, pin: rawPin } = req.body;
 
-  // Sanitize inputs
   const { username, pin } = sanitizeCredentials(rawUsername, rawPin);
 
   if (!username || !pin) {
@@ -24,7 +23,6 @@ const loginHandler = async (req, res) => {
     });
   }
 
-  // Validate credentials
   const user = validateUser(username, pin);
 
   if (!user) {
@@ -35,7 +33,6 @@ const loginHandler = async (req, res) => {
     });
   }
 
-  // Generate JWT token
   const token = jwt.sign(
     { 
       userId: user.id, 
@@ -63,7 +60,6 @@ const loginHandler = async (req, res) => {
   });
 };
 
-// Export with middleware
 export default createApiHandler(loginHandler, {
   allowedMethods: ['POST'],
   rateLimit: { max: CONFIG.MAX_REQUESTS_PER_MINUTE.LOGIN, window: 60000 }

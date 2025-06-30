@@ -9,22 +9,35 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
   
+  html, body, #__next {
+    @apply h-full;
+  }
+  
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gradient-to-b from-brand-blue to-gray-200 bg-fixed;
+    @apply text-gray-800;
+  }
+
+  .scroll-container {
+    @apply h-screen overflow-y-scroll snap-y snap-mandatory;
+  }
+
+  .scroll-section {
+    @apply snap-start;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-banking-blue hover:bg-banking-navy text-white font-medium px-6 py-2.5 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md;
+    @apply bg-brand-blue hover:bg-brand-navy text-white font-medium px-6 py-2.5 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
   }
   
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-banking-navy font-medium px-6 py-2.5 rounded-lg border border-gray-200 transition-all duration-300 shadow-sm hover:shadow-md;
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-6 py-2.5 rounded-lg border border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+    @apply bg-white/80 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6;
   }
   
   .chat-message {
@@ -33,30 +46,29 @@
   }
   
   .chat-message.user {
-    @apply bg-banking-blue text-white ml-auto rounded-br-md;
+    @apply bg-brand-blue text-white ml-auto rounded-br-md;
   }
   
   .chat-message.bot {
-    @apply bg-white text-gray-800 mr-auto border border-gray-100 rounded-bl-md;
+    @apply bg-white text-gray-800 mr-auto border border-gray-200/80 rounded-bl-md;
   }
   
   .input-field {
-    @apply w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-banking-blue focus:border-transparent outline-none transition-all duration-200;
+    @apply w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none transition-all duration-200;
   }
 
   .avatar {
     @apply w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0;
   }
 
-  .avatar-user {
-    @apply bg-gray-500;
-  }
-
   .avatar-bot {
-    @apply bg-banking-navy;
+    @apply bg-brand-navy;
   }
 
-  /* Combined Bounce and Shine Animation */
+  .nav-footer {
+    @apply bg-gray-100/30 backdrop-blur-lg border-white/10;
+  }
+
   .animate-bounce-shine {
     animation: bounce-effect 3s infinite 3s;
     animation-timing-function: cubic-bezier(0.280, 0.840, 0.420, 1);
@@ -71,78 +83,58 @@
     height: 200%;
     background: rgba(255, 255, 255, 0.4);
     transform: rotate(45deg);
-    animation: shine-effect 3s infinite 3s; /* Apply shine with the same delay */
+    animation: shine-effect 3s infinite 3s;
+  }
+
+  .chat-widget-container {
+    @apply fixed z-30 ease-in-out;
+    transition-property: opacity, transform;
+    transition-duration: 300ms;
+    bottom: 4.5rem;
+    right: 1.5rem;
+  }
+    
+  .chat-widget-container.closed {
+    @apply opacity-0 transform translate-y-4 pointer-events-none;
+  }
+  
+  .chat-widget-container.open {
+    @apply w-[400px] h-[calc(100vh-8.5rem)];
+    max-height: 700px;
+    opacity: 1;
+    transform: translateY(0);
+  }
+    
+  .chat-widget-inner {
+    @apply w-full h-full bg-gray-100 rounded-xl border border-gray-200 flex flex-col overflow-hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  
+  .chat-fab {
+    @apply fixed z-40 transition-all duration-150 relative overflow-hidden;
+    bottom: 4.5rem;
+    right: 1.5rem;
+  }
+  
+  .chat-fab:hover {
+    transform: scale(1.05);
+  }
+  
+  .chat-widget-container.open ~ .chat-fab {
+    @apply opacity-0 transform scale-90 pointer-events-none;
+  }
+  
+  .chat-cta {
+    @apply fixed z-40;
+    bottom: 9rem;
+    right: 9rem;
+  }
+  
+  .chat-cta-inner {
+    @apply bg-brand-blue/90 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-white/20;
   }
 }
 
-/* Chat Widget Container - Fixed positioning */
-.chat-widget-container {
-  @apply fixed z-30 ease-in-out;
-  transition-property: opacity, transform;
-  transition-duration: 300ms;
-  bottom: 1.5rem;
-  right: 1.5rem;
-}
-  
-.chat-widget-container.closed {
-  @apply opacity-0 transform translate-y-4 pointer-events-none;
-  transition-delay: 0ms;
-}
-
-.chat-widget-container.open {
-  @apply w-[400px] h-[700px] opacity-100 transform translate-y-0;
-  transition-delay: 150ms;
-}
-  
-.chat-widget-inner {
-  @apply w-full h-full bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
-              0 10px 20px -5px rgba(0, 0, 0, 0.1);
-}
-
-/* Floating Action Button */
-.chat-fab {
-  @apply fixed z-40 transition-all duration-150;
-  bottom: 1.5rem;
-  right: 1.5rem;
-}
-
-.chat-fab:hover {
-  transform: scale(1.05);
-  animation-play-state: paused;
-}
-
-.chat-fab:focus {
-  @apply outline-none ring-4 ring-blue-500 ring-opacity-50;
-}
-
-/* Hide FAB when chat is open */
-.chat-widget-container.open ~ .chat-fab {
-  @apply opacity-0 transform scale-90 pointer-events-none;
-}
-
-/* CTA Popup */
-.chat-cta {
-  @apply fixed z-40;
-  bottom: 8rem;
-  right: 8rem;
-}
-.chat-cta-inner {
-  @apply bg-banking-blue/80 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-white/20 relative;
-}
-.chat-cta-inner::after {
-  content: '';
-  position: absolute;
-  width: 1rem;
-  height: 1rem;
-  background-color: rgba(59, 130, 246, 0.8);
-  bottom: -0.5rem;
-  right: 1rem;
-  transform: translateY(0) rotate(45deg);
-  border-radius: 2px;
-}
-
-/* Full-Screen Mobile Styles */
 @media (max-width: 767px) {
   .chat-widget-container.open {
     @apply inset-0 w-full h-full;
@@ -160,13 +152,8 @@
     left: 2rem;
     width: auto;
   }
-
-  .chat-cta-inner::after {
-    display: none;
-  }
 }
 
-/* Scrollbar styling */
 .chat-messages::-webkit-scrollbar {
   width: 4px;
 }
@@ -184,7 +171,6 @@
   background: #94a3b8;
 }
 
-/* Keyframe Animations */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -205,10 +191,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.animate-cta-slide-in {
-  animation: cta-slide-in 0.5s ease-out forwards;
 }
 
 @keyframes shine-effect {

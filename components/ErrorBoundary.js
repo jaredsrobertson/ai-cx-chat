@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '../lib/utils';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -11,7 +12,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Chat widget error:', error, errorInfo);
+    logger.error('Chat widget error boundary caught an error', error, { errorInfo });
   }
 
   render() {

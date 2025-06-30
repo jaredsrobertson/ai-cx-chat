@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { logger } from '../../lib/utils';
 
 export default function LoginModal({ isOpen, onClose, onSuccess }) {
   const [username, setUsername] = useState('demo123');
@@ -12,33 +13,26 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
-    console.log('Attempting demo login with credentials:', { username, pin: '****' });
+    logger.debug('Attempting demo login', { username });
 
     try {
       const result = await login(username, pin);
-      
-      console.log('Login result:', { success: result.success, error: result.error });
+      logger.debug('Login result', { success: result.success, error: result.error });
       
       if (result.success) {
-        console.log('Login successful, triggering success callback.');
-        
-        // Reset form state
+        logger.info('Login successful, triggering success callback.');
         setUsername('demo123');
         setPin('1234');
         setError('');
-        
-        // The onSuccess handler in the parent is responsible for closing the modal
         if (onSuccess) {
           onSuccess();
         }
-        
       } else {
-        console.error('Login failed:', result.error);
+        logger.warn('Login failed', { error: result.error });
         setError(result.error);
       }
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (err) {
+      logger.error('Login submission error', err);
       setError('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -46,13 +40,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
   };
 
   const handleClose = () => {
-    console.log('Login modal closed/cancelled');
-    
-    // Reset form state
+    logger.debug('Login modal closed/cancelled');
     setError('');
     setIsLoading(false);
-    
-    // Call the close handler
     onClose();
   };
 
@@ -70,8 +60,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
           <h2 className="text-2xl font-bold text-gray-900">Demo Login</h2>
           <p className="text-gray-600 mt-2">This is a demonstration with mock credentials</p>
         </div>
-
-        {/* Demo Warning Banner */}
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-6">
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,7 +69,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
           </div>
           <p className="text-sm mt-1">These are test credentials for demonstration purposes only.</p>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-4" id="demo-login-form">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -101,7 +88,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               form="demo-login-form"
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Demo PIN
@@ -121,13 +107,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               form="demo-login-form"
             />
           </div>
-
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
-
           <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
             <p className="font-medium mb-1">Available Demo Accounts:</p>
             <div className="space-y-1">
@@ -136,7 +120,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
               <p>👤 Username: mike789, PIN: 5555</p>
             </div>
           </div>
-
           <div className="flex space-x-3 pt-4">
             <button
               type="button"

@@ -3,8 +3,8 @@ import ChatMessage from './ChatMessage';
 import { PaperAirplaneIcon, MicrophoneIcon } from '../ui/Icons';
 import { useChat } from '../../hooks/useChat';
 import { useTTS } from '../../contexts/TTSContext';
+import { logger } from '../../lib/utils';
 
-// Debounce utility
 function debounce(func, delay) {
   let timeoutId;
   return function (...args) {
@@ -25,7 +25,6 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
   const inputRef = useRef(null);
   const messageCounts = useRef({ banking: 0, advisor: 0 });
 
-  // Auto-play new bot messages for banking tab
   useEffect(() => {
     const currentMessages = messages[activeTab] || [];
     const lastMessage = currentMessages[currentMessages.length - 1];
@@ -45,19 +44,16 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
     messageCounts.current[activeTab] = currentMessages.length;
   }, [messages, activeTab, isAutoResponseEnabled, play]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeTab]);
 
-  // Focus input when not loading
   useEffect(() => {
     if (!loading) {
       inputRef.current?.focus();
     }
   }, [loading]);
 
-  // Setup speech recognition
   const setupSpeechRecognition = useCallback(() => {
     if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
       const recognition = new window.webkitSpeechRecognition();
@@ -77,7 +73,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
       };
       
       recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
+        logger.error('Speech recognition error', event.error);
         setIsRecording(false);
       };
       
@@ -86,12 +82,10 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
     }
   }, [activeTab, processMessage]);
 
-  // Initialize speech recognition once
   useEffect(() => {
     setupSpeechRecognition();
   }, [setupSpeechRecognition]);
 
-  // Debounced speech start
   const debouncedSpeechStart = useMemo(
     () => debounce(() => {
       if (recognitionRef.current && !isRecording) {
@@ -102,7 +96,6 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
     [isRecording]
   );
 
-  // Handle microphone click
   const handleMicClick = useCallback(() => {
     if (isRecording) {
       recognitionRef.current?.stop();
@@ -112,7 +105,6 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
     }
   }, [isRecording, debouncedSpeechStart]);
 
-  // Handle form submission
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
     if (input.trim() && !loading) {
@@ -123,7 +115,6 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Tab Headers */}
       <div className="flex border-b border-gray-200 flex-shrink-0">
         <button
           onClick={() => setActiveTab('banking')}
@@ -148,14 +139,10 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
           AI Advisor
         </button>
       </div>
-
-      {/* Messages Area */}
       <div className="flex-grow px-2 py-4 space-y-4 overflow-y-auto chat-messages" role="log" aria-label="Chat messages">
         {messages[activeTab].map(msg => (
           <ChatMessage key={msg.id} {...msg} />
         ))}
-        
-        {/* Loading Indicator */}
         {loading && (
           <div className="chat-message bot" role="status" aria-label="Assistant is typing">
             <div className="message-content bg-white p-3 rounded-lg shadow-sm">
@@ -170,11 +157,8 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
             </div>
           </div>
         )}
-        
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Input Area */}
       <div className="p-4 bg-white border-t border-gray-200">
         <form onSubmit={handleSubmit} className="flex items-center space-x-2">
           <input
@@ -188,8 +172,6 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
             maxLength={1000}
             aria-label="Type your message"
           />
-          
-          {/* Microphone Button */}
           <button
             type="button"
             onClick={handleMicClick}
@@ -204,8 +186,6 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
           >
             <MicrophoneIcon className="w-4 h-4" />
           </button>
-          
-          {/* Send Button */}
           <button
             type="submit"
             className="p-2 bg-banking-blue text-white rounded-full hover:bg-banking-navy disabled:bg-gray-300 transition-all hover:shadow-md"

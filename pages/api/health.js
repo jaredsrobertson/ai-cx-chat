@@ -1,88 +1,83 @@
-import { CONFIG, validateEnvironment, logger, createStandardResponse } from '../../lib/utils';
+import { createApiHandler, validateEnvironment, logger, CONFIG, createStandardResponse } from '../../lib/utils';
+import { OpenAIService } from '@/lib/openai';
+import dialogflow from '@google-cloud/dialogflow';
 
-export default function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json(createStandardResponse(false, null, 'Method not allowed'));
+const ping = async (serviceName, promise) => {
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000));
+  try {
+    await Promise.race([promise, timeout]);
+    return { status: 'ok' };
+  } catch (error) {
+    logger.warn(`Health check ping failed for ${serviceName}`, { error: error.message });
+    return { status: 'error', error: error.message };
   }
+};
 
+const healthHandler = async (req, res) => {
   const startTime = Date.now();
   
-  try {
-    // Basic health info
-    const health = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development'
-    };
-
-    // Check service availability
-    const services = {
-      dialogflow: {
-        available: !!(process.env.GOOGLE_CLOUD_PROJECT_ID && process.env.GOOGLE_APPLICATION_CREDENTIALS),
-        status: process.env.GOOGLE_CLOUD_PROJECT_ID ? 'configured' : 'not_configured'
-      },
-      openai: {
-        available: !!process.env.OPENAI_API_KEY,
-        status: process.env.OPENAI_API_KEY ? 'configured' : 'mock_mode'
-      },
-      tts: {
-        available: !!process.env.ELEVENLABS_API_KEY,
-        status: process.env.ELEVENLABS_API_KEY ? 'configured' : 'not_configured'
-      },
-      authentication: {
-        available: !!(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= CONFIG.JWT.MIN_SECRET_LENGTH),
-        status: process.env.JWT_SECRET ? 'configured' : 'not_configured'
-      }
-    };
-
-    // Check critical services
-    if (!services.authentication.available) {
-      health.status = 'unhealthy';
-      health.issues = ['Authentication not properly configured'];
+  const openaiService = new OpenAIService();
+  
+  const dialogflowPing = ping('Dialogflow', async () => {
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS && process.env.GOOGLE_CLOUD_PROJECT_ID) {
+      const sessionsClient = new dialogflow.SessionsClient();
+      await sessionsClient.getProjectId();
+    } else {
+      throw new Error('Not configured');
     }
+  });
 
-    // Environment validation
-    let envValidation = { valid: true };
-    try {
-      validateEnvironment();
-    } catch (error) {
-      envValidation.valid = false;
-      envValidation.error = error.message;
-      health.status = 'unhealthy';
+  const openAIPing = ping('OpenAI', openaiService.openai.models.list({ limit: 1 }));
+
+  const ttsPing = ping('ElevenLabs', fetch(`https://api.elevenlabs.io/v1/voices`, {
+    headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY || '' }
+  }).then(res => {
+    if (!res.ok) throw new Error(`API responded with ${res.status}`);
+  }));
+
+  const [dialogflowResult, openAIResult, ttsResult] = await Promise.all([dialogflowPing, openAIPing, ttsPing]);
+
+  const health = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
+  };
+
+  const services = {
+    dialogflow: dialogflowResult,
+    openai: openAIResult,
+    tts: ttsResult,
+    authentication: {
+      status: (process.env.JWT_SECRET && process.env.JWT_SECRET.length >= CONFIG.JWT.MIN_SECRET_LENGTH) ? 'ok' : 'error'
     }
+  };
 
-    // Performance metrics
-    const memoryUsage = process.memoryUsage();
-    const performance = {
-      memory_used_mb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
-      memory_total_mb: Math.round(memoryUsage.heapTotal / 1024 / 1024),
-      response_time_ms: Date.now() - startTime
-    };
+  const issues = Object.entries(services)
+    .filter(([, result]) => result.status !== 'ok')
+    .map(([name, result]) => `${name} is experiencing issues` + (result.error ? `: ${result.error}` : ''));
 
-    const response = {
-      ...health,
-      services,
-      environment_validation: envValidation,
-      performance,
-      features: CONFIG.FEATURES
-    };
-
-    logger.debug('Health check completed', { status: health.status, responseTime: performance.response_time_ms });
-
-    const statusCode = health.status === 'healthy' ? 200 : 503;
-    return res.status(statusCode).json(response);
-
-  } catch (error) {
-    logger.error('Health check failed', error);
-    
-    return res.status(500).json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: 'Health check failed',
-      message: error.message
-    });
+  if (issues.length > 0) {
+    health.status = 'unhealthy';
+    health.issues = issues;
   }
-}
+
+  const response = {
+    ...health,
+    services,
+    performance: {
+      response_time_ms: Date.now() - startTime
+    },
+    features: CONFIG.FEATURES
+  };
+
+  logger.debug('Health check completed', { status: health.status, responseTime: response.performance.response_time_ms });
+
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  return res.status(statusCode).json(response);
+};
+
+export default createApiHandler(healthHandler, {
+  allowedMethods: ['GET'],
+});

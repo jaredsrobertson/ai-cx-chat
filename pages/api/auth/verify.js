@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { mockUsers } from '../../../lib/mockData';
+import { mockUsers } from '@/lib/mockData';
 
 const getUserByUsername = (username) => {
   const user = mockUsers[username];
@@ -16,7 +16,6 @@ export default function handler(req, res) {
     return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
   }
 
-  // Validate JWT_SECRET
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
     console.error('JWT_SECRET must be set and at least 32 characters long');
     return res.status(500).json({ success: false, error: 'Server configuration error' });
