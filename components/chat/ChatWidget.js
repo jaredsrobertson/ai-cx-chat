@@ -22,8 +22,6 @@ const ChatWidgetInner = () => {
   const [activeTab, setActiveTab] = useState('banking');
   const [selectedBot, setSelectedBot] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showCta, setShowCta] = useState(false);
-  const ctaShownRef = useRef(false);
   const notificationAudioRef = useRef(null);
 
   const { user, logout } = useAuth();
@@ -32,20 +30,7 @@ const ChatWidgetInner = () => {
   const handleOpen = useCallback(() => {
     logger.debug('Chat widget opening');
     setIsOpen(true);
-    setShowCta(false);
   }, []);
-
-  const triggerCta = useCallback(() => {
-    if (ctaShownRef.current || isOpen) return;
-    logger.debug('Triggering CTA popup');
-    ctaShownRef.current = true;
-    setShowCta(true);
-  }, [isOpen]);
-
-  useEffect(() => {
-    const timer = setTimeout(triggerCta, 7000);
-    return () => clearTimeout(timer);
-  }, [triggerCta]);
 
   const handleBotSelection = (bot) => {
     logger.debug(`Bot selected: ${bot}`);
@@ -73,14 +58,6 @@ const ChatWidgetInner = () => {
   return (
     <>
       <audio ref={notificationAudioRef} src="/notify.mp3" preload="auto" />
-      
-      {showCta && !isOpen && (
-        <button onClick={handleOpen} className="chat-cta animate-cta-slide-in" aria-label="Open chat">
-          <div className="chat-cta-inner">
-            <p className="font-medium text-center">Hey there! Let's chat!</p>
-          </div>
-        </button>
-      )}
 
       <div className={`chat-widget-container ${isOpen ? 'open' : 'closed'}`}>
         <div className="chat-widget-inner">
@@ -125,7 +102,7 @@ const ChatWidgetInner = () => {
       
       <button 
         onClick={handleOpen} 
-        className="chat-fab w-24 h-24 bg-brand-blue hover:bg-brand-navy text-white rounded-full shadow-2xl flex items-center justify-center relative overflow-hidden group animate-bounce-shine" 
+        className="chat-fab w-24 h-24 text-brand-blue rounded-full flex items-center justify-center group animate-bounce-shine"
         aria-label="Open Chat"
       >
         <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
