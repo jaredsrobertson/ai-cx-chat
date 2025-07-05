@@ -1,4 +1,4 @@
-import { LockClosedIcon } from '../ui/Icons';
+import { HiOutlineLockClosed } from 'react-icons/hi2';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-US', {
@@ -65,7 +65,7 @@ export default function ConfidentialDisplay({ data }) {
   return (
     <div className="mt-2 border-t border-gray-200 pt-3">
       <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-        <LockClosedIcon className="w-4 h-4" />
+        <HiOutlineLockClosed className="w-4 h-4" />
         <span>Secure</span>
       </div>
       {renderContent()}

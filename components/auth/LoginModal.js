@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/utils';
+import { HiOutlineLockClosed, HiOutlineInformationCircle } from 'react-icons/hi2';
 
 export default function LoginModal({ isOpen, onClose, onSuccess }) {
   const [username, setUsername] = useState('demo123');
@@ -18,7 +19,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
     try {
       const result = await login(username, pin);
       logger.debug('Login result', { success: result.success, error: result.error });
-      
+
       if (result.success) {
         logger.info('Login successful, triggering success callback.');
         setUsername('demo123');
@@ -53,18 +54,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
       <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 animate-slide-up">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-banking-blue rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+            <HiOutlineLockClosed className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900">Demo Login</h2>
           <p className="text-gray-600 mt-2">This is a demonstration with mock credentials</p>
         </div>
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-6">
           <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <HiOutlineInformationCircle className="w-5 h-5 text-amber-600" />
             <p className="text-sm font-medium">Demo Mode</p>
           </div>
           <p className="text-sm mt-1">These are test credentials for demonstration purposes only.</p>
