@@ -1,4 +1,6 @@
-import { createApiHandler, logger, CONFIG } from '@/lib/utils';
+import { createApiHandler } from '@/lib/apiUtils';
+import { logger } from '@/lib/logger';
+import { CONFIG } from '@/lib/config';
 
 const ttsHandler = async (req, res) => {
     const { text } = req.body;

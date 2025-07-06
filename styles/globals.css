@@ -148,9 +148,9 @@
 
   /* Chat FAB */
   .chat-fab {
-    @apply fixed z-40;
+    @apply fixed z-40 w-24 h-24;
     bottom: 2rem;
-    right: 1.5rem;
+    right: 2rem; /* Consistent spacing */
   }
   
   .chat-fab-container {
@@ -218,10 +218,9 @@
     }
 
     .chat-fab {
-      width: 4rem;
-      height: 4rem;
+      @apply w-20 h-20; /* Smaller size for mobile */
       bottom: 1rem;
-      right: 1.5rem;
+      right: 1rem;
     }
 
     /* Mobile optimizations */

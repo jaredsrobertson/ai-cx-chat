@@ -17,7 +17,7 @@ import {
 } from 'react-icons/hi2';
 import { logger } from '@/lib/logger';
 import { CloudWithTailIcon } from '@/components/ui/CloudWithTailIcon';
-import { SmileyFaceIcon } from '@/components/ui/SmileyFaceIcon'; // Import the new custom icon
+import { SmileyFaceIcon } from '@/components/ui/SmileyFaceIcon';
 
 const LoginModal = dynamic(() => import('../auth/LoginModal'));
 
@@ -147,9 +147,9 @@ const ChatWidgetInner = () => {
         className="chat-fab"
         aria-label="Open Chat"
       >
-        <div className="relative w-24 h-24 chat-fab-container">
+        <div className="relative w-full h-full chat-fab-container">
             <CloudWithTailIcon className="absolute inset-0 w-full h-full text-white drop-shadow-lg" />
-            <SmileyFaceIcon className="absolute left-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-brand-blue top-[58%]" />
+            <SmileyFaceIcon className="absolute left-1/2 h-6 w-6 md:h-8 md:w-8 -translate-x-1/2 -translate-y-1/2 text-brand-blue top-[56%]" />
         </div>
       </button>
 

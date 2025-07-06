@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
-import { HiOutlineLockClosed, HiOutlineInformationCircle } from 'react-icons/hi2';
+import { HiOutlineLockClosed } from 'react-icons/hi2';
 
 export default function LoginModal({ isOpen, onClose, onSuccess }) {
-  const [username, setUsername] = useState('demo123');
-  const [pin, setPin] = useState('1234');
+  const [username, setUsername] = useState('demo0123');
+  const [pin, setPin] = useState('aicx0123');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -14,7 +14,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    logger.debug('Attempting demo login', { username });
+    logger.debug('Attempting login', { username });
 
     try {
       const result = await login(username, pin);
@@ -22,8 +22,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
 
       if (result.success) {
         logger.info('Login successful, triggering success callback.');
-        setUsername('demo123');
-        setPin('1234');
+        setUsername('demo0123');
+        setPin('aicx0123');
         setError('');
         if (onSuccess) {
           onSuccess();
@@ -56,20 +56,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
           <div className="w-16 h-16 bg-banking-blue rounded-full flex items-center justify-center mx-auto mb-4">
             <HiOutlineLockClosed className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Demo Login</h2>
-          <p className="text-gray-600 mt-2">This is a demonstration with mock credentials</p>
-        </div>
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-6">
-          <div className="flex items-center gap-2">
-            <HiOutlineInformationCircle className="w-5 h-5 text-amber-600" />
-            <p className="text-sm font-medium">Demo Mode</p>
-          </div>
-          <p className="text-sm mt-1">These are test credentials for demonstration purposes only.</p>
+          <h2 className="text-2xl font-bold text-gray-900">Login</h2>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4" id="demo-login-form">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Demo Username
+              Username
             </label>
             <input
               type="text"
@@ -87,15 +79,15 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Demo PIN
+              Password
             </label>
             <input
               type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               className="input-field"
-              placeholder="Enter 4-digit PIN"
-              maxLength="4"
+              placeholder="Enter password"
+              maxLength="8"
               required
               disabled={isLoading}
               autoComplete="current-password"
@@ -112,9 +104,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
           <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
             <p className="font-medium mb-1">Available Demo Accounts:</p>
             <div className="space-y-1">
-              <p>👤 Username: demo123, PIN: 1234</p>
-              <p>👤 Username: sarah456, PIN: 9876</p>
-              <p>👤 Username: mike789, PIN: 5555</p>
+              <p>👤 Username: demo0123, Password: aicx0123</p>
+              <p>👤 Username: john4567, Password: aicx4567</p>
+              <p>👤 Username: mary9876, Password: aicx9876</p>
             </div>
           </div>
           <div className="flex space-x-3 pt-4">
@@ -138,7 +130,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
                   Signing In...
                 </div>
               ) : (
-                'Demo Sign In'
+                'Sign In'
               )}
             </button>
           </div>
