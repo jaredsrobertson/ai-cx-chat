@@ -1,5 +1,8 @@
 import { OpenAIService } from '@/lib/openai';
-import { createApiHandler, sanitizeInput, logger, CONFIG } from '../../../lib/utils';
+import { createApiHandler } from '@/lib/apiUtils';
+import { sanitizeInput } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { CONFIG } from '@/lib/config';
 
 export const config = {
   runtime: 'edge',
@@ -9,7 +12,7 @@ const openAIService = new OpenAIService();
 
 const sanitizeMessages = (messages) => {
   if (!Array.isArray(messages)) return [];
-  
+
   return messages
     .filter(msg => msg && typeof msg === 'object' && msg.role && msg.content)
     .map(msg => ({
@@ -17,7 +20,7 @@ const sanitizeMessages = (messages) => {
       content: sanitizeInput(msg.content, CONFIG.MAX_ADVISOR_MESSAGE_LENGTH)
     }))
     .filter(msg => msg.content.length > 0)
-    .slice(-CONFIG.MAX_CONVERSATION_HISTORY); 
+    .slice(-CONFIG.MAX_CONVERSATION_HISTORY);
 };
 
 const advisorHandler = async (req, res) => {
@@ -25,7 +28,7 @@ const advisorHandler = async (req, res) => {
   const { messages } = body;
 
   const sanitizedMessages = sanitizeMessages(messages);
-  
+
   if (sanitizedMessages.length === 0) {
     return new Response(JSON.stringify({ success: false, error: 'Valid messages are required' }), {
       status: 400,
@@ -42,7 +45,7 @@ const advisorHandler = async (req, res) => {
       /fraud/i,
       /money laundering/i
     ];
-    
+
     if (suspiciousPatterns.some(pattern => pattern.test(lastMessage.content))) {
       return new Response(JSON.stringify({
         success: false,
@@ -56,9 +59,9 @@ const advisorHandler = async (req, res) => {
 
   try {
     const stream = await openAIService.getFinancialAdviceStream(sanitizedMessages);
-    
+
     return new Response(stream, {
-      headers: { 
+      headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive'
@@ -66,9 +69,9 @@ const advisorHandler = async (req, res) => {
     });
   } catch (error) {
     logger.error('Financial advisor stream error:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR 
+    return new Response(JSON.stringify({
+      success: false,
+      error: CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -78,5 +81,6 @@ const advisorHandler = async (req, res) => {
 
 export default createApiHandler(advisorHandler, {
   allowedMethods: ['POST'],
-  rateLimit: { max: CONFIG.MAX_REQUESTS_PER_MINUTE.ADVISOR, window: 60000 }
+  // Pass rateLimit as a function to defer evaluation
+  rateLimit: () => ({ max: CONFIG.MAX_REQUESTS_PER_MINUTE.ADVISOR, window: 60000 })
 });

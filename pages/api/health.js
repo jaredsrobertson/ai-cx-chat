@@ -1,4 +1,6 @@
-import { createApiHandler, validateEnvironment, logger, CONFIG, createStandardResponse } from '../../lib/utils';
+import { createApiHandler } from '@/lib/apiUtils';
+import { logger } from '@/lib/logger';
+import { CONFIG } from '@/lib/config';
 import { OpenAIService } from '@/lib/openai';
 import dialogflow from '@google-cloud/dialogflow';
 

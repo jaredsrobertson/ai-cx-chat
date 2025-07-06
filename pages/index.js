@@ -1,12 +1,12 @@
 import Head from 'next/head';
 import { useState } from 'react';
 import ChatWidget from '@/components/chat/ChatWidget';
-import { HiCloud } from 'react-icons/hi';
+import { HiCloud } from 'react-icons/hi2'; // Using the standard icon
 import { FaGithub } from 'react-icons/fa';
 
-// Using a solid cloud SVG path for consistency with the header logo.
-const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#FFFFFF">
-    <path d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+// The favicon SVG is back to the standard, tailless cloud shape.
+const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+    <path fill-rule="evenodd" d="M4.5 9.75a6 6 0 0 1 11.573-2.226 3.75 3.75 0 0 1 4.133 4.303A4.5 4.5 0 0 1 18 20.25H6.75a5.25 5.25 0 0 1-2.23-10.004 6.072 6.072 0 0 1-.02-.496Z" clip-rule="evenodd"></path>
 </svg>`;
 
 const faviconDataUri = `data:image/svg+xml;base64,${typeof window !== 'undefined' ? window.btoa(faviconSvg) : Buffer.from(faviconSvg).toString('base64')}`;

@@ -1,15 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { useAuth } from './useAuth';
-import { useTTS } from '../contexts/TTSContext';
-import { logger } from '../lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { useTTS } from '@/contexts/TTSContext';
+import { logger } from '@/lib/logger';
+import { CONFIG } from '@/lib/config';
 
-const AUTH_REQUIRED_INTENTS = [
-    'account.balance', 'account.transfer', 'account.transfer - yes',
-    'account.transactions', 'transaction.history', 'balance.check',
-    'account.balance.check', 'fund.transfer', 'account.fund.transfer',
-    'transactions', 'account.transaction.history'
-];
+const { AUTH_REQUIRED_INTENTS, MESSAGES } = CONFIG;
 
 /**
  * Handles the API call and logic for the financial-advisor bot.
@@ -69,7 +65,7 @@ async function processBankingMessage({ message, user, isAuthenticated, onLoginRe
         if (AUTH_REQUIRED_INTENTS.includes(responsePayload.intentName) && !isAuthenticated) {
             logger.warn('Authentication required for intent', { intent: responsePayload.intentName });
             const loginMessage = getLoginMessage(responsePayload.intentName);
-            
+
             const pending = { message, tab: 'banking', sessionId: data.sessionId, intentName: responsePayload.intentName, timestamp: new Date() };
             setPendingRequest(pending);
             onLoginRequired();
@@ -99,16 +95,16 @@ const getLoginMessage = (intentName) => {
 
 export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
   const [messages, setMessages] = useState({
-    banking: [{ id: uuidv4(), author: 'bot', type: 'structured', content: { speakableText: "Welcome to the SecureBank Concierge. I can help you with account balances, transaction history, and fund transfers. You can also ask to speak with a live agent. How can I assist you today?" }, timestamp: new Date() }],
-    advisor: [{ id: uuidv4(), author: 'bot', type: 'structured', content: { speakableText: "Welcome to the AI Advisor. I can help with financial planning, budgeting, and investment questions. What's on your mind?" }, timestamp: new Date() }]
+    banking: [{ ...MESSAGES.INITIAL.BANKING, id: uuidv4(), timestamp: new Date() }],
+    advisor: [{ ...MESSAGES.INITIAL.ADVISOR, id: uuidv4(), timestamp: new Date() }]
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [pendingRequest, setPendingRequest] = useState(null);
-  
+
   const { isAuthenticated, user } = useAuth();
   const { play, isAutoResponseEnabled, isNotificationEnabled } = useTTS();
-  
+
   const playNotificationSound = useCallback(() => {
     if (isNotificationEnabled && notificationAudioRef.current) {
       notificationAudioRef.current.volume = 0.5; // Set volume to 50%
@@ -131,7 +127,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
 
   const processPendingRequest = useCallback(async (request) => {
     logger.debug('Processing pending request', { intent: request.intentName });
-    
+
     try {
         const data = await processBankingMessage({
             message: request.message,
@@ -165,7 +161,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated, pendingRequest, processPendingRequest]);
-  
+
   const processMessage = useCallback(async (message, tab) => {
     setLoading(true);
     addMessage(tab, 'user', 'text', message);
@@ -176,7 +172,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
             role: msg.author === 'user' ? 'user' : 'assistant',
             content: msg.type === 'text' ? msg.content : msg.content.speakableText
         }));
-        
+
         const placeholderId = uuidv4();
         addMessage(tab, 'bot', 'text', '...', placeholderId);
 
@@ -190,7 +186,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
         }
       } else { // Banking
         const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
-        
+
         if (data.requiresAuth) {
             addMessage(tab, 'bot', 'structured', { speakableText: data.loginMessage });
             await playNotificationSound();
@@ -201,22 +197,22 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
       }
     } catch (error) {
       logger.error('Chat processing error', error);
-      addMessage(tab, 'bot', 'structured', { 
-        speakableText: error.message || "Sorry, I encountered an error. Please try again." 
+      addMessage(tab, 'bot', 'structured', {
+        speakableText: error.message || "Sorry, I encountered an error. Please try again."
       });
       await playNotificationSound();
     } finally {
       setLoading(false);
     }
   }, [
-      isAuthenticated, user, messages, onLoginRequired, addMessage, 
+      isAuthenticated, user, messages, onLoginRequired, addMessage,
       updateMessageContent, isAutoResponseEnabled, play, playNotificationSound, setPendingRequest,
       processPendingRequest
   ]);
 
-  return { 
-    messages, 
-    loading, 
+  return {
+    messages,
+    loading,
     processMessage
   };
 }

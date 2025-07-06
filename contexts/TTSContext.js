@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
-import { CONFIG, logger } from '../lib/utils';
+import { CONFIG } from '@/lib/config';
+import { logger } from '@/lib/logger';
 
 const TTSContext = createContext();
 

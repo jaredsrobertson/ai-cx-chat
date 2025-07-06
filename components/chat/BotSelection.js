@@ -1,4 +1,4 @@
-import { CloudIcon, SparklesIcon } from '@/components/ui/Icons';
+import { HiCloud, HiSparkles } from 'react-icons/hi2';
 
 export default function BotSelection({ onSelect }) {
   return (
@@ -7,7 +7,7 @@ export default function BotSelection({ onSelect }) {
       <p className="text-gray-600 mb-8 max-w-sm">
         Select a specialized assistant to get started.
       </p>
-      
+
       <div className="space-y-4 w-full max-w-sm">
         <button
           onClick={() => onSelect('banking')}
@@ -15,7 +15,7 @@ export default function BotSelection({ onSelect }) {
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-brand-blue text-white rounded-lg flex items-center justify-center flex-shrink-0">
-              <CloudIcon className="w-7 h-7" />
+              <HiCloud className="w-7 h-7" />
             </div>
             <div>
               <h3 className="font-bold text-brand-blue">
@@ -27,14 +27,14 @@ export default function BotSelection({ onSelect }) {
             </div>
           </div>
         </button>
-        
+
         <button
           onClick={() => onSelect('advisor')}
           className="w-full text-left p-4 bg-white border border-gray-300 rounded-xl hover:border-green-500 hover:shadow-md transition-all duration-300 group"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-green-600 text-white rounded-lg flex items-center justify-center flex-shrink-0">
-              <SparklesIcon className="w-7 h-7" />
+              <HiSparkles className="w-7 h-7" />
             </div>
             <div>
               <h3 className="font-bold text-green-700">

@@ -1,6 +1,6 @@
 import { HiOutlineSpeakerWave, HiOutlineExclamationTriangle } from 'react-icons/hi2';
 import ConfidentialDisplay from './ConfidentialDisplay';
-import { useTTS } from '../../contexts/TTSContext';
+import { useTTS } from '@/contexts/TTSContext';
 import React, { memo } from 'react';
 
 const Avatar = () => (

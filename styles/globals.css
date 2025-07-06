@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 /* ==================== BASE STYLES ==================== */
 @layer base {
   :root {
@@ -150,28 +148,19 @@
 
   /* Chat FAB */
   .chat-fab {
-    @apply fixed z-40 transition-all duration-150 overflow-hidden;
+    @apply fixed z-40;
     bottom: 2rem;
     right: 1.5rem;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 3px solid #3b82f6;
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-    transition-delay: 300ms; /* Delay the fade-in of the FAB */
+  }
+  
+  .chat-fab-container {
+    opacity: 0;
+    animation: zoom-fade-in 0.5s ease-out 0.5s forwards;
   }
 
-  .chat-fab:hover {
-    transform: scale(1.05);
-    background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  /* When widget is open, fade out the FAB immediately */
+  /* When widget is open, fade out the FAB */
   .chat-widget-container.open ~ .chat-fab {
     @apply opacity-0 transform scale-90 pointer-events-none;
-    transition-delay: 0ms; /* No delay on fade-out */
   }
 
   /* Custom scrollbar for content container */
@@ -210,63 +199,6 @@
     background: #94a3b8;
   }
 
-  /* ==================== ANIMATIONS ==================== */
-
-  /* Enhanced shine effect with glow for chat FAB */
-
-  .animate-bounce-shine {
-    animation: bounce-effect 3s infinite 3s;
-    animation-timing-function: cubic-bezier(0.280, 0.840, 0.420, 1);
-    overflow: hidden;
-  }
-
-  /* Main shine effect with glow */
-  .animate-bounce-shine::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 20%;
-    height: 200%;
-    background: linear-gradient(
-      45deg,
-      transparent 30%,
-      rgba(255, 255, 255, 0.8) 50%,
-      transparent 70%
-    );
-    transform: rotate(45deg);
-    animation: shine-effect 3s infinite 3s;
-    /* Add glow effect */
-    box-shadow:
-      0 0 20px rgba(255, 255, 255, 0.6),
-      0 0 40px rgba(255, 255, 255, 0.4),
-      0 0 60px rgba(255, 255, 255, 0.2);
-    filter: blur(1px);
-  }
-
-  /* Additional subtle glow layer */
-  .animate-bounce-shine::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 30%;
-    height: 200%;
-    background: linear-gradient(
-      45deg,
-      transparent 20%,
-      rgba(59, 130, 246, 0.3) 50%,
-      transparent 80%
-    );
-    transform: rotate(45deg);
-    animation: shine-effect 3s infinite 3s;
-    /* Blue glow to match brand */
-    box-shadow:
-      0 0 30px rgba(59, 130, 246, 0.4),
-      0 0 50px rgba(59, 130, 246, 0.2);
-    filter: blur(2px);
-  }
-
   /* ==================== MOBILE RESPONSIVE ==================== */
 
   @media (max-width: 767px) {
@@ -290,7 +222,6 @@
       height: 4rem;
       bottom: 1rem;
       right: 1.5rem;
-      border-width: 2px; /* Thinner border on mobile */
     }
 
     /* Mobile optimizations */
@@ -318,34 +249,13 @@
   }
 }
 
-@keyframes shine-effect {
-  0%, 20% {
-    left: -100%;
+@keyframes zoom-fade-in {
+  from {
+    transform: scale(0.8);
     opacity: 0;
   }
-  30% {
-    opacity: 0.8;
-  }
-  50% {
+  to {
+    transform: scale(1);
     opacity: 1;
-  }
-  70% {
-    opacity: 0.8;
-  }
-  80%, 100% {
-    left: 150%;
-    opacity: 0;
-  }
-}
-
-@keyframes bounce-effect {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-10px);
-  }
-  60% {
-    transform: translateY(-5px);
   }
 }

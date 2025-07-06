@@ -1,5 +1,5 @@
 import React from 'react';
-import { logger } from '../lib/utils';
+import { logger } from '@/lib/logger';
 import { HiOutlineExclamationTriangle } from 'react-icons/hi2';
 
 class ErrorBoundary extends React.Component {

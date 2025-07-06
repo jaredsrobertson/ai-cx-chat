@@ -1,6 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import dialogflowService from '@/lib/dialogflow';
-import { createApiHandler, sanitizeInput, logger, CONFIG } from '../../../lib/utils';
+import { createApiHandler } from '@/lib/apiUtils';
+import { sanitizeInput } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { CONFIG } from '@/lib/config';
 
 const bankingHandler = async (req, res, user) => {
   let { message, sessionId } = req.body;

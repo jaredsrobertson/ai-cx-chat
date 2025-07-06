@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ChatMessage from './ChatMessage';
-import { PaperAirplaneIcon, MicrophoneIcon } from '../ui/Icons';
-import { useChat } from '../../hooks/useChat';
-import { useTTS } from '../../contexts/TTSContext';
-import { logger } from '../../lib/utils';
+import { HiPaperAirplane, HiMicrophone } from 'react-icons/hi2';
+import { useChat } from '@/hooks/useChat';
+import { useTTS } from '@/contexts/TTSContext';
+import { logger } from '@/lib/logger';
 
 function debounce(func, delay) {
   let timeoutId;
@@ -16,10 +16,10 @@ function debounce(func, delay) {
 export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, notificationAudioRef }) {
   const { messages, loading, processMessage } = useChat(activeTab, onLoginRequired, notificationAudioRef);
   const { play, isAutoResponseEnabled } = useTTS();
-  
+
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  
+
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -40,7 +40,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
         play(textToSpeak, lastMessage.id);
       }
     }
-    
+
     messageCounts.current[activeTab] = currentMessages.length;
   }, [messages, activeTab, isAutoResponseEnabled, play]);
 
@@ -60,23 +60,23 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
-      
+
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
         setIsRecording(false);
-        
+
         if (transcript.trim()) {
           processMessage(transcript, activeTab);
           setInput('');
         }
       };
-      
+
       recognition.onerror = (event) => {
         logger.error('Speech recognition error', event.error);
         setIsRecording(false);
       };
-      
+
       recognition.onend = () => setIsRecording(false);
       recognitionRef.current = recognition;
     }
@@ -119,8 +119,8 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
         <button
           onClick={() => setActiveTab('banking')}
           className={`flex-1 py-3 px-4 text-sm font-medium text-center border-b-2 transition-colors ${
-            activeTab === 'banking' 
-              ? 'border-banking-blue text-banking-blue bg-blue-50' 
+            activeTab === 'banking'
+              ? 'border-banking-blue text-banking-blue bg-blue-50'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
           }`}
           aria-label="Switch to SecureBank Concierge"
@@ -130,8 +130,8 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
         <button
           onClick={() => setActiveTab('advisor')}
           className={`flex-1 py-3 px-4 text-sm font-medium text-center border-b-2 transition-colors ${
-            activeTab === 'advisor' 
-              ? 'border-green-500 text-green-600 bg-green-50' 
+            activeTab === 'advisor'
+              ? 'border-green-500 text-green-600 bg-green-50'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
           }`}
           aria-label="Switch to AI Advisor"
@@ -184,7 +184,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
             aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
             disabled={loading}
           >
-            <MicrophoneIcon className="w-4 h-4" />
+            <HiMicrophone className="w-4 h-4" />
           </button>
           <button
             type="submit"
@@ -192,7 +192,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
             disabled={loading || !input.trim()}
             aria-label="Send message"
           >
-            <PaperAirplaneIcon className="w-4 h-4" />
+            <HiPaperAirplane className="w-4 h-4" />
           </button>
         </form>
       </div>

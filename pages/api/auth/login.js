@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { mockUsers } from '@/lib/mockData';
-import { createApiHandler, sanitizeCredentials, logger, CONFIG } from '../../../lib/utils';
+import { createApiHandler } from '@/lib/apiUtils';
+import { sanitizeCredentials } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { CONFIG } from '@/lib/config';
 
 const validateUser = (username, pin) => {
   const user = mockUsers[username];
@@ -34,11 +37,11 @@ const loginHandler = async (req, res) => {
   }
 
   const token = jwt.sign(
-    { 
-      userId: user.id, 
-      username: username, 
-      name: user.name, 
-      accounts: user.accounts 
+    {
+      userId: user.id,
+      username: username,
+      name: user.name,
+      accounts: user.accounts
     },
     process.env.JWT_SECRET,
     { expiresIn: CONFIG.JWT.EXPIRES_IN }
@@ -50,11 +53,11 @@ const loginHandler = async (req, res) => {
     success: true,
     data: {
       token,
-      user: { 
-        id: user.id, 
-        name: user.name, 
-        email: user.email, 
-        username: username 
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: username
       }
     }
   });
@@ -62,5 +65,6 @@ const loginHandler = async (req, res) => {
 
 export default createApiHandler(loginHandler, {
   allowedMethods: ['POST'],
-  rateLimit: { max: CONFIG.MAX_REQUESTS_PER_MINUTE.LOGIN, window: 60000 }
+  // Pass rateLimit as a function to defer evaluation
+  rateLimit: () => ({ max: CONFIG.MAX_REQUESTS_PER_MINUTE.LOGIN, window: 60000 })
 });

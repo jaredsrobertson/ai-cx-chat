@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { mockUsers } from '@/lib/mockData';
+import { createApiHandler } from '@/lib/apiUtils';
+import { logger } from '@/lib/logger';
 
 const getUserByUsername = (username) => {
   const user = mockUsers[username];
@@ -10,17 +12,7 @@ const getUserByUsername = (username) => {
   return null;
 };
 
-export default function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
-  }
-
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-    console.error('JWT_SECRET must be set and at least 32 characters long');
-    return res.status(500).json({ success: false, error: 'Server configuration error' });
-  }
-
+const verifyHandler = async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, error: 'No token provided' });
@@ -31,7 +23,7 @@ export default function handler(req, res) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = getUserByUsername(decoded.username);
-    
+
     if (!user) {
       return res.status(401).json({ success: false, error: 'User not found' });
     }
@@ -43,7 +35,11 @@ export default function handler(req, res) {
       }
     });
   } catch (error) {
-    console.error('Token verification error:', error.message);
+    logger.error('Token verification error:', error.message);
     return res.status(401).json({ success: false, error: 'Invalid token' });
   }
-}
+};
+
+export default createApiHandler(verifyHandler, {
+  allowedMethods: ['GET'],
+});

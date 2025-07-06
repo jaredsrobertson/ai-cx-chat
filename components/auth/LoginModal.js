@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { logger } from '../../lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger';
 import { HiOutlineLockClosed, HiOutlineInformationCircle } from 'react-icons/hi2';
 
 export default function LoginModal({ isOpen, onClose, onSuccess }) {

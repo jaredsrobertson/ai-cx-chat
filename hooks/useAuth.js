@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { logger } from '../lib/utils';
+import { logger } from '@/lib/logger';
 
 const AuthContext = createContext();
 
@@ -8,10 +8,10 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    logger.debug('Auth state updated', { 
-      user: user?.name || null, 
+    logger.debug('Auth state updated', {
+      user: user?.name || null,
       isAuthenticated: !!user,
-      isLoading 
+      isLoading
     });
   }, [user, isLoading]);
 
@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
       const response = await fetch('/api/auth/verify', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -68,9 +68,9 @@ export function AuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, pin }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok && data.success) {
         logger.info('Login successful, storing token and setting user');
         localStorage.setItem('authToken', data.data.token);
@@ -91,14 +91,14 @@ export function AuthProvider({ children }) {
     clearAuth();
   }, [clearAuth, user?.username]);
 
-  const value = useMemo(() => ({ 
-    user, 
-    isLoading, 
-    login, 
-    logout, 
+  const value = useMemo(() => ({
+    user,
+    isLoading,
+    login,
+    logout,
     refreshAuth: verifyToken,
-    isAuthenticated: !!user 
-  }), [user, isLoading, login, logout, verifyToken]);
+    isAuthenticated: !!user
+  }), [user, isLoading]);
 
   return (
     <AuthContext.Provider value={value}>

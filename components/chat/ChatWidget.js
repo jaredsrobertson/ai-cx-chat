@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import ChatTabs from './ChatTabs';
-import LoginModal from '../auth/LoginModal';
 import ErrorBoundary from '../ErrorBoundary';
 import BotSelection from './BotSelection';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,9 +14,12 @@ import {
   HiOutlineXMark,
   HiOutlineBell,
   HiOutlineBellSlash,
-  HiOutlineChatBubbleOvalLeftEllipsis
 } from 'react-icons/hi2';
-import { logger } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { CloudWithTailIcon } from '@/components/ui/CloudWithTailIcon';
+import { SmileyFaceIcon } from '@/components/ui/SmileyFaceIcon'; // Import the new custom icon
+
+const LoginModal = dynamic(() => import('../auth/LoginModal'));
 
 const initialState = {
   isOpen: false,
@@ -30,11 +33,11 @@ function widgetReducer(state, action) {
     case 'OPEN':
       return { ...state, isOpen: true };
     case 'CLOSE':
-      return { ...initialState }; // Reset state on close
+      return { ...initialState };
     case 'SELECT_BOT':
       return { ...state, selectedBot: action.payload, activeTab: action.payload };
     case 'BACK_TO_SELECTION':
-        return { ...state, selectedBot: null };
+      return { ...state, selectedBot: null };
     case 'SHOW_LOGIN_MODAL':
       return { ...state, showLoginModal: true };
     case 'HIDE_LOGIN_MODAL':
@@ -43,7 +46,6 @@ function widgetReducer(state, action) {
       throw new Error(`Unhandled action type: ${action.type}`);
   }
 }
-
 
 const ChatWidgetInner = () => {
   const [state, dispatch] = useReducer(widgetReducer, initialState);
@@ -85,9 +87,9 @@ const ChatWidgetInner = () => {
 
   useEffect(() => {
     const handleToggle = (event) => {
-        if(event.target.closest('[data-chat-toggle]')) {
-            handleOpen();
-        }
+      if (event.target.closest('[data-chat-toggle]')) {
+        handleOpen();
+      }
     };
 
     document.addEventListener('click', handleToggle);
@@ -142,13 +144,22 @@ const ChatWidgetInner = () => {
 
       <button
         onClick={handleOpen}
-        className="chat-fab w-24 h-24 text-brand-blue rounded-full flex items-center justify-center group animate-bounce-shine"
+        className="chat-fab"
         aria-label="Open Chat"
       >
-        <HiOutlineChatBubbleOvalLeftEllipsis className="w-12 h-12" />
+        <div className="relative w-24 h-24 chat-fab-container">
+            <CloudWithTailIcon className="absolute inset-0 w-full h-full text-white drop-shadow-lg" />
+            <SmileyFaceIcon className="absolute left-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-brand-blue top-[58%]" />
+        </div>
       </button>
 
-      <LoginModal isOpen={showLoginModal} onClose={() => dispatch({ type: 'HIDE_LOGIN_MODAL' })} onSuccess={handleLoginSuccess} />
+      {showLoginModal && (
+        <LoginModal
+          isOpen={showLoginModal}
+          onClose={() => dispatch({ type: 'HIDE_LOGIN_MODAL' })}
+          onSuccess={handleLoginSuccess}
+        />
+      )}
     </>
   );
 };
