@@ -120,7 +120,8 @@
   }
 
   .chat-message.bot {
-    @apply bg-white text-gray-800 mr-auto border border-gray-200/80 rounded-bl-md;
+    /* Made the border slightly more opaque for better contrast */
+    @apply bg-white text-gray-800 mr-auto border border-gray-200 rounded-bl-md;
   }
 
   /* Chat widget container */
@@ -142,8 +143,9 @@
   }
 
   .chat-widget-inner {
-    @apply w-full h-full bg-gray-100 rounded-xl border border-gray-200 flex flex-col overflow-hidden;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    /* REMOVED background color from here to let child components control it. */
+    @apply w-full h-full rounded-xl border border-gray-200/80 flex flex-col overflow-hidden;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
   }
 
   /* Chat FAB */

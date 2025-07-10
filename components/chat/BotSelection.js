@@ -2,7 +2,8 @@ import { HiCloud, HiSparkles } from 'react-icons/hi2';
 
 export default function BotSelection({ onSelect }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full p-8 bg-gray-100 text-center">
+    // Changed background from bg-gray-100 to bg-gray-50
+    <div className="flex flex-col items-center justify-center h-full p-8 bg-gray-50 text-center">
       <h2 className="text-xl font-bold text-gray-800 mb-2">Choose an Assistant</h2>
       <p className="text-gray-600 mb-8 max-w-sm">
         Select a specialized assistant to get started.

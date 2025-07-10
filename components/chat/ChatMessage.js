@@ -1,11 +1,12 @@
-import { HiOutlineSpeakerWave, HiOutlineExclamationTriangle } from 'react-icons/hi2';
+import { HiOutlineSpeakerWave, HiOutlineExclamationTriangle, HiCloud } from 'react-icons/hi2';
 import ConfidentialDisplay from './ConfidentialDisplay';
 import { useTTS } from '@/contexts/TTSContext';
 import React, { memo } from 'react';
+import clsx from 'clsx';
 
 const Avatar = () => (
-  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-banking-navy flex-shrink-0">
-    <span className="text-xl" role="img" aria-label="Robot assistant">🤖</span>
+  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-brand-navy flex-shrink-0">
+    <HiCloud className="w-5 h-5 text-white" />
   </div>
 );
 
@@ -47,15 +48,16 @@ const SpeakButton = memo(({ textToSpeak, messageId }) => {
       <button
         onClick={handleSpeakButtonClick}
         onKeyDown={handleKeyDown}
-        className={`p-1 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-banking-blue focus:ring-opacity-50 ${
-          isThisMessagePlaying
-            ? 'text-blue-500 bg-blue-100'
-            : isLoading && nowPlayingId === messageId
-              ? 'text-gray-400 cursor-wait'
-              : error && nowPlayingId === messageId
-                ? 'text-red-500 bg-red-50'
-                : 'text-gray-400 hover:bg-gray-200 hover:text-banking-blue'
-        }`}
+        className={clsx(
+          'p-1 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-opacity-50',
+          {
+            'text-blue-500 bg-blue-100': isThisMessagePlaying,
+            'text-gray-400 cursor-wait': isLoading && nowPlayingId === messageId,
+            'text-red-500 bg-red-50': error && nowPlayingId === messageId,
+            'text-gray-400 hover:bg-gray-200 hover:text-brand-blue':
+              !isThisMessagePlaying && !(isLoading && nowPlayingId === messageId) && !(error && nowPlayingId === messageId),
+          }
+        )}
         aria-label={
           isThisMessagePlaying
             ? "Stop reading message aloud"
@@ -88,7 +90,7 @@ function ChatMessage({ id, author, type, content, timestamp }) {
 
   const getSafeContent = (rawContent) => {
     if (typeof rawContent === 'object' && rawContent !== null && !Array.isArray(rawContent)) {
-      return rawContent.speakableText || JSON.stringify(rawContent, null, 2);
+      return rawContent.speakableText || 'No speakable text available';
     }
     return rawContent || '';
   };
@@ -109,9 +111,12 @@ function ChatMessage({ id, author, type, content, timestamp }) {
   }
 
   return (
-    <div className="flex items-start gap-2 my-2" role="group" aria-label="Assistant message">
+    <div className="flex items-start gap-1 my-2" role="group" aria-label="Assistant message">
       <Avatar />
-      <div className="chat-message bot">
+      <div className={clsx(
+        'chat-message bot',
+        { 'max-w-md': content.confidentialData }
+      )}>
         <p className="text-sm whitespace-pre-wrap">{textContent}</p>
 
         {type === 'structured' && content.confidentialData && (

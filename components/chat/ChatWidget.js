@@ -125,7 +125,8 @@ const ChatWidgetInner = () => {
               <p className="text-yellow-800 text-xs text-center">Audio playback error. Please try again.</p>
             </div>
           )}
-          <div className="flex-grow overflow-hidden bg-gray-100">
+          {/* Removed redundant background color class from this div */}
+          <div className="flex-grow overflow-hidden">
             <ErrorBoundary>
               {!selectedBot ? (
                 <BotSelection onSelect={handleBotSelection} />

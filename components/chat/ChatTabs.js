@@ -114,14 +114,14 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
   }, [input, loading, processMessage, activeTab]);
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="flex border-b border-gray-200 flex-shrink-0">
+    <div className="flex flex-col h-full">
+      <div className="flex border-b border-gray-200 flex-shrink-0 bg-white">
         <button
           onClick={() => setActiveTab('banking')}
           className={`flex-1 py-3 px-4 text-sm font-medium text-center border-b-2 transition-colors ${
             activeTab === 'banking'
-              ? 'border-banking-blue text-banking-blue bg-blue-50'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ? 'border-brand-blue text-brand-blue bg-blue-50'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
           }`}
           aria-label="Switch to SecureBank Concierge"
         >
@@ -132,14 +132,15 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
           className={`flex-1 py-3 px-4 text-sm font-medium text-center border-b-2 transition-colors ${
             activeTab === 'advisor'
               ? 'border-green-500 text-green-600 bg-green-50'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
           }`}
           aria-label="Switch to AI Advisor"
         >
           AI Advisor
         </button>
       </div>
-      <div className="flex-grow px-2 py-4 space-y-4 overflow-y-auto chat-messages" role="log" aria-label="Chat messages">
+      {/* Adding bg-gray-50 directly to the message container */}
+      <div className="flex-grow px-2 py-4 space-y-4 overflow-y-auto chat-messages bg-gray-50" role="log" aria-label="Chat messages">
         {messages[activeTab].map(msg => (
           <ChatMessage key={msg.id} {...msg} />
         ))}
@@ -167,7 +168,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
-            className="flex-grow p-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-banking-blue"
+            className="flex-grow p-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-blue"
             disabled={loading}
             maxLength={1000}
             aria-label="Type your message"
@@ -188,7 +189,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
           </button>
           <button
             type="submit"
-            className="p-2 bg-banking-blue text-white rounded-full hover:bg-banking-navy disabled:bg-gray-300 transition-all hover:shadow-md"
+            className="flex-shrink-0 p-2 bg-brand-blue text-white rounded-full hover:bg-brand-navy disabled:opacity-50 transition-all hover:shadow-md"
             disabled={loading || !input.trim()}
             aria-label="Send message"
           >

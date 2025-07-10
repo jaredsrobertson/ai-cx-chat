@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import dialogflowService from '@/lib/dialogflow';
+import { detectIntent, handleBankingIntent } from '@/lib/dialogflow';
 import { createApiHandler } from '@/lib/apiUtils';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
@@ -23,8 +23,8 @@ const bankingHandler = async (req, res, user) => {
   try {
     const userContext = { user };
 
-    const dialogflowResponse = await dialogflowService.detectIntent(sessionId, message);
-    const bankingResponse = await dialogflowService.handleBankingIntent(
+    const dialogflowResponse = await detectIntent(sessionId, message);
+    const bankingResponse = await handleBankingIntent(
       dialogflowResponse,
       userContext
     );

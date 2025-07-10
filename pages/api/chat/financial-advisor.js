@@ -1,4 +1,4 @@
-import { OpenAIService } from '@/lib/openai';
+import { getFinancialAdviceStream } from '@/lib/openai';
 import { createApiHandler } from '@/lib/apiUtils';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
@@ -7,8 +7,6 @@ import { CONFIG } from '@/lib/config';
 export const config = {
   runtime: 'edge',
 };
-
-const openAIService = new OpenAIService();
 
 const sanitizeMessages = (messages) => {
   if (!Array.isArray(messages)) return [];
@@ -58,7 +56,7 @@ const advisorHandler = async (req, res) => {
   }
 
   try {
-    const stream = await openAIService.getFinancialAdviceStream(sanitizedMessages);
+    const stream = await getFinancialAdviceStream(sanitizedMessages);
 
     return new Response(stream, {
       headers: {

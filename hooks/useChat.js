@@ -92,7 +92,6 @@ const getLoginMessage = (intentName) => {
     return messages[intentName] || "For security, please log in to access your account information.";
 };
 
-
 export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
   const [messages, setMessages] = useState({
     banking: [{ ...MESSAGES.INITIAL.BANKING, id: uuidv4(), timestamp: new Date() }],
@@ -154,13 +153,41 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
   useEffect(() => {
     if (isAuthenticated && pendingRequest) {
       logger.debug('Login detected. Processing pending request...');
-      const timer = setTimeout(() => {
-          processPendingRequest(pendingRequest);
-          setPendingRequest(null);
-      }, 100);
-      return () => clearTimeout(timer);
+      processPendingRequest(pendingRequest);
+      setPendingRequest(null);
     }
   }, [isAuthenticated, pendingRequest, processPendingRequest]);
+
+  const processAdvisorMessageHelper = useCallback(async (message) => {
+    const messageHistory = messages.advisor.map(msg => ({
+      role: msg.author === 'user' ? 'user' : 'assistant',
+      content: msg.type === 'text' ? msg.content : msg.content.speakableText
+    }));
+
+    const placeholderId = uuidv4();
+    addMessage('advisor', 'bot', 'text', '...', placeholderId);
+
+    const streamedContent = await processAdvisorMessage(message, messageHistory);
+
+    updateMessageContent('advisor', placeholderId, { speakableText: streamedContent });
+    await playNotificationSound();
+
+    if (isAutoResponseEnabled && streamedContent) {
+      play(streamedContent, placeholderId);
+    }
+  }, [messages.advisor, addMessage, updateMessageContent, playNotificationSound, isAutoResponseEnabled, play]);
+
+  const processBankingMessageHelper = useCallback(async (message) => {
+    const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
+
+    if (data.requiresAuth) {
+        addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
+        await playNotificationSound();
+    } else if (data.success) {
+        addMessage('banking', 'bot', 'structured', data.response);
+        await playNotificationSound();
+    }
+  }, [user, isAuthenticated, onLoginRequired, setPendingRequest, addMessage, playNotificationSound]);
 
   const processMessage = useCallback(async (message, tab) => {
     setLoading(true);
@@ -168,32 +195,9 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
 
     try {
       if (tab === 'advisor') {
-        const messageHistory = messages.advisor.map(msg => ({
-            role: msg.author === 'user' ? 'user' : 'assistant',
-            content: msg.type === 'text' ? msg.content : msg.content.speakableText
-        }));
-
-        const placeholderId = uuidv4();
-        addMessage(tab, 'bot', 'text', '...', placeholderId);
-
-        const streamedContent = await processAdvisorMessage(message, messageHistory);
-
-        updateMessageContent(tab, placeholderId, { speakableText: streamedContent });
-        await playNotificationSound();
-
-        if (isAutoResponseEnabled && streamedContent) {
-          play(streamedContent, placeholderId);
-        }
+        await processAdvisorMessageHelper(message);
       } else { // Banking
-        const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
-
-        if (data.requiresAuth) {
-            addMessage(tab, 'bot', 'structured', { speakableText: data.loginMessage });
-            await playNotificationSound();
-        } else if (data.success) {
-            addMessage(tab, 'bot', 'structured', data.response);
-            await playNotificationSound();
-        }
+        await processBankingMessageHelper(message);
       }
     } catch (error) {
       logger.error('Chat processing error', error);
@@ -204,11 +208,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
     } finally {
       setLoading(false);
     }
-  }, [
-      isAuthenticated, user, messages, onLoginRequired, addMessage,
-      updateMessageContent, isAutoResponseEnabled, play, playNotificationSound, setPendingRequest,
-      processPendingRequest
-  ]);
+  }, [addMessage, playNotificationSound, processAdvisorMessageHelper, processBankingMessageHelper]);
 
   return {
     messages,

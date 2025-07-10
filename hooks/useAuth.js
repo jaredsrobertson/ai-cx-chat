@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '@/lib/logger';
+import jwt_decode from 'jwt-decode';
 
 const AuthContext = createContext();
 
@@ -31,6 +32,13 @@ export function AuthProvider({ children }) {
     }
 
     try {
+      const decoded = jwt_decode(token);
+      const currentTime = Date.now() / 1000;
+      if (decoded.exp < currentTime) {
+        logger.warn('Token has expired');
+        clearAuth();
+        return;
+      }
       const response = await fetch('/api/auth/verify', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -98,7 +106,7 @@ export function AuthProvider({ children }) {
     logout,
     refreshAuth: verifyToken,
     isAuthenticated: !!user
-  }), [user, isLoading]);
+  }), [user, isLoading, login, logout, verifyToken]);
 
   return (
     <AuthContext.Provider value={value}>
