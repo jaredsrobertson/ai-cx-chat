@@ -52,5 +52,5 @@ const bankingHandler = async (req, res, user) => {
 
 export default createApiHandler(bankingHandler, {
   allowedMethods: ['POST'],
-  rateLimit: { max: 20, window: 60000 }
+  rateLimit: () => ({ max: CONFIG.MAX_REQUESTS_PER_MINUTE.BANKING, window: 60000 })
 });

@@ -140,7 +140,7 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
         </button>
       </div>
       {/* Adding bg-gray-50 directly to the message container */}
-      <div className="flex-grow px-2 py-4 space-y-4 overflow-y-auto chat-messages bg-gray-50" role="log" aria-label="Chat messages">
+      <div className="flex-grow px-2 py-4 space-y-4 overflow-y-auto chat-messages bg-blue-200" role="log" aria-label="Chat messages">
         {messages[activeTab].map(msg => (
           <ChatMessage key={msg.id} {...msg} />
         ))}
