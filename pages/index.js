@@ -1,10 +1,9 @@
 import Head from 'next/head';
 import { useState } from 'react';
 import ChatWidget from '@/components/chat/ChatWidget';
-import { HiCloud } from 'react-icons/hi2'; // Using the standard icon
+import { HiCloud } from 'react-icons/hi2';
 import { FaGithub } from 'react-icons/fa';
 
-// The favicon SVG is back to the standard, tailless cloud shape.
 const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
     <path fill-rule="evenodd" d="M4.5 9.75a6 6 0 0 1 11.573-2.226 3.75 3.75 0 0 1 4.133 4.303A4.5 4.5 0 0 1 18 20.25H6.75a5.25 5.25 0 0 1-2.23-10.004 6.072 6.072 0 0 1-.02-.496Z" clip-rule="evenodd"></path>
 </svg>`;
@@ -27,7 +26,8 @@ export default function Home() {
         {/* Fixed header container */}
         <div className="header-container">
           <header className="h-full flex items-center nav-footer">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            {/* This div is now full-width with padding */}
+            <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center h-16">
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-md">
@@ -106,7 +106,7 @@ export default function Home() {
                       </div>
                       <div className="text-center">
                         <h4 className="text-xl font-bold text-gray-900 mb-2">Secure API & State</h4>
-                        <p className="text-gray-600">Backend APIs are secured with **JSON Web Tokens (JWT)**. **Vercel KV (Redis)** is used for server-side rate-limiting and demonstrates caching capabilities.</p>
+                        <p className="text-gray-600">Backend APIs are secured with **JSON Web Tokens (JWT)**. In-memory rate-limiting is used on API routes to prevent abuse.</p>
                       </div>
                       <div className="text-center">
                         <h4 className="text-xl font-bold text-gray-900 mb-2">Clean & Maintainable Code</h4>
@@ -121,7 +121,7 @@ export default function Home() {
           <footer className="content-footer">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col md:flex-row justify-between items-center text-xs text-white gap-4">
-                  <p>&copy; 2024 Jared S. Robertson</p>
+                  <p>&copy; 2025 Jared S. Robertson</p>
                   <p className="text-center font-medium text-gray-300">
                     This is a portfolio project and not affiliated with any real entity.
                   </p>
@@ -146,7 +146,7 @@ export default function Home() {
                 <p className="text-gray-600 mt-2">The repository contains the complete source code for this demo.</p>
               </div>
               <div className="flex space-x-3">
-                <button onClick={() => setShowGitHubModal(false)} className="flex-1 btn-secondary">Cancel</button>
+                <button onClick={() => setShowGitHubModal(false)} className="btn-secondary">Cancel</button>
                 <button onClick={() => { window.open('https://github.com/jaredsrobertson/ai-cx-chat', '_blank'); setShowGitHubModal(false); }} className="flex-1 btn-primary">Open GitHub</button>
               </div>
             </div>

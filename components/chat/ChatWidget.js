@@ -14,10 +14,13 @@ import {
   HiOutlineXMark,
   HiOutlineBell,
   HiOutlineBellSlash,
+  HiOutlineChatBubbleOvalLeftEllipsis, // Import the new icon
 } from 'react-icons/hi2';
 import { logger } from '@/lib/logger';
-import { CloudWithTailIcon } from '@/components/ui/CloudWithTailIcon';
-import { SmileyFaceIcon } from '@/components/ui/SmileyFaceIcon';
+
+// The custom CloudWithTailIcon and SmileyFaceIcon are no longer needed
+// import { CloudWithTailIcon } from '@/components/ui/CloudWithTailIcon';
+// import { SmileyFaceIcon } from '@/components/ui/SmileyFaceIcon';
 
 const LoginModal = dynamic(() => import('../auth/LoginModal'));
 
@@ -125,8 +128,7 @@ const ChatWidgetInner = () => {
               <p className="text-yellow-800 text-xs text-center">Audio playback error. Please try again.</p>
             </div>
           )}
-          {/* Removed redundant background color class from this div */}
-          <div className="flex-grow overflow-hidden">
+          <div className="flex-grow overflow-hidden bg-gray-50">
             <ErrorBoundary>
               {!selectedBot ? (
                 <BotSelection onSelect={handleBotSelection} />
@@ -143,15 +145,13 @@ const ChatWidgetInner = () => {
         </div>
       </div>
 
+      {/* Replaced custom icon with a standard one */}
       <button
         onClick={handleOpen}
-        className="chat-fab"
+        className="chat-fab bg-brand-blue text-white rounded-full flex items-center justify-center shadow-lg hover:bg-brand-navy transition-all duration-300"
         aria-label="Open Chat"
       >
-        <div className="relative w-full h-full chat-fab-container">
-            <CloudWithTailIcon className="absolute inset-0 w-full h-full text-white drop-shadow-lg" />
-            <SmileyFaceIcon className="absolute left-1/2 h-6 w-6 md:h-8 md:w-8 -translate-x-1/2 -translate-y-1/2 text-brand-blue top-[56%]" />
-        </div>
+        <HiOutlineChatBubbleOvalLeftEllipsis className="w-10 h-10" />
       </button>
 
       {showLoginModal && (

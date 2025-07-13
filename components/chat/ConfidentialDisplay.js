@@ -1,11 +1,5 @@
 import { HiOutlineLockClosed } from 'react-icons/hi2';
-
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-};
+import { formatCurrency } from '@/lib/utils';
 
 export default function ConfidentialDisplay({ data }) {
   if (!data) return null;
