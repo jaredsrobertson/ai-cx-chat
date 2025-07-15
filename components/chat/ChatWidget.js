@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import ChatTabs from './ChatTabs';
 import ErrorBoundary from '../ErrorBoundary';
 import BotSelection from './BotSelection';
+import Handoff from './Handoff'; // Import the new Handoff component
 import { useAuth } from '@/hooks/useAuth';
 import { TTSProvider, useTTS } from '@/contexts/TTSContext';
 import {
@@ -14,13 +15,9 @@ import {
   HiOutlineXMark,
   HiOutlineBell,
   HiOutlineBellSlash,
-  HiOutlineChatBubbleOvalLeftEllipsis, // Import the new icon
+  HiOutlineChatBubbleOvalLeftEllipsis,
 } from 'react-icons/hi2';
 import { logger } from '@/lib/logger';
-
-// The custom CloudWithTailIcon and SmileyFaceIcon are no longer needed
-// import { CloudWithTailIcon } from '@/components/ui/CloudWithTailIcon';
-// import { SmileyFaceIcon } from '@/components/ui/SmileyFaceIcon';
 
 const LoginModal = dynamic(() => import('../auth/LoginModal'));
 
@@ -29,6 +26,7 @@ const initialState = {
   activeTab: 'banking',
   selectedBot: null,
   showLoginModal: false,
+  isHandoff: false, // New state for managing handoff mode
 };
 
 function widgetReducer(state, action) {
@@ -36,6 +34,7 @@ function widgetReducer(state, action) {
     case 'OPEN':
       return { ...state, isOpen: true };
     case 'CLOSE':
+      // Reset the entire state, including handoff, on close
       return { ...initialState };
     case 'SELECT_BOT':
       return { ...state, selectedBot: action.payload, activeTab: action.payload };
@@ -45,6 +44,10 @@ function widgetReducer(state, action) {
       return { ...state, showLoginModal: true };
     case 'HIDE_LOGIN_MODAL':
       return { ...state, showLoginModal: false };
+    case 'START_HANDOFF':
+      return { ...state, isHandoff: true };
+    case 'END_HANDOFF':
+      return { ...state, isHandoff: false };
     default:
       throw new Error(`Unhandled action type: ${action.type}`);
   }
@@ -52,9 +55,10 @@ function widgetReducer(state, action) {
 
 const ChatWidgetInner = () => {
   const [state, dispatch] = useReducer(widgetReducer, initialState);
-  const { isOpen, activeTab, selectedBot, showLoginModal } = state;
+  const { isOpen, activeTab, selectedBot, showLoginModal, isHandoff } = state;
 
   const notificationAudioRef = useRef(null);
+  const handoffMessageHistory = useRef([]); // Store history for the handoff summary
 
   const { user, logout } = useAuth();
   const { stop, error: ttsError, isAutoResponseEnabled, toggleAutoResponse, isNotificationEnabled, toggleNotificationSound } = useTTS();
@@ -87,6 +91,18 @@ const ChatWidgetInner = () => {
   const handleLoginSuccess = useCallback(() => {
     dispatch({ type: 'HIDE_LOGIN_MODAL' });
   }, []);
+  
+  const handleAgentRequest = useCallback((history = []) => {
+    logger.debug('Agent handoff requested');
+    handoffMessageHistory.current = history; // Store the history for the summary
+    dispatch({ type: 'START_HANDOFF' });
+  }, []);
+
+  const handleCancelHandoff = useCallback(() => {
+    logger.debug('Agent handoff cancelled');
+    dispatch({ type: 'END_HANDOFF' });
+  }, []);
+
 
   useEffect(() => {
     const handleToggle = (event) => {
@@ -112,7 +128,7 @@ const ChatWidgetInner = () => {
               <h3 className="font-semibold text-lg">CloudBank</h3>
             </div>
             <div className="flex items-center space-x-1">
-              {selectedBot && (
+              {selectedBot && !isHandoff && (
                 <>
                   <button onClick={backToSelection} className="p-2 rounded-full hover:bg-white/20" title="Back"><HiOutlineArrowUturnLeft className="w-5 h-5" /></button>
                   <button onClick={toggleNotificationSound} className="p-2 rounded-full hover:bg-white/20" title="Toggle Notifications">{isNotificationEnabled ? <HiOutlineBell className="w-5 h-5" /> : <HiOutlineBellSlash className="w-5 h-5" />}</button>
@@ -128,30 +144,32 @@ const ChatWidgetInner = () => {
               <p className="text-yellow-800 text-xs text-center">Audio playback error. Please try again.</p>
             </div>
           )}
-          <div className="flex-grow overflow-hidden bg-gray-50">
+          <div className="flex-grow overflow-hidden bg-brand-ui-02">
             <ErrorBoundary>
-              {!selectedBot ? (
-                <BotSelection onSelect={handleBotSelection} />
+              {isHandoff ? (
+                <Handoff messageHistory={handoffMessageHistory.current} onCancel={handleCancelHandoff} />
+              ) : !selectedBot ? (
+                <BotSelection onSelect={handleBotSelection} onAgentRequest={handleAgentRequest} />
               ) : (
                 <ChatTabs
                   activeTab={activeTab}
                   setActiveTab={(tab) => dispatch({ type: 'SELECT_BOT', payload: tab })}
                   onLoginRequired={handleLoginRequired}
                   notificationAudioRef={notificationAudioRef}
+                  onAgentRequest={handleAgentRequest}
                 />
               )}
             </ErrorBoundary>
           </div>
         </div>
       </div>
-
-      {/* Replaced custom icon with a standard one */}
+      
       <button
         onClick={handleOpen}
-        className="chat-fab bg-brand-blue text-white rounded-full flex items-center justify-center shadow-lg hover:bg-brand-navy transition-all duration-300"
+        className="chat-fab bg-brand-blue hover:bg-brand-navy text-white rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300"
         aria-label="Open Chat"
       >
-        <HiOutlineChatBubbleOvalLeftEllipsis className="w-10 h-10" />
+        <HiOutlineChatBubbleOvalLeftEllipsis className="w-8 h-8" />
       </button>
 
       {showLoginModal && (

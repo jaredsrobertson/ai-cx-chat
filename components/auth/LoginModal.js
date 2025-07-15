@@ -56,11 +56,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
           <div className="w-16 h-16 bg-banking-blue rounded-full flex items-center justify-center mx-auto mb-4">
             <HiOutlineLockClosed className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Login</h2>
+          <h2 className="text-2xl font-bold text-brand-text-primary">Login</h2>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4" id="demo-login-form">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-brand-text-secondary mb-2">
               Username
             </label>
             <input

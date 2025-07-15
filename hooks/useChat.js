@@ -70,7 +70,6 @@ async function processBankingMessage({ message, user, isAuthenticated, onLoginRe
             setPendingRequest(pending);
             onLoginRequired();
 
-            // Return a specific payload to signal that a login is required
             return { requiresAuth: true, loginMessage, sessionId: data.sessionId };
         }
         if (data.sessionId) {
@@ -82,6 +81,37 @@ async function processBankingMessage({ message, user, isAuthenticated, onLoginRe
     }
 }
 
+/**
+ * Handles the API call for the knowledge base bot.
+ * @param {string} message - The user's input message.
+ * @returns {Promise<string>} - A promise that resolves with the streamed text content.
+ */
+async function processKnowledgeMessage(message) {
+  const response = await fetch('/api/chat/knowledge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message })
+  });
+
+  if (!response.ok) {
+    const errData = await response.json();
+    throw new Error(errData.error || 'Failed to fetch knowledge base response');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let streamedContent = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    streamedContent += decoder.decode(value, { stream: true });
+  }
+
+  return streamedContent;
+}
+
+
 const getLoginMessage = (intentName) => {
     const messages = {
       'account.balance': "Please log in to view your account balance. I'll show you the information right after you sign in.",
@@ -92,10 +122,11 @@ const getLoginMessage = (intentName) => {
     return messages[intentName] || "For security, please log in to access your account information.";
 };
 
-export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
+export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAgentRequest) {
   const [messages, setMessages] = useState({
     banking: [{ ...MESSAGES.INITIAL.BANKING, id: uuidv4(), timestamp: new Date() }],
-    advisor: [{ ...MESSAGES.INITIAL.ADVISOR, id: uuidv4(), timestamp: new Date() }]
+    advisor: [{ ...MESSAGES.INITIAL.ADVISOR, id: uuidv4(), timestamp: new Date() }],
+    knowledge: [{ author: 'bot', type: 'structured', content: { speakableText: "Welcome! Ask me anything about CloudBank's products, services, or policies." }, id: uuidv4(), timestamp: new Date() }]
   });
 
   const [loading, setLoading] = useState(false);
@@ -104,9 +135,32 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
   const { isAuthenticated, user } = useAuth();
   const { play, isAutoResponseEnabled, isNotificationEnabled } = useTTS();
 
+  useEffect(() => {
+    try {
+      const savedMessages = localStorage.getItem('chatMessages');
+      if (savedMessages) {
+        const parsedMessages = JSON.parse(savedMessages);
+        if (parsedMessages.banking && parsedMessages.advisor && parsedMessages.knowledge) {
+          setMessages(parsedMessages);
+        }
+      }
+    } catch (error) {
+      logger.error("Failed to load messages from localStorage", error);
+      localStorage.removeItem('chatMessages');
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+    } catch (error) {
+      logger.error("Failed to save messages to localStorage", error);
+    }
+  }, [messages]);
+
   const playNotificationSound = useCallback(() => {
     if (isNotificationEnabled && notificationAudioRef.current) {
-      notificationAudioRef.current.volume = 0.5; // Set volume to 50%
+      notificationAudioRef.current.volume = 0.5;
       notificationAudioRef.current.play().catch(e => logger.error("Error playing notification sound", e));
       return new Promise(resolve => setTimeout(resolve, 500));
     }
@@ -132,8 +186,8 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
             message: request.message,
             user,
             isAuthenticated: true,
-            onLoginRequired: () => {}, // Should not be called here
-            setPendingRequest: () => {} // Should not be called here
+            onLoginRequired: () => {},
+            setPendingRequest: () => {}
         });
 
         if (data.success) {
@@ -182,12 +236,14 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
 
     if (data.requiresAuth) {
         addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
-        await playNotificationSound();
     } else if (data.success) {
         addMessage('banking', 'bot', 'structured', data.response);
-        await playNotificationSound();
+        if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
+          onAgentRequest(messages.banking);
+        }
     }
-  }, [user, isAuthenticated, onLoginRequired, setPendingRequest, addMessage, playNotificationSound]);
+    await playNotificationSound();
+  }, [user, isAuthenticated, onLoginRequired, setPendingRequest, addMessage, playNotificationSound, onAgentRequest, messages.banking]);
 
   const processMessage = useCallback(async (message, tab) => {
     setLoading(true);
@@ -196,6 +252,16 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
     try {
       if (tab === 'advisor') {
         await processAdvisorMessageHelper(message);
+      } else if (tab === 'knowledge') {
+        const placeholderId = uuidv4();
+        addMessage('knowledge', 'bot', 'text', '...', placeholderId);
+        const streamedContent = await processKnowledgeMessage(message);
+        updateMessageContent('knowledge', placeholderId, { speakableText: streamedContent });
+        await playNotificationSound();
+
+        if (isAutoResponseEnabled && streamedContent) {
+          play(streamedContent, placeholderId);
+        }
       } else { // Banking
         await processBankingMessageHelper(message);
       }
@@ -208,7 +274,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef) {
     } finally {
       setLoading(false);
     }
-  }, [addMessage, playNotificationSound, processAdvisorMessageHelper, processBankingMessageHelper]);
+  }, [addMessage, playNotificationSound, processAdvisorMessageHelper, processBankingMessageHelper, updateMessageContent, isAutoResponseEnabled, play]);
 
   return {
     messages,

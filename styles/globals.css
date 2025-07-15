@@ -16,6 +16,7 @@
     @apply h-full;
   }
 
+  /* Keep the main page gradient background that sparks joy */
   body {
     @apply bg-gradient-to-b from-brand-blue to-gray-200 bg-fixed text-gray-800;
     overflow: hidden; /* Prevent body scroll */
@@ -44,7 +45,6 @@
     overflow-x: hidden;
     scroll-snap-type: y mandatory;
     -webkit-overflow-scrolling: touch;
-    /* Fade top 25% and bottom 25% of the container */
     mask-image: linear-gradient(
       to bottom,
       transparent 0%,
@@ -61,7 +61,6 @@
     );
   }
 
-
   .content-footer {
     background: transparent;
     padding: 2rem 0;
@@ -76,24 +75,23 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    /* No padding-top needed */
   }
 }
 
 /* ==================== COMPONENT STYLES ==================== */
 @layer components {
-  /* Buttons */
+  /* Buttons (Carbon-inspired) */
   .btn-primary {
-    @apply bg-brand-blue hover:bg-brand-navy text-white font-medium px-6 py-2.5 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
+    @apply bg-brand-blue hover:bg-brand-navy text-white font-medium px-6 py-2.5 rounded-md transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-6 py-2.5 rounded-lg border border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
+    @apply bg-neutral-200 hover:bg-neutral-300 text-brand-text-primary font-medium px-6 py-2.5 rounded-md border border-neutral-300 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
   }
 
-  /* Cards */
+  /* Cards (Carbon-inspired) */
   .card {
-    @apply bg-white/80 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6;
+    @apply bg-brand-ui-01/80 backdrop-blur-md rounded-lg shadow-lg border border-brand-ui-03/50 p-4 md:p-6;
   }
 
   /* Navigation */
@@ -102,9 +100,9 @@
     border: none;
   }
 
-  /* Input fields */
+  /* Input fields (Carbon-inspired) */
   .input-field {
-    @apply w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none transition-all duration-200;
+    @apply w-full px-4 py-3 bg-brand-ui-01 border border-brand-ui-03 rounded-md focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none transition-all duration-200;
   }
 
   /* ==================== CHAT COMPONENTS ==================== */
@@ -120,8 +118,7 @@
   }
 
   .chat-message.bot {
-    /* Made the border slightly more opaque for better contrast */
-    @apply bg-white text-gray-800 mr-auto border border-gray-200 rounded-bl-md;
+    @apply bg-brand-ui-01 text-brand-text-primary mr-auto border border-brand-ui-03 rounded-bl-md;
   }
 
   /* Chat widget container */
@@ -143,16 +140,15 @@
   }
 
   .chat-widget-inner {
-    /* REMOVED background color from here to let child components control it. */
-    @apply w-full h-full rounded-xl border border-gray-200/80 flex flex-col overflow-hidden;
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
+    @apply w-full h-full rounded-xl border border-brand-ui-03/80 flex flex-col overflow-hidden;
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   }
 
-  /* Chat FAB */
+  /* Chat FAB (Carbon-inspired) */
   .chat-fab {
-    @apply fixed z-40 w-24 h-24;
-    bottom: 2rem;
-    right: 2rem; /* Consistent spacing */
+    @apply fixed z-40 w-16 h-16;
+    bottom: 1.5rem;
+    right: 1.5rem;
   }
   
   .chat-fab-container {
@@ -184,6 +180,10 @@
   }
 
   /* Chat messages scrollbar */
+  .chat-messages {
+    @apply bg-brand-ui-02; /* Use the page background for chat history */
+  }
+
   .chat-messages::-webkit-scrollbar {
     width: 4px;
   }
@@ -220,7 +220,7 @@
     }
 
     .chat-fab {
-      @apply w-20 h-20; /* Smaller size for mobile */
+      @apply w-14 h-14;
       bottom: 1rem;
       right: 1rem;
     }

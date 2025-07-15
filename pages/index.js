@@ -71,8 +71,8 @@ export default function Home() {
                 <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                   <div className="card">
                     <div className="text-center mb-12">
-                      <h3 className="text-4xl font-bold text-gray-900 mb-4">Dual AI Bot Architecture</h3>
-                      <p className="text-xl text-gray-600">Combining structured, task-oriented dialogue with flexible, generative conversation.</p>
+                      <h3 className="text-4xl font-bold text-brand-text-primary mb-4">Dual AI Bot Architecture</h3>
+                      <p className="text-xl text-brand-text-secondary">Combining structured, task-oriented dialogue with flexible, generative conversation.</p>
                     </div>
                     <div className="grid md:grid-cols-3 gap-8">
                       <div className="text-center">

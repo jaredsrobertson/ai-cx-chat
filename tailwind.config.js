@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class', 
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -7,21 +8,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          blue: '#3b82f6',
-          navy: '#1e3a8a',
+        // New Carbon-inspired palette
+        'brand-blue': '#0f62fe', // The primary interactive blue
+        'brand-navy': '#001d6c', // A deep navy for accents
+        'brand-background': '#f4f4f4', // The standard light gray page background
+        'brand-ui': {
+          '01': '#ffffff', // Primary UI color (e.g., card backgrounds)
+          '02': '#f4f4f4', // Secondary UI color (e.g., page background)
+          '03': '#e0e0e0', // Subtle borders
         },
-        gray: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
+        'brand-text': {
+          'primary': '#161616', // Primary text color (dark gray, not black)
+          'secondary': '#525252', // Secondary text for hints and descriptions
         },
       },
       fontFamily: {

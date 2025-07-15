@@ -13,8 +13,8 @@ function debounce(func, delay) {
   };
 }
 
-export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, notificationAudioRef }) {
-  const { messages, loading, processMessage } = useChat(activeTab, onLoginRequired, notificationAudioRef);
+export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, notificationAudioRef, onAgentRequest }) {
+  const { messages, loading, processMessage } = useChat(activeTab, onLoginRequired, notificationAudioRef, onAgentRequest);
   const { play, isAutoResponseEnabled } = useTTS();
 
   const [input, setInput] = useState('');
