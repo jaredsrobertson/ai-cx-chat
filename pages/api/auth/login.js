@@ -65,6 +65,5 @@ const loginHandler = async (req, res) => {
 
 export default createApiHandler(loginHandler, {
   allowedMethods: ['POST'],
-  // Pass rateLimit as a function to defer evaluation
   rateLimit: () => ({ max: CONFIG.MAX_REQUESTS_PER_MINUTE.LOGIN, window: 60000 })
 });

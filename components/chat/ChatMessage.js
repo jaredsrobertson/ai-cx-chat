@@ -2,6 +2,7 @@ import { HiOutlineSpeakerWave, HiOutlineExclamationTriangle, HiCloud } from 'rea
 import ConfidentialDisplay from './ConfidentialDisplay';
 import { useTTS } from '@/contexts/TTSContext';
 import React, { memo } from 'react';
+import { motion } from 'framer-motion';
 import clsx from 'clsx';
 
 const Avatar = () => (
@@ -85,6 +86,11 @@ const SpeakButton = memo(({ textToSpeak, messageId }) => {
   );
 });
 
+const messageVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
+};
+
 function ChatMessage({ id, author, type, content, timestamp }) {
   const isUser = author === 'user';
 
@@ -97,28 +103,23 @@ function ChatMessage({ id, author, type, content, timestamp }) {
 
   const textContent = getSafeContent(content);
 
-  if (isUser) {
-    return (
-      <div className="flex justify-end my-2" role="group" aria-label="User message">
-        <div className="chat-message user">
-          <p className="text-sm whitespace-pre-wrap">{textContent}</p>
-          <span className="text-xs opacity-70 mt-1 block text-right">
-            {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex items-start gap-1 my-2" role="group" aria-label="Assistant message">
-      <Avatar />
-      <div className={clsx(
-        'chat-message bot',
-        { 'max-w-md': content.confidentialData }
-      )}>
+    <motion.div
+      variants={messageVariants}
+      initial="hidden"
+      animate="visible"
+      className={clsx('flex items-start gap-1 my-2', { 'justify-end': isUser })}
+      role="group"
+      aria-label={isUser ? 'User message' : 'Assistant message'}
+    >
+      {!isUser && <Avatar />}
+      <div className={clsx('max-w-xs lg:max-w-md px-4 py-2 rounded-2xl', {
+        'user bg-brand-blue text-white ml-auto rounded-br-md dark:bg-dark-brand-blue dark:text-brand-text-primary': isUser,
+        'bot bg-brand-ui-01 text-brand-text-primary dark:bg-dark-brand-ui-01 dark:text-dark-brand-text-primary mr-auto border border-brand-ui-03 dark:border-dark-brand-ui-03 rounded-bl-md': !isUser,
+        'max-w-md': content.confidentialData,
+      })}>
         <p className="text-sm whitespace-pre-wrap">{textContent}</p>
-
+        
         {type === 'structured' && content.confidentialData && (
           <ConfidentialDisplay data={content.confidentialData} />
         )}
@@ -127,10 +128,10 @@ function ChatMessage({ id, author, type, content, timestamp }) {
           <span className="text-xs opacity-70">
             {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
-          <SpeakButton textToSpeak={textContent} messageId={id} />
+          {!isUser && <SpeakButton textToSpeak={textContent} messageId={id} />}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

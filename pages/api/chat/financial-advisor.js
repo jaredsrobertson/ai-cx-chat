@@ -1,4 +1,4 @@
-import { getFinancialAdviceStream } from '@/lib/openai';
+import { getOpenAICompletion } from '@/lib/openai';
 import { createApiHandler } from '@/lib/apiUtils';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
@@ -8,9 +8,23 @@ export const config = {
   runtime: 'edge',
 };
 
+function OpenAIStream(completion) {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    async start(controller) {
+      for await (const chunk of completion) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          controller.enqueue(encoder.encode(content));
+        }
+      }
+      controller.close();
+    },
+  });
+}
+
 const sanitizeMessages = (messages) => {
   if (!Array.isArray(messages)) return [];
-
   return messages
     .filter(msg => msg && typeof msg === 'object' && msg.role && msg.content)
     .map(msg => ({
@@ -21,10 +35,9 @@ const sanitizeMessages = (messages) => {
     .slice(-CONFIG.MAX_CONVERSATION_HISTORY);
 };
 
-const advisorHandler = async (req, res) => {
+const advisorHandler = async (req) => {
   const body = await req.json();
   const { messages } = body;
-
   const sanitizedMessages = sanitizeMessages(messages);
 
   if (sanitizedMessages.length === 0) {
@@ -33,36 +46,25 @@ const advisorHandler = async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
-  const lastMessage = sanitizedMessages[sanitizedMessages.length - 1];
-  if (lastMessage && lastMessage.content) {
-    const suspiciousPatterns = [
-      /how to hack/i,
-      /illegal/i,
-      /scam/i,
-      /fraud/i,
-      /money laundering/i
-    ];
-
-    if (suspiciousPatterns.some(pattern => pattern.test(lastMessage.content))) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'I can only provide legitimate financial advice.'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  }
+  
+  const systemPrompt = `
+      You are a helpful AI customer experience chat bot for a corporate bank.
+      Your goal is to answer questions and provide tips related to basic, general personal finance.
+      Follow these rules strictly:
+      1. Keep your entire response concise and easy to understand.
+      2. Do not use bullet points or numbered lists.
+      3. Your tone should be light, encouraging, and educational.
+      4. Frame your answer so it can be spoken aloud in under 20 seconds.
+    `;
 
   try {
-    const stream = await getFinancialAdviceStream(sanitizedMessages);
-
+    const completion = await getOpenAICompletion(sanitizedMessages, systemPrompt, { max_tokens: 70 });
+    const stream = OpenAIStream(completion);
     return new Response(stream, {
       headers: {
-        'Content-Type': 'text/event-stream',
+        'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
+        'Connection': 'keep-alive',
       },
     });
   } catch (error) {
@@ -79,6 +81,5 @@ const advisorHandler = async (req, res) => {
 
 export default createApiHandler(advisorHandler, {
   allowedMethods: ['POST'],
-  // Pass rateLimit as a function to defer evaluation
   rateLimit: () => ({ max: CONFIG.MAX_REQUESTS_PER_MINUTE.ADVISOR, window: 60000 })
 });

@@ -8,10 +8,10 @@ import { CONFIG } from '@/lib/config';
 const { AUTH_REQUIRED_INTENTS, MESSAGES } = CONFIG;
 
 /**
- * Handles the API call and logic for the financial-advisor bot.
+ * Fetches the complete response for the financial-advisor bot.
  * @param {string} message - The user's input message.
- * @param {Array} messageHistory - The existing conversation history for the advisor tab.
- * @returns {Promise<string>} - A promise that resolves with the streamed text content.
+ * @param {Array} messageHistory - The existing conversation history.
+ * @returns {Promise<string>} - A promise that resolves with the full text response.
  */
 async function processAdvisorMessage(message, messageHistory) {
   const response = await fetch('/api/chat/financial-advisor', {
@@ -23,25 +23,15 @@ async function processAdvisorMessage(message, messageHistory) {
   });
 
   if (!response.ok) {
-    const errData = await response.json();
+    const errData = await response.json().catch(() => ({}));
     throw new Error(errData.error || 'Failed to fetch advisor response');
   }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let streamedContent = '';
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    streamedContent += decoder.decode(value, { stream: true });
-  }
-
-  return streamedContent;
+  return response.text();
 }
 
 /**
- * Handles the API call and logic for the banking concierge bot.
+ * Fetches the complete response for the banking concierge bot.
  * @param {object} params - The parameters for processing the banking message.
  * @returns {Promise<object>} - A promise that resolves with the API response data.
  */
@@ -82,9 +72,9 @@ async function processBankingMessage({ message, user, isAuthenticated, onLoginRe
 }
 
 /**
- * Handles the API call for the knowledge base bot.
+ * Fetches the complete response for the knowledge base bot.
  * @param {string} message - The user's input message.
- * @returns {Promise<string>} - A promise that resolves with the streamed text content.
+ * @returns {Promise<string>} - A promise that resolves with the full text response.
  */
 async function processKnowledgeMessage(message) {
   const response = await fetch('/api/chat/knowledge', {
@@ -94,21 +84,11 @@ async function processKnowledgeMessage(message) {
   });
 
   if (!response.ok) {
-    const errData = await response.json();
+    const errData = await response.json().catch(() => ({}));
     throw new Error(errData.error || 'Failed to fetch knowledge base response');
   }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let streamedContent = '';
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    streamedContent += decoder.decode(value, { stream: true });
-  }
-
-  return streamedContent;
+  return response.text();
 }
 
 
@@ -169,13 +149,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
 
   const addMessage = useCallback((tab, author, type, content, id = uuidv4()) => {
     setMessages(prev => ({ ...prev, [tab]: [...prev[tab], { id, author, type, content, timestamp: new Date() }] }));
-  }, []);
-
-  const updateMessageContent = useCallback((tab, messageId, newContent) => {
-    setMessages(prev => ({
-      ...prev,
-      [tab]: prev[tab].map(msg => msg.id === messageId ? { ...msg, content: newContent } : msg),
-    }));
+    return id;
   }, []);
 
   const processPendingRequest = useCallback(async (request) => {
@@ -212,58 +186,48 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
     }
   }, [isAuthenticated, pendingRequest, processPendingRequest]);
 
-  const processAdvisorMessageHelper = useCallback(async (message) => {
-    const messageHistory = messages.advisor.map(msg => ({
-      role: msg.author === 'user' ? 'user' : 'assistant',
-      content: msg.type === 'text' ? msg.content : msg.content.speakableText
-    }));
-
-    const placeholderId = uuidv4();
-    addMessage('advisor', 'bot', 'text', '...', placeholderId);
-
-    const streamedContent = await processAdvisorMessage(message, messageHistory);
-
-    updateMessageContent('advisor', placeholderId, { speakableText: streamedContent });
-    await playNotificationSound();
-
-    if (isAutoResponseEnabled && streamedContent) {
-      play(streamedContent, placeholderId);
-    }
-  }, [messages.advisor, addMessage, updateMessageContent, playNotificationSound, isAutoResponseEnabled, play]);
-
-  const processBankingMessageHelper = useCallback(async (message) => {
-    const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
-
-    if (data.requiresAuth) {
-        addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
-    } else if (data.success) {
-        addMessage('banking', 'bot', 'structured', data.response);
-        if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
-          onAgentRequest(messages.banking);
-        }
-    }
-    await playNotificationSound();
-  }, [user, isAuthenticated, onLoginRequired, setPendingRequest, addMessage, playNotificationSound, onAgentRequest, messages.banking]);
-
   const processMessage = useCallback(async (message, tab) => {
-    setLoading(true);
     addMessage(tab, 'user', 'text', message);
+    setLoading(true);
 
     try {
       if (tab === 'advisor') {
-        await processAdvisorMessageHelper(message);
+        const messageHistory = messages.advisor.map(msg => ({
+          role: msg.author === 'user' ? 'user' : 'assistant',
+          content: msg.type === 'text' ? msg.content : msg.content.speakableText
+        }));
+        
+        const responseText = await processAdvisorMessage(message, messageHistory);
+        await playNotificationSound();
+        const newMessageId = addMessage('advisor', 'bot', 'text', { speakableText: responseText });
+        
+        if (isAutoResponseEnabled && responseText) {
+          play(responseText, newMessageId);
+        }
+
       } else if (tab === 'knowledge') {
-        const placeholderId = uuidv4();
-        addMessage('knowledge', 'bot', 'text', '...', placeholderId);
-        const streamedContent = await processKnowledgeMessage(message);
-        updateMessageContent('knowledge', placeholderId, { speakableText: streamedContent });
+        const responseText = await processKnowledgeMessage(message);
+        await playNotificationSound();
+        const newMessageId = addMessage('knowledge', 'bot', 'text', { speakableText: responseText });
+
+        if (isAutoResponseEnabled && responseText) {
+          play(responseText, newMessageId);
+        }
+      } else {
+        const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
         await playNotificationSound();
 
-        if (isAutoResponseEnabled && streamedContent) {
-          play(streamedContent, placeholderId);
+        if (data.requiresAuth) {
+            addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
+        } else if (data.success) {
+            const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
+            if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
+              onAgentRequest(messages.banking);
+            }
+            if(isAutoResponseEnabled && data.response.speakableText){
+                play(data.response.speakableText, newMessageId);
+            }
         }
-      } else { // Banking
-        await processBankingMessageHelper(message);
       }
     } catch (error) {
       logger.error('Chat processing error', error);
@@ -274,7 +238,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
     } finally {
       setLoading(false);
     }
-  }, [addMessage, playNotificationSound, processAdvisorMessageHelper, processBankingMessageHelper, updateMessageContent, isAutoResponseEnabled, play]);
+  }, [addMessage, messages, user, isAuthenticated, onLoginRequired, setPendingRequest, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play]);
 
   return {
     messages,

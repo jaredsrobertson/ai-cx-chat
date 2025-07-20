@@ -1,6 +1,5 @@
-// In pages/api/chat/summarize.js (New File)
 import { createApiHandler } from '@/lib/apiUtils';
-import { getFinancialAdviceStream } from '@/lib/openai'; // We can reuse this function
+import { getOpenAICompletion } from '@/lib/openai';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { CONFIG } from '@/lib/config';
@@ -8,6 +7,21 @@ import { CONFIG } from '@/lib/config';
 export const config = {
   runtime: 'edge',
 };
+
+function OpenAIStream(completion) {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    async start(controller) {
+      for await (const chunk of completion) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          controller.enqueue(encoder.encode(content));
+        }
+      }
+      controller.close();
+    },
+  });
+}
 
 const summarizeHandler = async (req) => {
   const body = await req.json();
@@ -20,7 +34,6 @@ const summarizeHandler = async (req) => {
     });
   }
 
-  // Sanitize the history
   const sanitizedHistory = messages.map(msg => 
     `[${msg.author === 'user' ? 'Customer' : 'Bot'}]: ${sanitizeInput(msg.content.speakableText || msg.content)}`
   ).join('\n');
@@ -39,12 +52,11 @@ const summarizeHandler = async (req) => {
   `;
 
   try {
-    // We can reuse the existing streaming function for this one-off completion
-    const stream = await getFinancialAdviceStream([{ role: 'system', content: systemPrompt }]);
-    
+    const completion = await getOpenAICompletion([], systemPrompt);
+    const stream = OpenAIStream(completion);
     return new Response(stream, {
       headers: {
-        'Content-Type': 'text/event-stream',
+        'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive'
       },

@@ -11,12 +11,9 @@ export default function Handoff({ messageHistory, onCancel }) {
     const generateSummary = async () => {
       setIsLoading(true);
 
-      // **THE FIX IS HERE**
-      // Ensure messageHistory is treated as an array, even if the prop is not ready yet.
       const historyToProcess = Array.isArray(messageHistory) ? messageHistory : [];
 
       const serializableHistory = historyToProcess.map(msg => {
-        // Safely extract the text content from the potentially complex content object
         const contentText = (typeof msg.content === 'object' && msg.content !== null)
           ? msg.content.speakableText || ''
           : msg.content;

@@ -9,20 +9,19 @@
   }
 
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply font-sans;
   }
 
   html, body, #__next {
     @apply h-full;
   }
 
-  /* Keep the main page gradient background that sparks joy */
   body {
-    @apply bg-gradient-to-b from-brand-blue to-gray-200 bg-fixed text-gray-800;
-    overflow: hidden; /* Prevent body scroll */
+    @apply bg-gradient-to-b from-brand-blue to-gray-200 dark:from-dark-brand-background dark:to-dark-brand-ui-03;
+    @apply bg-fixed text-brand-text-primary dark:text-dark-brand-text-primary;
+    overflow: hidden;
   }
 
-  /* Fixed header container */
   .header-container {
     position: fixed;
     top: 0;
@@ -33,230 +32,74 @@
     z-index: 20;
   }
 
-  /* Scroll container starts below header, has fade masks */
   .content-container {
-    position: fixed;
+    position: absolute;
     top: var(--header-height);
     bottom: 0;
     left: 0;
     right: 0;
-    background: transparent;
     overflow-y: auto;
     overflow-x: hidden;
+    scrollbar-width: none;
     scroll-snap-type: y mandatory;
     -webkit-overflow-scrolling: touch;
-    mask-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      black 25%,
-      black 75%,
-      transparent 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      black 25%,
-      black 75%,
-      transparent 100%
-    );
   }
 
-  .content-footer {
-    background: transparent;
-    padding: 2rem 0;
-    margin-top: 2rem;
+  .content-container::-webkit-scrollbar {
+    display: none;
   }
 
-  /* Section styling - each section fills the new container height */
+  .footer-container {
+    /* footer styles */
+  }
+  
   .scroll-section {
     @apply snap-start;
     height: calc(100vh - var(--header-height));
     display: flex;
     align-items: center;
     justify-content: center;
-    box-sizing: border-box;
   }
 }
 
+
 /* ==================== COMPONENT STYLES ==================== */
 @layer components {
-  /* Buttons (Carbon-inspired) */
+  /* Buttons */
   .btn-primary {
-    @apply bg-brand-blue hover:bg-brand-navy text-white font-medium px-6 py-2.5 rounded-md transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
+    @apply bg-brand-blue hover:bg-brand-navy text-white dark:bg-dark-brand-blue dark:hover:bg-blue-700 dark:text-brand-text-primary font-medium px-6 py-2.5 rounded-md transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply bg-neutral-200 hover:bg-neutral-300 text-brand-text-primary font-medium px-6 py-2.5 rounded-md border border-neutral-300 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
+    @apply bg-brand-ui-01 hover:bg-gray-200 text-brand-text-primary dark:bg-dark-brand-ui-03 dark:hover:bg-gray-600 dark:text-dark-brand-text-primary font-medium px-6 py-2.5 rounded-md border border-brand-ui-03 dark:border-dark-brand-ui-03 transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50;
   }
 
-  /* Cards (Carbon-inspired) */
+  /* Cards */
   .card {
-    @apply bg-brand-ui-01/80 backdrop-blur-md rounded-lg shadow-lg border border-brand-ui-03/50 p-4 md:p-6;
+    @apply bg-brand-ui-01/80 dark:bg-dark-brand-ui-01/80 backdrop-blur-md rounded-lg shadow-lg border border-brand-ui-03/50 dark:border-dark-brand-ui-03/50 p-4 md:p-6;
   }
 
-  /* Navigation */
-  .nav-footer {
-    background: transparent;
-    border: none;
-  }
-
-  /* Input fields (Carbon-inspired) */
+  /* Input fields */
   .input-field {
-    @apply w-full px-4 py-3 bg-brand-ui-01 border border-brand-ui-03 rounded-md focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none transition-all duration-200;
+    @apply w-full px-4 py-3 bg-brand-ui-01 dark:bg-dark-brand-ui-01 border border-brand-ui-03 dark:border-dark-brand-ui-03 rounded-md focus:ring-2 focus:ring-brand-blue dark:focus:ring-dark-brand-blue focus:border-transparent outline-none transition-all duration-200 text-brand-text-primary dark:text-dark-brand-text-primary;
   }
 
-  /* ==================== CHAT COMPONENTS ==================== */
-
-  /* Chat messages */
-  .chat-message {
-    @apply max-w-xs lg:max-w-md px-4 py-2 rounded-2xl mb-3;
-    animation: fade-in 0.3s ease-out;
-  }
-
-  .chat-message.user {
-    @apply bg-brand-blue text-white ml-auto rounded-br-md;
-  }
-
-  .chat-message.bot {
-    @apply bg-brand-ui-01 text-brand-text-primary mr-auto border border-brand-ui-03 rounded-bl-md;
-  }
-
-  /* Chat widget container */
+  /* Chat Widget */
   .chat-widget-container {
     @apply fixed z-30 w-[400px] h-[calc(100vh-8.5rem)] ease-in-out;
     max-height: 700px;
-    transition-property: opacity, transform;
-    transition-duration: 300ms;
     bottom: 4.5rem;
     right: 1.5rem;
   }
 
-  .chat-widget-container.closed {
-    @apply opacity-0 transform translate-y-4 pointer-events-none;
-  }
-
-  .chat-widget-container.open {
-    @apply opacity-100 transform-none;
-  }
-
   .chat-widget-inner {
-    @apply w-full h-full rounded-xl border border-brand-ui-03/80 flex flex-col overflow-hidden;
+    @apply w-full h-full rounded-xl flex flex-col overflow-hidden bg-brand-ui-02 dark:bg-dark-brand-ui-02 border border-brand-ui-03 dark:border-dark-brand-ui-03;
     box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   }
 
-  /* Chat FAB (Carbon-inspired) */
   .chat-fab {
     @apply fixed z-40 w-16 h-16;
     bottom: 1.5rem;
     right: 1.5rem;
-  }
-  
-  .chat-fab-container {
-    opacity: 0;
-    animation: zoom-fade-in 0.5s ease-out 0.5s forwards;
-  }
-
-  /* When widget is open, fade out the FAB */
-  .chat-widget-container.open ~ .chat-fab {
-    @apply opacity-0 transform scale-90 pointer-events-none;
-  }
-
-  /* Custom scrollbar for content container */
-  .content-container::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .content-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .content-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
-  }
-
-  .content-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
-  }
-
-  /* Chat messages scrollbar */
-  .chat-messages {
-    @apply bg-brand-ui-02; /* Use the page background for chat history */
-  }
-
-  .chat-messages::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .chat-messages::-webkit-scrollbar-track {
-    background: #f1f5f9;
-  }
-
-  .chat-messages::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 2px;
-  }
-
-  .chat-messages::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
-
-  /* ==================== MOBILE RESPONSIVE ==================== */
-
-  @media (max-width: 767px) {
-    :root {
-      --header-height: 4.5rem;
-    }
-
-    /* Chat widget mobile */
-    .chat-widget-container.open {
-      @apply inset-0 w-full h-full;
-      bottom: 0;
-      right: 0;
-    }
-
-    .chat-widget-inner {
-      @apply rounded-none border-none shadow-none;
-    }
-
-    .chat-fab {
-      @apply w-14 h-14;
-      bottom: 1rem;
-      right: 1rem;
-    }
-
-    /* Mobile optimizations */
-    input[type="text"], input[type="password"] {
-      font-size: 16px; /* Prevent iOS zoom */
-    }
-
-    .chat-message button {
-      min-height: 44px;
-      min-width: 44px;
-    }
-  }
-}
-
-/* ==================== KEYFRAME ANIMATIONS ==================== */
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes zoom-fade-in {
-  from {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
   }
 }

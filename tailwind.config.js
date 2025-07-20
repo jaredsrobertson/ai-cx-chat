@@ -1,6 +1,8 @@
+// tailwind.config.js
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class', 
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -8,27 +10,33 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // New Carbon-inspired palette
-        'brand-blue': '#0f62fe', // The primary interactive blue
-        'brand-navy': '#001d6c', // A deep navy for accents
-        'brand-background': '#f4f4f4', // The standard light gray page background
-        'brand-ui': {
-          '01': '#ffffff', // Primary UI color (e.g., card backgrounds)
-          '02': '#f4f4f4', // Secondary UI color (e.g., page background)
-          '03': '#e0e0e0', // Subtle borders
-        },
-        'brand-text': {
-          'primary': '#161616', // Primary text color (dark gray, not black)
-          'secondary': '#525252', // Secondary text for hints and descriptions
-        },
+        // Light Mode - Carbon Inspired
+        'brand-blue': '#0f62fe',
+        'brand-navy': '#001d6c',
+        'brand-background': '#f4f4f4',
+        'brand-ui-01': '#ffffff', // Primary UI (cards)
+        'brand-ui-02': '#f4f4f4', // Secondary UI (page background)
+        'brand-ui-03': '#e0e0e0', // Subtle borders
+        'brand-text-primary': '#161616',
+        'brand-text-secondary': '#525252',
+
+        // Dark Mode - Carbon Inspired
+        'dark-brand-blue': '#4589ff',
+        'dark-brand-navy': '#d0e2ff',
+        'dark-brand-background': '#161616',
+        'dark-brand-ui-01': '#262626', // Primary UI (cards)
+        'dark-brand-ui-02': '#161616', // Secondary UI (page background)
+        'dark-brand-ui-03': '#393939', // Subtle borders
+        'dark-brand-text-primary': '#f4f4f4',
+        'dark-brand-text-secondary': '#c6c6c6',
       },
       fontFamily: {
-        // Use the CSS variable for the Inter font
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
+        'zoom-fade-in': 'zoomFadeIn 0.5s ease-out 0.5s forwards',
       },
       keyframes: {
         fadeIn: {
@@ -38,6 +46,10 @@ module.exports = {
         slideUp: {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        zoomFadeIn: {
+          from: { transform: 'scale(0.8)', opacity: '0' },
+          to: { transform: 'scale(1)', opacity: '1' },
         },
       },
     },

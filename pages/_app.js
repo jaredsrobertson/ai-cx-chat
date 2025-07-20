@@ -1,20 +1,21 @@
 import '../styles/globals.css';
 import { AuthProvider } from '@/hooks/useAuth';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Inter } from 'next/font/google';
 
-// Initialize the font
 const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-inter', // A CSS variable to be used in Tailwind
+  variable: '--font-inter',
 });
 
 export default function App({ Component, pageProps }) {
   return (
-    // Apply the font variable to the root of your app
     <main className={`${inter.variable} font-sans`}>
-      <AuthProvider>
-        <Component {...pageProps} />
-      </AuthProvider>
+      <ThemeProvider> {/* Wrap AuthProvider with ThemeProvider */}
+        <AuthProvider>
+          <Component {...pageProps} />
+        </AuthProvider>
+      </ThemeProvider>
     </main>
   );
 }

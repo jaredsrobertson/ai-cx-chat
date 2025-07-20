@@ -23,16 +23,15 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  const messageCounts = useRef({ banking: 0, advisor: 0 });
+  const messageCounts = useRef({ banking: 0, advisor: 0, knowledge: 0 });
 
   useEffect(() => {
     const currentMessages = messages[activeTab] || [];
     const lastMessage = currentMessages[currentMessages.length - 1];
 
     if (
-      activeTab === 'banking' &&
-      isAutoResponseEnabled &&
       lastMessage?.author === 'bot' &&
+      isAutoResponseEnabled &&
       currentMessages.length > messageCounts.current[activeTab]
     ) {
       const textToSpeak = lastMessage.content.speakableText || lastMessage.content;
@@ -139,22 +138,20 @@ export default function ChatTabs({ activeTab, setActiveTab, onLoginRequired, not
           AI Advisor
         </button>
       </div>
-      {/* Adding bg-gray-50 directly to the message container */}
-      <div className="flex-grow px-2 py-4 space-y-4 overflow-y-auto chat-messages bg-blue-200" role="log" aria-label="Chat messages">
+      <div className="flex-grow px-2 py-4 space-y-4 overflow-y-auto chat-messages" role="log" aria-label="Chat messages">
         {messages[activeTab].map(msg => (
           <ChatMessage key={msg.id} {...msg} />
         ))}
+        
         {loading && (
-          <div className="chat-message bot" role="status" aria-label="Assistant is typing">
-            <div className="message-content bg-white p-3 rounded-lg shadow-sm">
-              <div className="flex items-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                </div>
-                <span className="text-sm text-gray-600">Thinking...</span>
+          <div className="flex justify-start px-2 py-1 ml-10">
+            <div className="flex items-center space-x-2 text-sm text-brand-text-secondary">
+              <div className="flex space-x-1">
+                <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce"></div>
+                <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
+              <span className="italic">Thinking...</span>
             </div>
           </div>
         )}

@@ -9,11 +9,8 @@ export const SmileyFaceIcon = ({ className }) => (
     strokeWidth={1.5}
     className={className}
   >
-    {/* Left Eye */}
     <circle cx="9" cy="9.75" r="0.75" fill="currentColor" />
-    {/* Right Eye */}
     <circle cx="15" cy="9.75" r="0.75" fill="currentColor" />
-    {/* Corrected Smile Path */}
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
