@@ -11,8 +11,8 @@ export default function ConfidentialDisplay({ data }) {
           <ul className="space-y-2">
             {data.accounts.map(acc => (
               <li key={acc.name} className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">{acc.name} Account</span>
-                <span className="font-medium text-gray-800">{formatCurrency(acc.balance)}</span>
+                <span className="text-brand-text-secondary dark:text-dark-brand-text-secondary">{acc.name} Account</span>
+                <span className="font-medium text-brand-text-primary dark:text-dark-brand-text-primary">{formatCurrency(acc.balance)}</span>
               </li>
             ))}
           </ul>
@@ -23,8 +23,8 @@ export default function ConfidentialDisplay({ data }) {
                 {data.transactions.map((tx, index) => (
                     <li key={index} className="flex justify-between items-center text-sm">
                         <div>
-                            <p className="font-medium text-gray-800">{tx.description}</p>
-                            <p className="text-xs text-gray-500">{tx.date}</p>
+                            <p className="font-medium text-brand-text-primary dark:text-dark-brand-text-primary">{tx.description}</p>
+                            <p className="text-xs text-brand-text-secondary dark:text-dark-brand-text-secondary">{tx.date}</p>
                         </div>
                         <span className={`font-medium ${tx.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
                             {formatCurrency(tx.amount)}
@@ -38,16 +38,16 @@ export default function ConfidentialDisplay({ data }) {
         return (
           <ul className="space-y-2 text-sm">
             <li className="flex justify-between items-center">
-              <span className="text-gray-600">Amount</span>
+              <span className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Amount</span>
               <span className="font-medium text-red-600">{formatCurrency(details.amount)}</span>
             </li>
             <li className="flex justify-between items-center">
-              <span className="text-gray-600">From</span>
-              <span className="font-medium text-gray-800 capitalize">{details.fromAccount}</span>
+              <span className="text-brand-text-secondary dark:text-dark-brand-text-secondary">From</span>
+              <span className="font-medium text-brand-text-primary dark:text-dark-brand-text-primary capitalize">{details.fromAccount}</span>
             </li>
             <li className="flex justify-between items-center">
-              <span className="text-gray-600">To</span>
-              <span className="font-medium text-gray-800 capitalize">{details.toAccount}</span>
+              <span className="text-brand-text-secondary dark:text-dark-brand-text-secondary">To</span>
+              <span className="font-medium text-brand-text-primary dark:text-dark-brand-text-primary capitalize">{details.toAccount}</span>
             </li>
           </ul>
         );
@@ -57,10 +57,10 @@ export default function ConfidentialDisplay({ data }) {
   };
 
   return (
-    <div className="mt-2 border-t border-gray-200 pt-3">
-      <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+    <div className="bg-white dark:bg-dark-brand-ui-01/50 border border-brand-ui-03 dark:border-dark-brand-ui-03 p-3 rounded-lg">
+      <div className="flex items-center gap-2 text-xs text-brand-text-secondary dark:text-dark-brand-text-secondary mb-3">
         <HiOutlineLockClosed className="w-4 h-4" />
-        <span>Secure</span>
+        <span>Secure Information</span>
       </div>
       {renderContent()}
     </div>

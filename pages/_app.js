@@ -1,6 +1,7 @@
 import '../styles/globals.css';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AnalyticsProvider } from '@/contexts/AnalyticsContext';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({
@@ -11,9 +12,11 @@ const inter = Inter({
 export default function App({ Component, pageProps }) {
   return (
     <main className={`${inter.variable} font-sans`}>
-      <ThemeProvider> {/* Wrap AuthProvider with ThemeProvider */}
+      <ThemeProvider>
         <AuthProvider>
-          <Component {...pageProps} />
+          <AnalyticsProvider>
+            <Component {...pageProps} />
+          </AnalyticsProvider>
         </AuthProvider>
       </ThemeProvider>
     </main>

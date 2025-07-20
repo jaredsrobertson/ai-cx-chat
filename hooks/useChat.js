@@ -2,17 +2,106 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/hooks/useAuth';
 import { useTTS } from '@/contexts/TTSContext';
+import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { logger } from '@/lib/logger';
 import { CONFIG } from '@/lib/config';
 
 const { AUTH_REQUIRED_INTENTS, MESSAGES } = CONFIG;
 
-/**
- * Fetches the complete response for the financial-advisor bot.
- * @param {string} message - The user's input message.
- * @param {Array} messageHistory - The existing conversation history.
- * @returns {Promise<string>} - A promise that resolves with the full text response.
- */
+// NEW: This function now calls our internal API route instead of the Dialogflow library directly.
+async function detectDialogflowIntent(message, sessionId, token) {
+  const response = await fetch('/api/dialogflow/detect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, sessionId, token }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to detect intent');
+  }
+
+  const result = await response.json();
+  return result.data;
+}
+
+// This helper function parses the rich response we get back from Dialogflow
+// after our webhook has processed the intent.
+function formatDialogflowResponse(response) {
+  const firstMessage = response.fulfillmentMessages?.[0];
+
+  if (!firstMessage) {
+    return { speakableText: response.fulfillmentText || "I'm sorry, I'm having trouble responding right now." };
+  }
+
+  // Check for the custom payload we designed in our webhook
+  if (firstMessage.payload && firstMessage.payload.fields) {
+    const fields = firstMessage.payload.fields;
+    const responseData = {
+      speakableText: fields.speakableText?.stringValue || response.fulfillmentText,
+      action: fields.action?.stringValue,
+      intentName: fields.intentName?.stringValue || response.intent?.displayName,
+    };
+    
+    // Unpack the confidentialData struct if it exists
+    const confidentialData = fields.confidentialData?.structValue?.fields;
+    if (confidentialData) {
+      const formattedData = {};
+      formattedData.type = confidentialData.type?.stringValue;
+
+      if (confidentialData.accounts) {
+        formattedData.accounts = confidentialData.accounts.listValue.values.map(v => ({
+          name: v.structValue.fields.name.stringValue,
+          balance: v.structValue.fields.balance.numberValue,
+        }));
+      }
+      if (confidentialData.transactions) {
+        formattedData.transactions = confidentialData.transactions.listValue.values.map(v => ({
+          date: v.structValue.fields.date.stringValue,
+          description: v.structValue.fields.description.stringValue,
+          amount: v.structValue.fields.amount.numberValue,
+        }));
+      }
+      if (confidentialData.details) {
+        const detailsFields = confidentialData.details.structValue.fields;
+        formattedData.details = {
+          amount: detailsFields.amount.numberValue,
+          fromAccount: detailsFields.fromAccount.stringValue,
+          toAccount: detailsFields.toAccount.stringValue,
+        };
+      }
+      responseData.confidentialData = formattedData;
+    }
+    return responseData;
+  }
+
+  // Fallback to a standard text response
+  return { 
+    speakableText: firstMessage.text?.text?.[0] || response.fulfillmentText,
+    intentName: response.intent?.displayName,
+  };
+}
+
+
+async function processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest }) {
+    const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
+    localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
+    const token = localStorage.getItem('authToken');
+
+    const dialogflowResponse = await detectDialogflowIntent(message, sessionId, token); 
+    const responsePayload = formatDialogflowResponse(dialogflowResponse);
+
+    if (responsePayload.action === 'AUTH_REQUIRED' && !isAuthenticated) {
+        const loginMessage = getLoginMessage(responsePayload.intentName);
+        const pending = { message, tab: 'banking', sessionId, intentName: responsePayload.intentName, timestamp: new Date() };
+        setPendingRequest(pending);
+        onLoginRequired();
+        return { requiresAuth: true, loginMessage };
+    }
+    
+    return { success: true, response: responsePayload };
+}
+
+
 async function processAdvisorMessage(message, messageHistory) {
   const response = await fetch('/api/chat/financial-advisor', {
     method: 'POST',
@@ -30,52 +119,6 @@ async function processAdvisorMessage(message, messageHistory) {
   return response.text();
 }
 
-/**
- * Fetches the complete response for the banking concierge bot.
- * @param {object} params - The parameters for processing the banking message.
- * @returns {Promise<object>} - A promise that resolves with the API response data.
- */
-async function processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest }) {
-    const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`);
-    const token = localStorage.getItem('authToken');
-
-    const response = await fetch('/api/chat/banking', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({ message, sessionId }),
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-        const responsePayload = data.response;
-        if (AUTH_REQUIRED_INTENTS.includes(responsePayload.intentName) && !isAuthenticated) {
-            logger.warn('Authentication required for intent', { intent: responsePayload.intentName });
-            const loginMessage = getLoginMessage(responsePayload.intentName);
-
-            const pending = { message, tab: 'banking', sessionId: data.sessionId, intentName: responsePayload.intentName, timestamp: new Date() };
-            setPendingRequest(pending);
-            onLoginRequired();
-
-            return { requiresAuth: true, loginMessage, sessionId: data.sessionId };
-        }
-        if (data.sessionId) {
-            localStorage.setItem(`sessionId_${user?.id || 'guest'}`, data.sessionId);
-        }
-        return data;
-    } else {
-        throw new Error(data.error || "An unknown banking error occurred.");
-    }
-}
-
-/**
- * Fetches the complete response for the knowledge base bot.
- * @param {string} message - The user's input message.
- * @returns {Promise<string>} - A promise that resolves with the full text response.
- */
 async function processKnowledgeMessage(message) {
   const response = await fetch('/api/chat/knowledge', {
     method: 'POST',
@@ -91,7 +134,6 @@ async function processKnowledgeMessage(message) {
   return response.text();
 }
 
-
 const getLoginMessage = (intentName) => {
     const messages = {
       'account.balance': "Please log in to view your account balance. I'll show you the information right after you sign in.",
@@ -102,7 +144,7 @@ const getLoginMessage = (intentName) => {
     return messages[intentName] || "For security, please log in to access your account information.";
 };
 
-export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAgentRequest) {
+export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgentRequest) {
   const [messages, setMessages] = useState({
     banking: [{ ...MESSAGES.INITIAL.BANKING, id: uuidv4(), timestamp: new Date() }],
     advisor: [{ ...MESSAGES.INITIAL.ADVISOR, id: uuidv4(), timestamp: new Date() }],
@@ -114,7 +156,11 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
 
   const { isAuthenticated, user } = useAuth();
   const { play, isAutoResponseEnabled, isNotificationEnabled } = useTTS();
+  const { addAnalyticsEntry } = useAnalytics();
+  const inactivityTimer = useRef(null);
+  const proactiveCount = useRef(0);
 
+  // Load messages from localStorage on initial render
   useEffect(() => {
     try {
       const savedMessages = localStorage.getItem('chatMessages');
@@ -130,6 +176,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
     }
   }, []);
 
+  // Save messages to localStorage whenever they change
   useEffect(() => {
     try {
       localStorage.setItem('chatMessages', JSON.stringify(messages));
@@ -137,6 +184,25 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
       logger.error("Failed to save messages to localStorage", error);
     }
   }, [messages]);
+  
+  // Proactive engagement timer
+  useEffect(() => {
+    clearTimeout(inactivityTimer.current);
+
+    const currentMessages = messages[activeTab] || [];
+    const lastMessage = currentMessages[currentMessages.length - 1];
+
+    if (lastMessage && lastMessage.author === 'bot' && proactiveCount.current < 2) {
+      const delay = proactiveCount.current === 0 ? 20000 : 30000; // 20s then 30s
+      
+      inactivityTimer.current = setTimeout(() => {
+        addMessage(activeTab, 'bot', 'text', { speakableText: "Is there anything else I can help you with today?" });
+        proactiveCount.current += 1;
+      }, delay);
+    }
+
+    return () => clearTimeout(inactivityTimer.current);
+  }, [messages, activeTab]);
 
   const playNotificationSound = useCallback(() => {
     if (isNotificationEnabled && notificationAudioRef.current) {
@@ -148,9 +214,31 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
   }, [isNotificationEnabled, notificationAudioRef]);
 
   const addMessage = useCallback((tab, author, type, content, id = uuidv4()) => {
-    setMessages(prev => ({ ...prev, [tab]: [...prev[tab], { id, author, type, content, timestamp: new Date() }] }));
+    setMessages(prev => {
+      const newMessages = { ...prev };
+      newMessages[tab] = [...(newMessages[tab] || []), { id, author, type, content, timestamp: new Date() }];
+      return newMessages;
+    });
     return id;
   }, []);
+  
+  const analyzeMessage = async (message) => {
+    try {
+      const response = await fetch('/api/chat/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      if (response.ok) {
+        const analysis = await response.json();
+        if(analysis.intent && analysis.sentiment) {
+          addAnalyticsEntry({ message, ...analysis });
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to analyze message', error);
+    }
+  };
 
   const processPendingRequest = useCallback(async (request) => {
     logger.debug('Processing pending request', { intent: request.intentName });
@@ -187,8 +275,12 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
   }, [isAuthenticated, pendingRequest, processPendingRequest]);
 
   const processMessage = useCallback(async (message, tab) => {
+    clearTimeout(inactivityTimer.current);
+    proactiveCount.current = 0; // Reset proactive counter on new user message
+
     addMessage(tab, 'user', 'text', message);
     setLoading(true);
+    analyzeMessage(message);
 
     try {
       if (tab === 'advisor') {
@@ -238,7 +330,7 @@ export function useChat(initialTab, onLoginRequired, notificationAudioRef, onAge
     } finally {
       setLoading(false);
     }
-  }, [addMessage, messages, user, isAuthenticated, onLoginRequired, setPendingRequest, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play]);
+  }, [addMessage, messages, user, isAuthenticated, onLoginRequired, setPendingRequest, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play, analyzeMessage]);
 
   return {
     messages,

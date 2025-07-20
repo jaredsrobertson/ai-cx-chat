@@ -1,4 +1,4 @@
-import { createApiHandler } from '@/lib/apiUtils';
+import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 import { knowledgeBase } from '@/lib/knowledgeBase';
 import { getOpenAICompletion } from '@/lib/openai';
 import { sanitizeInput } from '@/lib/utils';
@@ -30,7 +30,7 @@ const knowledgeHandler = async (req) => {
   const sanitizedMessage = sanitizeInput(message);
 
   if (!sanitizedMessage) {
-    return new Response(JSON.stringify({ success: false, error: 'Valid message is required' }), {
+    return new Response(JSON.stringify(createStandardResponse(false, null, 'Valid message is required')), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -63,10 +63,8 @@ const knowledgeHandler = async (req) => {
     });
   } catch (error) {
     logger.error('Knowledge base stream error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR
-    }), {
+    const errorResponse = createStandardResponse(false, null, CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR);
+    return new Response(JSON.stringify(errorResponse), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

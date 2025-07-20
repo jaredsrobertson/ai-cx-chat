@@ -102,4 +102,20 @@
     bottom: 1.5rem;
     right: 1.5rem;
   }
+
+  /* Mobile Overrides for Chat Widget */
+  @media (max-width: 768px) {
+    .chat-widget-container {
+      @apply w-full h-full top-0 left-0 right-0 bottom-0 max-h-full rounded-none;
+    }
+
+    .chat-widget-inner {
+      @apply rounded-none shadow-none border-none;
+    }
+
+    /* Hide the FAB when the widget is open on mobile, as it's not needed */
+    .chat-fab {
+      @apply hidden;
+    }
+  }
 }

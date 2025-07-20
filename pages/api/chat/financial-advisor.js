@@ -1,5 +1,5 @@
 import { getOpenAICompletion } from '@/lib/openai';
-import { createApiHandler } from '@/lib/apiUtils';
+import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { CONFIG } from '@/lib/config';
@@ -41,7 +41,7 @@ const advisorHandler = async (req) => {
   const sanitizedMessages = sanitizeMessages(messages);
 
   if (sanitizedMessages.length === 0) {
-    return new Response(JSON.stringify({ success: false, error: 'Valid messages are required' }), {
+    return new Response(JSON.stringify(createStandardResponse(false, null, 'Valid messages are required')), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -69,10 +69,8 @@ const advisorHandler = async (req) => {
     });
   } catch (error) {
     logger.error('Financial advisor stream error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR
-    }), {
+    const errorResponse = createStandardResponse(false, null, CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR);
+    return new Response(JSON.stringify(errorResponse), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

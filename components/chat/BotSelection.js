@@ -3,7 +3,7 @@ import { HiCloud, HiSparkles, HiQuestionMarkCircle, HiOutlineUserGroup } from 'r
 export default function BotSelection({ onSelect, onAgentRequest }) {
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 bg-brand-ui-02 text-center">
-      <h2 className="text-xl font-bold text-brand-text-primary mb-2">Choose an Assistant</h2>
+      <h2 className="text-xl font-bold text-brand-text-primary mb-2">How can I help you?</h2>
       <p className="text-brand-text-secondary mb-8 max-w-sm">
         Select a specialized assistant to get started.
       </p>
@@ -22,7 +22,7 @@ export default function BotSelection({ onSelect, onAgentRequest }) {
                 CloudBank Concierge
               </h3>
               <p className="text-sm text-brand-text-secondary mt-1">
-                For everyday banking tasks.
+                Check balances, transfer funds, and view transactions.
               </p>
             </div>
           </div>
@@ -41,7 +41,7 @@ export default function BotSelection({ onSelect, onAgentRequest }) {
                 AI Advisor
               </h3>
               <p className="text-sm text-brand-text-secondary mt-1">
-                For financial advice and planning.
+                Get general financial advice and planning tips.
               </p>
             </div>
           </div>
@@ -60,7 +60,7 @@ export default function BotSelection({ onSelect, onAgentRequest }) {
                 Knowledge Base
               </h3>
               <p className="text-sm text-brand-text-secondary mt-1">
-                For questions about our products and services.
+                Ask about our products and services.
               </p>
             </div>
           </div>

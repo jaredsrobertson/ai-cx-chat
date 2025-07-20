@@ -11,9 +11,15 @@ export default function Handoff({ messageHistory, onCancel }) {
     const generateSummary = async () => {
       setIsLoading(true);
 
-      const historyToProcess = Array.isArray(messageHistory) ? messageHistory : [];
+      const hasMeaningfulHistory = Array.isArray(messageHistory) && messageHistory.length > 1;
 
-      const serializableHistory = historyToProcess.map(msg => {
+      if (!hasMeaningfulHistory) {
+        setSummary("You'll be connected to the next available agent.");
+        setIsLoading(false);
+        return;
+      }
+
+      const serializableHistory = messageHistory.map(msg => {
         const contentText = (typeof msg.content === 'object' && msg.content !== null)
           ? msg.content.speakableText || ''
           : msg.content;
@@ -61,7 +67,7 @@ export default function Handoff({ messageHistory, onCancel }) {
         <HiOutlineUserGroup className="w-8 h-8" />
       </div>
       <h2 className="text-xl font-bold text-brand-text-primary mb-2">Connecting to an Agent</h2>
-      <p className="text-brand-text-secondary mb-6">An agent will be with you shortly. Please review this summary of your conversation.</p>
+      <p className="text-brand-text-secondary mb-6">An agent will be with you shortly. Please review this summary of your request.</p>
       
       <div className="w-full max-w-sm p-4 bg-white rounded-lg border border-brand-ui-03 text-left">
         <h3 className="text-sm font-bold text-brand-text-primary mb-2">Summary for Agent:</h3>

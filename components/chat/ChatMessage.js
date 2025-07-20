@@ -108,28 +108,31 @@ function ChatMessage({ id, author, type, content, timestamp }) {
       variants={messageVariants}
       initial="hidden"
       animate="visible"
-      className={clsx('flex items-start gap-1 my-2', { 'justify-end': isUser })}
+      className={clsx('flex items-start gap-2 my-2', { 'justify-end': isUser })}
       role="group"
       aria-label={isUser ? 'User message' : 'Assistant message'}
     >
       {!isUser && <Avatar />}
-      <div className={clsx('max-w-xs lg:max-w-md px-4 py-2 rounded-2xl', {
-        'user bg-brand-blue text-white ml-auto rounded-br-md dark:bg-dark-brand-blue dark:text-brand-text-primary': isUser,
-        'bot bg-brand-ui-01 text-brand-text-primary dark:bg-dark-brand-ui-01 dark:text-dark-brand-text-primary mr-auto border border-brand-ui-03 dark:border-dark-brand-ui-03 rounded-bl-md': !isUser,
-        'max-w-md': content.confidentialData,
-      })}>
-        <p className="text-sm whitespace-pre-wrap">{textContent}</p>
-        
-        {type === 'structured' && content.confidentialData && (
-          <ConfidentialDisplay data={content.confidentialData} />
-        )}
-
-        <div className="flex items-center justify-between mt-1.5">
-          <span className="text-xs opacity-70">
-            {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-          {!isUser && <SpeakButton textToSpeak={textContent} messageId={id} />}
+      <div className={clsx('flex flex-col w-full', { 'items-end': isUser, 'items-start': !isUser })}>
+        <div className={clsx('max-w-xs lg:max-w-md px-4 py-2 rounded-2xl', {
+          'user bg-brand-blue text-white ml-auto rounded-br-md dark:bg-dark-brand-blue dark:text-brand-text-primary': isUser,
+          'bot bg-brand-ui-01 text-brand-text-primary dark:bg-dark-brand-ui-01 dark:text-dark-brand-text-primary mr-auto border border-brand-ui-03 dark:border-dark-brand-ui-03 rounded-bl-md': !isUser,
+        })}>
+          <p className="text-sm whitespace-pre-wrap">{textContent}</p>
+          
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-xs opacity-70">
+              {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            {!isUser && <SpeakButton textToSpeak={textContent} messageId={id} />}
+          </div>
         </div>
+
+        {type === 'structured' && content.confidentialData && (
+          <div className="mt-1 w-full max-w-xs lg:max-w-md">
+             <ConfidentialDisplay data={content.confidentialData} />
+          </div>
+        )}
       </div>
     </motion.div>
   );

@@ -1,9 +1,10 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import ChatTabs from './ChatTabs';
+import ConversationView from './ConversationView';
 import ErrorBoundary from '../ErrorBoundary';
 import BotSelection from './BotSelection';
 import Handoff from './Handoff';
+import AnalyticsDisplay from '../analytics/AnalyticsDisplay';
 import { useAuth } from '@/hooks/useAuth';
 import { TTSProvider, useTTS } from '@/contexts/TTSContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,7 +25,6 @@ const LoginModal = dynamic(() => import('../auth/LoginModal'));
 
 const initialState = {
   isOpen: false,
-  activeTab: 'banking',
   selectedBot: null,
   showLoginModal: false,
   isHandoff: false,
@@ -37,7 +37,7 @@ function widgetReducer(state, action) {
     case 'CLOSE':
       return { ...initialState };
     case 'SELECT_BOT':
-      return { ...state, selectedBot: action.payload, activeTab: action.payload };
+      return { ...state, selectedBot: action.payload };
     case 'BACK_TO_SELECTION':
       return { ...state, selectedBot: null };
     case 'SHOW_LOGIN_MODAL':
@@ -55,13 +55,13 @@ function widgetReducer(state, action) {
 
 const ChatWidgetInner = () => {
   const [state, dispatch] = useReducer(widgetReducer, initialState);
-  const { isOpen, activeTab, selectedBot, showLoginModal, isHandoff } = state;
+  const { isOpen, selectedBot, showLoginModal, isHandoff } = state;
 
   const notificationAudioRef = useRef(null);
   const handoffMessageHistory = useRef([]);
 
   const { user, logout } = useAuth();
-  const { stop, error: ttsError, isAutoResponseEnabled, toggleAutoResponse, isNotificationEnabled, toggleNotificationSound } = useTTS();
+  const { stop, isAutoResponseEnabled, toggleAutoResponse, isNotificationEnabled, toggleNotificationSound } = useTTS();
 
   const handleOpen = useCallback(() => {
     logger.debug('Chat widget opening');
@@ -148,11 +148,15 @@ const ChatWidgetInner = () => {
                   <button onClick={handleClose} className="p-2 rounded-full hover:bg-white/20 dark:hover:bg-black/20" title="Close"><HiOutlineXMark className="w-6 h-6" /></button>
                 </div>
               </div>
+
+              {/* Conditionally render AnalyticsDisplay here */}
+              {selectedBot && !isHandoff && <AnalyticsDisplay />}
+
               <div className="flex-grow overflow-hidden bg-brand-ui-02 dark:bg-dark-brand-ui-02">
                 <ErrorBoundary>
                   {isHandoff ? ( <Handoff messageHistory={handoffMessageHistory.current} onCancel={handleCancelHandoff} /> ) 
                   : !selectedBot ? ( <BotSelection onSelect={handleBotSelection} onAgentRequest={handleAgentRequest} /> ) 
-                  : ( <ChatTabs activeTab={activeTab} setActiveTab={(tab) => dispatch({ type: 'SELECT_BOT', payload: tab })} onLoginRequired={handleLoginRequired} notificationAudioRef={notificationAudioRef} onAgentRequest={handleAgentRequest}/> )}
+                  : ( <ConversationView activeBot={selectedBot} onLoginRequired={handleLoginRequired} notificationAudioRef={notificationAudioRef} onAgentRequest={handleAgentRequest}/> )}
                 </ErrorBoundary>
               </div>
             </div>

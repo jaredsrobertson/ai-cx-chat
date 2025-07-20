@@ -1,4 +1,4 @@
-import { createApiHandler } from '@/lib/apiUtils';
+import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 import { getOpenAICompletion } from '@/lib/openai';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
@@ -28,7 +28,7 @@ const summarizeHandler = async (req) => {
   const { messages, user } = body;
 
   if (!Array.isArray(messages) || messages.length === 0) {
-    return new Response(JSON.stringify({ success: false, error: 'Message history is required' }), {
+    return new Response(JSON.stringify(createStandardResponse(false, null, 'Message history is required')), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -63,10 +63,8 @@ const summarizeHandler = async (req) => {
     });
   } catch (error) {
     logger.error('Summarization stream error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to generate summary.'
-    }), {
+    const errorResponse = createStandardResponse(false, null, 'Failed to generate summary.');
+    return new Response(JSON.stringify(errorResponse), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

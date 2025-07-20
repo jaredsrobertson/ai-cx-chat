@@ -14,7 +14,7 @@ export default function Home() {
     <>
       <Head>
         <title>AI-Powered CX Chat Demo</title>
-        <meta name="description" content="A technical demonstration of a modern conversational AI solution, combining Dialogflow-style fulfillment with generative AI." />
+        <meta name="description" content="A technical demonstration of an end-to-end conversational AI solution, combining Dialogflow-style fulfillment with generative AI." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href={faviconDataUri} />
       </Head>
@@ -33,7 +33,7 @@ export default function Home() {
                 <nav className="hidden md:flex items-center space-x-4">
                   <a href="#ai-architecture" className="text-gray-200 hover:text-white font-medium">AI Architecture</a>
                   <a href="#tech-stack" className="text-gray-200 hover:text-white font-medium">Tech Stack</a>
-                  <button className="btn-primary" data-chat-toggle="true">Try AI Chat</button>
+                  <button className="btn-primary" data-chat-toggle="true">Launch Demo</button>
                   <button 
                     onClick={toggleTheme} 
                     className="p-2.5 rounded-md hover:bg-white/20 text-white transition-colors" 
@@ -53,14 +53,14 @@ export default function Home() {
             <section id="demo" className="scroll-section">
               <div className="text-center">
                 <h2 className="text-6xl font-bold mb-6 leading-tight text-white">
-                    AI-Powered Customer Experience
-                    <span className="block">Chat Demo</span>
+                    End-to-End AI Customer Service
+                    <span className="block">A Technical Demonstration</span>
                 </h2>
                 <p className="text-xl mb-8 text-blue-100 dark:text-dark-brand-text-secondary leading-relaxed max-w-3xl mx-auto">
-                  A technical demonstration of a modern conversational AI solution, showcasing how structured, Dialogflow-style fulfillment can be combined with generative AI.
+                  This project demonstrates a complete conversational AI solution, integrating structured <strong>fulfillment</strong> with generative AI to deliver a seamless customer experience.
                 </p>
                 <div className="flex justify-center gap-4">
-                  <button className="btn-primary" data-chat-toggle="true">Try AI Chat</button>
+                  <button className="btn-primary" data-chat-toggle="true">Launch Demo</button>
                   <button onClick={() => window.open('https://github.com/jaredsrobertson/ai-cx-chat', '_blank')} className="bg-white/10 text-white font-medium px-6 py-2.5 rounded-lg border border-white/20 hover:bg-white/20 flex items-center justify-center gap-2">
                     <FaGithub className="w-5 h-5" />
                     View on GitHub
@@ -73,21 +73,21 @@ export default function Home() {
                 <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                   <div className="card">
                     <div className="text-center mb-12">
-                      <h3 className="text-4xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-4">Dual AI Bot Architecture</h3>
-                      <p className="text-xl text-brand-text-secondary dark:text-dark-brand-text-secondary">Combining structured, task-oriented dialogue with flexible, generative conversation.</p>
+                      <h3 className="text-4xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-4">Hybrid AI Solution Architecture</h3>
+                      <p className="text-xl text-brand-text-secondary dark:text-dark-brand-text-secondary">Combining NLU-driven fulfillment with generative AI for a comprehensive and robust user experience.</p>
                     </div>
                     <div className="grid md:grid-cols-3 gap-8">
                        <div className="text-center">
-                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Stateful Dialogue & NLU</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Using **Google Dialogflow** for robust intent classification, entity extraction, and managing conversational context for banking tasks.</p>
+                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Task-Oriented Fulfillment</h4>
+                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Using <strong>Google Dialogflow</strong> for robust intent classification, entity extraction, and stateful dialogue management to handle specific banking tasks.</p>
                       </div>
                       <div className="text-center">
                         <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Generative Conversation</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Leveraging the **OpenAI GPT-4** model to provide open-ended, human-like financial advice that goes beyond pre-defined scripts.</p>
+                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Leveraging <strong>OpenAI's GPT models</strong> to provide open-ended, human-like financial advice that goes beyond pre-defined conversational flows.</p>
                       </div>
                       <div className="text-center">
-                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Voice-Enabled Experience</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Integrating browser-native **Speech Recognition (ASR)** and dynamic **Text-to-Speech (TTS via ElevenLabs)** to create a complete voice experience.</p>
+                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Voice-First Integration</h4>
+                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Integrating browser-native <strong>Speech Recognition (ASR)</strong> and dynamic <strong>Text-to-Speech (TTS)</strong> to create a complete, voice-enabled experience.</p>
                       </div>
                     </div>
                   </div>
@@ -99,20 +99,20 @@ export default function Home() {
                   <div className="card">
                     <div className="text-center mb-12">
                       <h3 className="text-4xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-4">Enterprise-Ready Technology Stack</h3>
-                      <p className="text-xl text-brand-text-secondary dark:text-dark-brand-text-secondary">A modern, scalable, and secure web architecture.</p>
+                      <p className="text-xl text-brand-text-secondary dark:text-dark-brand-text-secondary">A modern, scalable, and secure web architecture built for performance and maintainability.</p>
                     </div>
                     <div className="grid md:grid-cols-3 gap-8">
                        <div className="text-center">
                         <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Full-Stack Next.js</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">A performant **React** frontend with a powerful backend built on **serverless functions**, enabling rapid development and scalability.</p>
+                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">A performant <strong>React</strong> frontend with a powerful backend built on <strong>serverless functions</strong>, enabling rapid, agile development and scalability.</p>
                       </div>
                       <div className="text-center">
                         <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Secure API & State</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Backend APIs are secured with **JSON Web Tokens (JWT)**. In-memory rate-limiting is used on API routes to prevent abuse.</p>
+                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Backend APIs are secured with <strong>JSON Web Tokens (JWT)</strong>. In-memory rate-limiting on API routes provides operational diagnostic capabilities to prevent abuse.</p>
                       </div>
                       <div className="text-center">
                         <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Clean & Maintainable Code</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Showcasing a modular architecture with custom React Hooks, organized utilities, and a focus on code that is easy to understand and extend.</p>
+                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">A modular architecture with custom React Hooks, organized utilities, and comprehensive logging for a codebase that is easy to understand and extend.</p>
                       </div>
                     </div>
                   </div>
