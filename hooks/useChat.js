@@ -1,3 +1,5 @@
+// hooks/useChat.js - Final Version with Clean Response Integration
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,9 +8,9 @@ import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { logger } from '@/lib/logger';
 import { CONFIG } from '@/lib/config';
 
-const { AUTH_REQUIRED_INTENTS, MESSAGES } = CONFIG;
+const { MESSAGES } = CONFIG;
 
-// NEW: This function now calls our internal API route instead of the Dialogflow library directly.
+// Dialogflow integration
 async function detectDialogflowIntent(message, sessionId, token) {
   const response = await fetch('/api/dialogflow/detect', {
     method: 'POST',
@@ -17,91 +19,91 @@ async function detectDialogflowIntent(message, sessionId, token) {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to detect intent');
+    throw new Error('Failed to communicate with Dialogflow');
   }
 
   const result = await response.json();
   return result.data;
 }
 
-// This helper function parses the rich response we get back from Dialogflow
-// after our webhook has processed the intent.
+// Enhanced response formatting for clean Dialogflow responses
 function formatDialogflowResponse(response) {
-  const firstMessage = response.fulfillmentMessages?.[0];
+  logger.debug('Processing Dialogflow response', { 
+    intent: response.intent?.displayName,
+    hasFulfillmentText: !!response.fulfillmentText,
+    messageCount: response.fulfillmentMessages?.length || 0
+  });
 
-  if (!firstMessage) {
-    return { speakableText: response.fulfillmentText || "I'm sorry, I'm having trouble responding right now." };
-  }
-
-  // Check for the custom payload we designed in our webhook
-  if (firstMessage.payload && firstMessage.payload.fields) {
-    const fields = firstMessage.payload.fields;
-    const responseData = {
-      speakableText: fields.speakableText?.stringValue || response.fulfillmentText,
-      action: fields.action?.stringValue,
-      intentName: fields.intentName?.stringValue || response.intent?.displayName,
-    };
+  // Start with Dialogflow's response text (our clean, consistent responses)
+  let speakableText = response.fulfillmentText || "I'm having trouble right now. Please try again.";
+  
+  // Check for custom payload from our webhook
+  const customMessage = response.fulfillmentMessages?.find(msg => msg.payload);
+  
+  if (customMessage?.payload) {
+    const payload = customMessage.payload;
     
-    // Unpack the confidentialData struct if it exists
-    const confidentialData = fields.confidentialData?.structValue?.fields;
-    if (confidentialData) {
-      const formattedData = {};
-      formattedData.type = confidentialData.type?.stringValue;
+    const responseData = {
+      speakableText: speakableText, // Use Dialogflow's consistent response
+      action: payload.action,
+      intentName: payload.intentName || response.intent?.displayName,
+    };
 
-      if (confidentialData.accounts) {
-        formattedData.accounts = confidentialData.accounts.listValue.values.map(v => ({
-          name: v.structValue.fields.name.stringValue,
-          balance: v.structValue.fields.balance.numberValue,
-        }));
-      }
-      if (confidentialData.transactions) {
-        formattedData.transactions = confidentialData.transactions.listValue.values.map(v => ({
-          date: v.structValue.fields.date.stringValue,
-          description: v.structValue.fields.description.stringValue,
-          amount: v.structValue.fields.amount.numberValue,
-        }));
-      }
-      if (confidentialData.details) {
-        const detailsFields = confidentialData.details.structValue.fields;
-        formattedData.details = {
-          amount: detailsFields.amount.numberValue,
-          fromAccount: detailsFields.fromAccount.stringValue,
-          toAccount: detailsFields.toAccount.stringValue,
-        };
-      }
-      responseData.confidentialData = formattedData;
+    // Handle auth required differently - use custom auth message
+    if (payload.action === 'AUTH_REQUIRED') {
+      responseData.speakableText = payload.authMessage || speakableText;
     }
+
+    // Handle confidential data from webhook
+    if (payload.confidentialData) {
+      responseData.confidentialData = payload.confidentialData;
+    }
+
     return responseData;
   }
 
-  // Fallback to a standard text response
+  // Standard response from Dialogflow
   return { 
-    speakableText: firstMessage.text?.text?.[0] || response.fulfillmentText,
+    speakableText,
     intentName: response.intent?.displayName,
   };
 }
 
-
+// Banking message processing
 async function processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest }) {
-    const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
-    localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
-    const token = localStorage.getItem('authToken');
+  const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
+  localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
+  const token = localStorage.getItem('authToken');
 
+  try {
+    // Send to Dialogflow for conversation management
     const dialogflowResponse = await detectDialogflowIntent(message, sessionId, token); 
     const responsePayload = formatDialogflowResponse(dialogflowResponse);
 
+    // Check if webhook requested authentication
     if (responsePayload.action === 'AUTH_REQUIRED' && !isAuthenticated) {
-        const loginMessage = getLoginMessage(responsePayload.intentName);
-        const pending = { message, tab: 'banking', sessionId, intentName: responsePayload.intentName, timestamp: new Date() };
-        setPendingRequest(pending);
-        onLoginRequired();
-        return { requiresAuth: true, loginMessage };
+      const pending = { 
+        message, 
+        tab: 'banking', 
+        sessionId, 
+        intentName: responsePayload.intentName, 
+        timestamp: new Date()
+      };
+      setPendingRequest(pending);
+      onLoginRequired();
+      return { requiresAuth: true, loginMessage: responsePayload.speakableText };
     }
     
+    // Normal response from Dialogflow + webhook
     return { success: true, response: responsePayload };
+    
+  } catch (error) {
+    logger.error('Banking message processing failed', error);
+    throw new Error('I\'m having trouble connecting to my services. Please try again.');
+  }
 }
 
-
+// Other processing functions (unchanged)
 async function processAdvisorMessage(message, messageHistory) {
   const response = await fetch('/api/chat/financial-advisor', {
     method: 'POST',
@@ -134,16 +136,6 @@ async function processKnowledgeMessage(message) {
   return response.text();
 }
 
-const getLoginMessage = (intentName) => {
-    const messages = {
-      'account.balance': "Please log in to view your account balance. I'll show you the information right after you sign in.",
-      'account.transactions': "Please log in to view your transaction history. I'll show you the information right after you sign in.",
-      'account.transfer': "Please log in to complete your transfer. I'll process your request right after you sign in.",
-      'transaction.history': "Please log in to view your transaction history. I'll show you the information right after you sign in.",
-    };
-    return messages[intentName] || "For security, please log in to access your account information.";
-};
-
 export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgentRequest) {
   const [messages, setMessages] = useState({
     banking: [{ ...MESSAGES.INITIAL.BANKING, id: uuidv4(), timestamp: new Date() }],
@@ -160,7 +152,7 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
   const inactivityTimer = useRef(null);
   const proactiveCount = useRef(0);
 
-  // Load messages from localStorage on initial render
+  // Load and save messages
   useEffect(() => {
     try {
       const savedMessages = localStorage.getItem('chatMessages');
@@ -176,7 +168,6 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
     }
   }, []);
 
-  // Save messages to localStorage whenever they change
   useEffect(() => {
     try {
       localStorage.setItem('chatMessages', JSON.stringify(messages));
@@ -185,15 +176,14 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
     }
   }, [messages]);
   
-  // Proactive engagement timer
+  // Proactive engagement
   useEffect(() => {
     clearTimeout(inactivityTimer.current);
-
     const currentMessages = messages[activeTab] || [];
     const lastMessage = currentMessages[currentMessages.length - 1];
 
     if (lastMessage && lastMessage.author === 'bot' && proactiveCount.current < 2) {
-      const delay = proactiveCount.current === 0 ? 20000 : 30000; // 20s then 30s
+      const delay = proactiveCount.current === 0 ? 20000 : 30000;
       
       inactivityTimer.current = setTimeout(() => {
         addMessage(activeTab, 'bot', 'text', { speakableText: "Is there anything else I can help you with today?" });
@@ -240,46 +230,64 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
     }
   };
 
+  // Process pending request after login
   const processPendingRequest = useCallback(async (request) => {
-    logger.debug('Processing pending request', { intent: request.intentName });
+    logger.debug('Processing pending request after authentication', { 
+      intent: request.intentName,
+      originalMessage: request.message 
+    });
 
     try {
-        const data = await processBankingMessage({
-            message: request.message,
-            user,
-            isAuthenticated: true,
-            onLoginRequired: () => {},
-            setPendingRequest: () => {}
-        });
+      const data = await processBankingMessage({
+        message: request.message,
+        user,
+        isAuthenticated: true,
+        onLoginRequired: () => {},
+        setPendingRequest: () => {}
+      });
 
-        if (data.success) {
-            addMessage(request.tab, 'bot', 'structured', data.response);
-            await playNotificationSound();
-            logger.debug('Pending request completed successfully');
-        } else {
-            throw new Error(data.error || "Pending request failed");
-        }
-    } catch (error) {
-        logger.error('Error processing pending request', error);
-        addMessage(request.tab, 'bot', 'structured', { speakableText: "I'm sorry, there was an issue processing your request after login. Please try again." });
+      if (data.success) {
+        addMessage(request.tab, 'bot', 'structured', data.response);
         await playNotificationSound();
+        
+        // Handle special actions
+        if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
+          onAgentRequest(messages.banking);
+        }
+        
+        // Auto-play TTS if enabled
+        if (isAutoResponseEnabled && data.response.speakableText) {
+          const messageId = uuidv4();
+          play(data.response.speakableText, messageId);
+        }
+        
+        logger.debug('Pending request completed successfully');
+      }
+    } catch (error) {
+      logger.error('Error processing pending request', error);
+      addMessage(request.tab, 'bot', 'structured', { 
+        speakableText: "I'm sorry, there was an issue processing your request after login. Please try again." 
+      });
+      await playNotificationSound();
     }
-  }, [addMessage, user, playNotificationSound]);
+  }, [addMessage, user, playNotificationSound, onAgentRequest, messages.banking, isAutoResponseEnabled, play]);
 
   useEffect(() => {
     if (isAuthenticated && pendingRequest) {
-      logger.debug('Login detected. Processing pending request...');
+      logger.debug('User authenticated, processing pending request');
       processPendingRequest(pendingRequest);
       setPendingRequest(null);
     }
   }, [isAuthenticated, pendingRequest, processPendingRequest]);
 
+  // Main message processing
   const processMessage = useCallback(async (message, tab) => {
     clearTimeout(inactivityTimer.current);
-    proactiveCount.current = 0; // Reset proactive counter on new user message
+    proactiveCount.current = 0;
 
     addMessage(tab, 'user', 'text', message);
     setLoading(true);
+    
     analyzeMessage(message);
 
     try {
@@ -305,20 +313,33 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
         if (isAutoResponseEnabled && responseText) {
           play(responseText, newMessageId);
         }
-      } else {
-        const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
+        
+      } else if (tab === 'banking') {
+        // Dialogflow handles conversation, webhook handles data
+        const data = await processBankingMessage({ 
+          message, 
+          user, 
+          isAuthenticated, 
+          onLoginRequired, 
+          setPendingRequest 
+        });
+        
         await playNotificationSound();
 
         if (data.requiresAuth) {
-            addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
+          addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
         } else if (data.success) {
-            const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
-            if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
-              onAgentRequest(messages.banking);
-            }
-            if(isAutoResponseEnabled && data.response.speakableText){
-                play(data.response.speakableText, newMessageId);
-            }
+          const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
+          
+          // Handle special actions
+          if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
+            onAgentRequest(messages.banking);
+          }
+          
+          // Auto-play TTS
+          if (isAutoResponseEnabled && data.response.speakableText) {
+            play(data.response.speakableText, newMessageId);
+          }
         }
       }
     } catch (error) {
@@ -330,7 +351,19 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
     } finally {
       setLoading(false);
     }
-  }, [addMessage, messages, user, isAuthenticated, onLoginRequired, setPendingRequest, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play, analyzeMessage]);
+  }, [
+    addMessage, 
+    messages, 
+    user, 
+    isAuthenticated, 
+    onLoginRequired, 
+    setPendingRequest, 
+    playNotificationSound, 
+    onAgentRequest, 
+    isAutoResponseEnabled, 
+    play, 
+    analyzeMessage
+  ]);
 
   return {
     messages,
