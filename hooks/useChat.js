@@ -8,23 +8,23 @@ import { BOTS } from '@/lib/bots';
 
 // Helper to convert Dialogflow's Struct format to a plain JSON object
 function structToJson(struct) {
-    if (!struct || !struct.fields) {
-        return struct;
-    }
-    const json = {};
-    for (const key in struct.fields) {
-        const field = struct.fields[key];
-        const valueType = Object.keys(field)[0];
-        let value = field[valueType];
+  if (!struct || !struct.fields) {
+    return struct;
+  }
+  const json = {};
+  for (const key in struct.fields) {
+    const field = struct.fields[key];
+    const valueType = Object.keys(field)[0];
+    let value = field[valueType];
 
-        if (valueType === 'structValue') {
-            value = structToJson(value);
-        } else if (valueType === 'listValue') {
-            value = value.values.map(item => structToJson({ fields: { item } }).item);
-        }
-        json[key] = value;
+    if (valueType === 'structValue') {
+      value = structToJson(value);
+    } else if (valueType === 'listValue') {
+      value = value.values.map(item => structToJson({ fields: { item } }).item);
     }
-    return json;
+    json[key] = value;
+  }
+  return json;
 }
 
 async function detectDialogflowIntent(message, sessionId, token) {
@@ -63,10 +63,18 @@ async function processBankingMessage({ message, user, isAuthenticated, onLoginRe
     const responsePayload = formatDialogflowResponse(dialogflowResponse);
 
     if (responsePayload.action === 'AUTH_REQUIRED' && !isAuthenticated) {
-      setPendingRequest({ message, tab: 'banking', sessionId, intentName: responsePayload.intentName, timestamp: new Date() });
+      setPendingRequest({ 
+        message, 
+        tab: 'banking', 
+        sessionId, 
+        intentName: responsePayload.intentName, 
+        timestamp: new Date(),
+        parameters: dialogflowResponse.parameters || {}
+      });
       onLoginRequired();
       return { requiresAuth: true, loginMessage: responsePayload.speakableText };
     }
+    
     return { success: true, response: responsePayload };
   } catch (error) {
     logger.error('Banking message processing failed', error);
@@ -127,7 +135,6 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
   const inactivityTimer = useRef(null);
   const proactiveCount = useRef(0);
 
-  // CORRECTED: Moved `addMessage` before the `useEffect` that uses it.
   const addMessage = useCallback((tab, author, type, content, id = uuidv4()) => {
     const newMessage = { id, author, type, content, timestamp: new Date() };
     setMessages(prev => ({
@@ -137,6 +144,7 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     return newMessage;
   }, []);
 
+  // Load saved messages
   useEffect(() => {
     try {
       const saved = localStorage.getItem('chatMessages');
@@ -147,6 +155,7 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     }
   }, []);
 
+  // Save messages
   useEffect(() => {
     try {
       localStorage.setItem('chatMessages', JSON.stringify(messages));
@@ -168,8 +177,7 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
       }, proactiveCount.current === 0 ? 20000 : 30000);
     }
     return () => clearTimeout(inactivityTimer.current);
-  }, [messages, activeBot, addMessage]); // CORRECTED: Added `addMessage` to dependency array.
-
+  }, [messages, activeBot, addMessage]);
 
   const playNotificationSound = useCallback(async () => {
     if (isNotificationEnabled && notificationAudioRef.current) {
@@ -178,7 +186,7 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     }
   }, [isNotificationEnabled, notificationAudioRef]);
 
-  const analyzeMessage = async (message) => {
+  const analyzeMessage = useCallback(async (message) => {
     try {
       const response = await fetch('/api/chat/analyze', {
         method: 'POST',
@@ -186,7 +194,15 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
         body: JSON.stringify({ message }),
       });
       if (response.ok) {
-        const analysis = await response.json();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let result = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          result += decoder.decode(value, { stream: true });
+        }
+        const analysis = JSON.parse(result);
         if (analysis.intent && analysis.sentiment) {
           addAnalyticsEntry({ message, ...analysis });
         }
@@ -194,34 +210,55 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     } catch (error) {
       logger.error('Failed to analyze message', error);
     }
-  };
+  }, [addAnalyticsEntry]);
 
-  const processPendingRequest = useCallback(async (request) => {
-    try {
-      const data = await processBankingMessage({
-        message: request.message, user, isAuthenticated: true, onLoginRequired: () => {}, setPendingRequest: () => {}
-      });
-
-      if (data.success) {
-        const newMessage = addMessage(request.tab, 'bot', 'structured', data.response);
-        await playNotificationSound();
-        if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) onAgentRequest(messages.banking);
-        if (isAutoResponseEnabled && data.response.speakableText) play(data.response.speakableText, newMessage.id);
-      }
-    } catch (error) {
-      logger.error('Error processing pending request', error);
-      const msg = addMessage(request.tab, 'bot', 'structured', { speakableText: "I'm sorry, there was an issue processing your request after login. Please try again." });
-      await playNotificationSound();
-      if (isAutoResponseEnabled) play(msg.content.speakableText, msg.id);
-    }
-  }, [addMessage, user, playNotificationSound, onAgentRequest, messages.banking, isAutoResponseEnabled, play]);
-  
+  // 🚨 FIXED: Process pending request when user becomes authenticated
+  // Moved logic directly into useEffect to avoid dependency issues
   useEffect(() => {
-    if (isAuthenticated && pendingRequest) {
-      processPendingRequest(pendingRequest);
-      setPendingRequest(null);
-    }
-  }, [isAuthenticated, pendingRequest, processPendingRequest]);
+    if (!isAuthenticated || !pendingRequest) return;
+
+    const processPendingRequest = async () => {
+      try {
+        logger.debug('Processing pending request after login', { 
+          intentName: pendingRequest.intentName,
+          sessionId: pendingRequest.sessionId 
+        });
+
+        // Re-run the banking message with authentication
+        const data = await processBankingMessage({
+          message: pendingRequest.message, 
+          user, 
+          isAuthenticated: true, 
+          onLoginRequired: () => {}, 
+          setPendingRequest: () => {}
+        });
+
+        if (data.success) {
+          const newMessage = addMessage('banking', 'bot', 'structured', data.response);
+          await playNotificationSound();
+          
+          if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
+            onAgentRequest(messages.banking);
+          }
+          
+          if (isAutoResponseEnabled && data.response.speakableText) {
+            play(data.response.speakableText, newMessage.id);
+          }
+        }
+      } catch (error) {
+        logger.error('Error processing pending request', error);
+        const msg = addMessage('banking', 'bot', 'structured', { 
+          speakableText: "I'm sorry, there was an issue processing your request after login. Please try again." 
+        });
+        await playNotificationSound();
+        if (isAutoResponseEnabled) play(msg.content.speakableText, msg.id);
+      } finally {
+        setPendingRequest(null); // Clear pending request
+      }
+    };
+
+    processPendingRequest();
+  }, [isAuthenticated, pendingRequest, user, addMessage, playNotificationSound, onAgentRequest, messages.banking, isAutoResponseEnabled, play]);
 
   const processMessage = useCallback(async (message, tab) => {
     clearTimeout(inactivityTimer.current);
@@ -233,20 +270,28 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     try {
       let newMessage;
       if (tab === 'banking') {
-        const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
+        const data = await processBankingMessage({ 
+          message, 
+          user, 
+          isAuthenticated, 
+          onLoginRequired, 
+          setPendingRequest 
+        });
         
         if (data.requiresAuth) {
           newMessage = addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
         } else if (data.success) {
           newMessage = addMessage('banking', 'bot', 'structured', data.response);
-          if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) onAgentRequest(messages.banking);
+          if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
+            onAgentRequest(messages.banking);
+          }
         }
         
         if (newMessage) {
-            await playNotificationSound();
-            if (isAutoResponseEnabled && newMessage.content.speakableText) {
-                play(newMessage.content.speakableText, newMessage.id);
-            }
+          await playNotificationSound();
+          if (isAutoResponseEnabled && newMessage.content.speakableText) {
+            play(newMessage.content.speakableText, newMessage.id);
+          }
         }
 
       } else { // Advisor or Knowledge
@@ -265,7 +310,9 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
       }
     } catch (error) {
       logger.error('Chat processing error', error);
-      const msg = addMessage(tab, 'bot', 'structured', { speakableText: error.message || "Sorry, I encountered an error. Please try again." });
+      const msg = addMessage(tab, 'bot', 'structured', { 
+        speakableText: error.message || "Sorry, I encountered an error. Please try again." 
+      });
       await playNotificationSound();
       if (isAutoResponseEnabled) play(msg.content.speakableText, msg.id);
     } finally {
