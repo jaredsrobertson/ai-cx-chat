@@ -1,4 +1,4 @@
-import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
+import { createApiHandler, createStandardResponse, OpenAIStream } from '@/lib/apiUtils';
 import { knowledgeBase } from '@/lib/knowledgeBase';
 import { getOpenAICompletion } from '@/lib/openai';
 import { sanitizeInput } from '@/lib/utils';
@@ -8,21 +8,6 @@ import { CONFIG } from '@/lib/config';
 export const config = {
   runtime: 'edge',
 };
-
-function OpenAIStream(completion) {
-  const encoder = new TextEncoder();
-  return new ReadableStream({
-    async start(controller) {
-      for await (const chunk of completion) {
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          controller.enqueue(encoder.encode(content));
-        }
-      }
-      controller.close();
-    },
-  });
-}
 
 const knowledgeHandler = async (req) => {
   const body = await req.json();

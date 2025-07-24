@@ -1,5 +1,5 @@
 import { getOpenAICompletion } from '@/lib/openai';
-import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
+import { createApiHandler, createStandardResponse, OpenAIStream } from '@/lib/apiUtils';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { CONFIG } from '@/lib/config';
@@ -7,21 +7,6 @@ import { CONFIG } from '@/lib/config';
 export const config = {
   runtime: 'edge',
 };
-
-function OpenAIStream(completion) {
-  const encoder = new TextEncoder();
-  return new ReadableStream({
-    async start(controller) {
-      for await (const chunk of completion) {
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          controller.enqueue(encoder.encode(content));
-        }
-      }
-      controller.close();
-    },
-  });
-}
 
 const sanitizeMessages = (messages) => {
   if (!Array.isArray(messages)) return [];
