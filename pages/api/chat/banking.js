@@ -290,12 +290,24 @@ const intentHandlers = {
 };
 
 // --- Main Webhook Handler ---
-const bankingWebhookHandler = async (req, res, user) => {
+const bankingWebhookHandler = async (req, res) => { // Note: Removed 'user' from parameters
   try {
-    const { queryResult } = req.body;
+    const { queryResult, session } = req.body;
     const intentName = queryResult?.intent?.displayName;
-    const session = queryResult?.session;
     
+    let user = null;
+    const token = queryResult?.queryParams?.payload?.fields?.token?.stringValue;
+
+    if (token) {
+      try {
+        const jwt = (await import('jsonwebtoken')).default;
+        user = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (error) {
+        logger.warn('Webhook received an invalid JWT from Dialogflow payload', { error: error.message });
+        user = null; // Token is invalid, treat as unauthenticated
+      }
+    }
+
     logger.debug('Webhook fulfillment request received', {
       intent: intentName,
       authenticated: !!user,
