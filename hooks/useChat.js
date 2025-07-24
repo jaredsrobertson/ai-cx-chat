@@ -1,4 +1,3 @@
-// hooks/useChat.js
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,7 +6,27 @@ import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { logger } from '@/lib/logger';
 import { BOTS } from '@/lib/bots';
 
-// Dialogflow integration
+// Helper to convert Dialogflow's Struct format to a plain JSON object
+function structToJson(struct) {
+    if (!struct || !struct.fields) {
+        return struct;
+    }
+    const json = {};
+    for (const key in struct.fields) {
+        const field = struct.fields[key];
+        const valueType = Object.keys(field)[0];
+        let value = field[valueType];
+
+        if (valueType === 'structValue') {
+            value = structToJson(value);
+        } else if (valueType === 'listValue') {
+            value = value.values.map(item => structToJson({ fields: { item } }).item);
+        }
+        json[key] = value;
+    }
+    return json;
+}
+
 async function detectDialogflowIntent(message, sessionId, token) {
   const response = await fetch('/api/dialogflow/detect', {
     method: 'POST',
@@ -18,24 +37,22 @@ async function detectDialogflowIntent(message, sessionId, token) {
   return (await response.json()).data;
 }
 
-// Format Dialogflow response
 function formatDialogflowResponse(response) {
   const speakableText = response.fulfillmentText || "I'm having trouble right now. Please try again.";
-  const customPayload = response.fulfillmentMessages?.find(msg => msg.payload)?.payload;
+  const rawPayload = response.fulfillmentMessages?.find(msg => msg.payload)?.payload;
+  const customPayload = structToJson(rawPayload);
 
   if (customPayload) {
-    const responseData = {
+    return {
       speakableText: customPayload.authMessage || speakableText,
       action: customPayload.action,
       intentName: customPayload.intentName || response.intent?.displayName,
       confidentialData: customPayload.confidentialData,
     };
-    return responseData;
   }
   return { speakableText, intentName: response.intent?.displayName };
 }
 
-// Banking message processor
 async function processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest }) {
   const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
   localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
@@ -57,7 +74,6 @@ async function processBankingMessage({ message, user, isAuthenticated, onLoginRe
   }
 }
 
-// Advisor message processor
 async function processAdvisorMessage(message, messageHistory) {
   const response = await fetch('/api/chat/financial-advisor', {
     method: 'POST',
@@ -65,10 +81,17 @@ async function processAdvisorMessage(message, messageHistory) {
     body: JSON.stringify({ messages: [...messageHistory, { role: 'user', content: message }] })
   });
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Failed to fetch advisor response');
-  return response.text();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let content = '';
+  while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      content += decoder.decode(value, { stream: true });
+  }
+  return content;
 }
 
-// Knowledge base message processor
 async function processKnowledgeMessage(message) {
   const response = await fetch('/api/chat/knowledge', {
     method: 'POST',
@@ -76,7 +99,15 @@ async function processKnowledgeMessage(message) {
     body: JSON.stringify({ message })
   });
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Failed to fetch knowledge base response');
-  return response.text();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let content = '';
+  while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      content += decoder.decode(value, { stream: true });
+  }
+  return content;
 }
 
 const initialMessages = {
@@ -85,7 +116,7 @@ const initialMessages = {
   knowledge: [BOTS.knowledge.initialMessage],
 };
 
-export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgentRequest) {
+export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgentRequest) {
   const [messages, setMessages] = useState(initialMessages);
   const [loading, setLoading] = useState(false);
   const [pendingRequest, setPendingRequest] = useState(null);
@@ -96,7 +127,16 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
   const inactivityTimer = useRef(null);
   const proactiveCount = useRef(0);
 
-  // Load and save messages from/to localStorage
+  // CORRECTED: Moved `addMessage` before the `useEffect` that uses it.
+  const addMessage = useCallback((tab, author, type, content, id = uuidv4()) => {
+    const newMessage = { id, author, type, content, timestamp: new Date() };
+    setMessages(prev => ({
+      ...prev,
+      [tab]: [...(prev[tab] || []), newMessage],
+    }));
+    return newMessage;
+  }, []);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('chatMessages');
@@ -118,33 +158,25 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
   // Proactive engagement timer
   useEffect(() => {
     clearTimeout(inactivityTimer.current);
-    const currentMessages = messages[activeTab] || [];
+    const currentMessages = messages[activeBot] || [];
     const lastMessage = currentMessages[currentMessages.length - 1];
 
     if (lastMessage?.author === 'bot' && proactiveCount.current < 2) {
       inactivityTimer.current = setTimeout(() => {
-        addMessage(activeTab, 'bot', 'text', { speakableText: "Is there anything else I can help you with today?" });
+        addMessage(activeBot, 'bot', 'text', { speakableText: "Is there anything else I can help you with today?" });
         proactiveCount.current += 1;
       }, proactiveCount.current === 0 ? 20000 : 30000);
     }
     return () => clearTimeout(inactivityTimer.current);
-  }, [messages, activeTab]);
+  }, [messages, activeBot, addMessage]); // CORRECTED: Added `addMessage` to dependency array.
+
 
   const playNotificationSound = useCallback(async () => {
     if (isNotificationEnabled && notificationAudioRef.current) {
       notificationAudioRef.current.volume = 0.5;
       await notificationAudioRef.current.play().catch(e => logger.error("Error playing notification sound", e));
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }, [isNotificationEnabled, notificationAudioRef]);
-
-  const addMessage = useCallback((tab, author, type, content, id = uuidv4()) => {
-    setMessages(prev => ({
-      ...prev,
-      [tab]: [...(prev[tab] || []), { id, author, type, content, timestamp: new Date() }],
-    }));
-    return id;
-  }, []);
 
   const analyzeMessage = async (message) => {
     try {
@@ -167,26 +199,23 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
   const processPendingRequest = useCallback(async (request) => {
     try {
       const data = await processBankingMessage({
-        message: request.message,
-        user,
-        isAuthenticated: true,
-        onLoginRequired: () => {},
-        setPendingRequest: () => {}
+        message: request.message, user, isAuthenticated: true, onLoginRequired: () => {}, setPendingRequest: () => {}
       });
 
       if (data.success) {
-        const newId = addMessage(request.tab, 'bot', 'structured', data.response);
+        const newMessage = addMessage(request.tab, 'bot', 'structured', data.response);
         await playNotificationSound();
         if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) onAgentRequest(messages.banking);
-        if (isAutoResponseEnabled && data.response.speakableText) play(data.response.speakableText, newId);
+        if (isAutoResponseEnabled && data.response.speakableText) play(data.response.speakableText, newMessage.id);
       }
     } catch (error) {
       logger.error('Error processing pending request', error);
-      addMessage(request.tab, 'bot', 'structured', { speakableText: "I'm sorry, there was an issue processing your request after login. Please try again." });
+      const msg = addMessage(request.tab, 'bot', 'structured', { speakableText: "I'm sorry, there was an issue processing your request after login. Please try again." });
       await playNotificationSound();
+      if (isAutoResponseEnabled) play(msg.content.speakableText, msg.id);
     }
   }, [addMessage, user, playNotificationSound, onAgentRequest, messages.banking, isAutoResponseEnabled, play]);
-
+  
   useEffect(() => {
     if (isAuthenticated && pendingRequest) {
       processPendingRequest(pendingRequest);
@@ -202,35 +231,43 @@ export function useChat(activeTab, onLoginRequired, notificationAudioRef, onAgen
     analyzeMessage(message);
 
     try {
-      let responseText, data, newId;
-      await playNotificationSound();
-
+      let newMessage;
       if (tab === 'banking') {
-        data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
+        const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
+        
         if (data.requiresAuth) {
-          addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
+          newMessage = addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
         } else if (data.success) {
-          newId = addMessage('banking', 'bot', 'structured', data.response);
+          newMessage = addMessage('banking', 'bot', 'structured', data.response);
           if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) onAgentRequest(messages.banking);
-          if (isAutoResponseEnabled && data.response.speakableText) play(data.response.speakableText, newId);
         }
-      } else {
+        
+        if (newMessage) {
+            await playNotificationSound();
+            if (isAutoResponseEnabled && newMessage.content.speakableText) {
+                play(newMessage.content.speakableText, newMessage.id);
+            }
+        }
+
+      } else { // Advisor or Knowledge
         const messageHistory = messages[tab].map(msg => ({
           role: msg.author === 'user' ? 'user' : 'assistant',
           content: msg.type === 'text' ? msg.content : msg.content.speakableText
         }));
 
-        responseText = tab === 'advisor'
+        const responseText = tab === 'advisor'
           ? await processAdvisorMessage(message, messageHistory)
           : await processKnowledgeMessage(message);
 
-        newId = addMessage(tab, 'bot', 'text', { speakableText: responseText });
-        if (isAutoResponseEnabled && responseText) play(responseText, newId);
+        newMessage = addMessage(tab, 'bot', 'text', { speakableText: responseText });
+        await playNotificationSound();
+        if (isAutoResponseEnabled && responseText) play(responseText, newMessage.id);
       }
     } catch (error) {
       logger.error('Chat processing error', error);
-      addMessage(tab, 'bot', 'structured', { speakableText: error.message || "Sorry, I encountered an error. Please try again." });
+      const msg = addMessage(tab, 'bot', 'structured', { speakableText: error.message || "Sorry, I encountered an error. Please try again." });
       await playNotificationSound();
+      if (isAutoResponseEnabled) play(msg.content.speakableText, msg.id);
     } finally {
       setLoading(false);
     }

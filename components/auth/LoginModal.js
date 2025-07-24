@@ -73,10 +73,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
             </div>
             <form onSubmit={handleSubmit} className="space-y-4" id="demo-login-form">
               <div>
-                <label className="block text-sm font-medium text-brand-text-secondary dark:text-dark-brand-text-secondary mb-2">
+                <label htmlFor="username" className="block text-sm font-medium text-brand-text-secondary dark:text-dark-brand-text-secondary mb-2">
                   Username
                 </label>
                 <input
+                  id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -91,10 +92,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-brand-text-secondary dark:text-dark-brand-text-secondary mb-2">
+                <label htmlFor="pin" className="block text-sm font-medium text-brand-text-secondary dark:text-dark-brand-text-secondary mb-2">
                   Password
                 </label>
                 <input
+                  id="pin"
                   type="password"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
