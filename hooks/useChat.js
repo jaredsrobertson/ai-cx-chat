@@ -117,6 +117,15 @@ async function processBankingMessage({ message, user, isAuthenticated, onLoginRe
     localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
     const token = localStorage.getItem('authToken');
 
+    // 🚨 ADD THIS DEBUG LOGGING:
+    console.log('processBankingMessage DEBUG:', {
+        hasUser: !!user,
+        isAuthenticated,
+        hasToken: !!token,
+        tokenLength: token ? token.length : 0,
+        allTokens: Object.keys(localStorage).filter(k => k.includes('token'))
+    });
+
     try {
         const dialogflowResponse = await detectDialogflowIntent(message, sessionId, token); 
         const responsePayload = formatDialogflowResponse(dialogflowResponse);
