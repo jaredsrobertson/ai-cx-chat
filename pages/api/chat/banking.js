@@ -260,7 +260,6 @@ const intentHandlers = {
 // --- Main Exported Handler ---
 
 export default async function handler(req, res) {
-  // Method validation
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
@@ -269,132 +268,102 @@ export default async function handler(req, res) {
   try {
     const { queryResult, session } = req.body;
     
-    // Validate request body
     if (!queryResult) {
-      logger.warn('Webhook received invalid request body', { 
-        hasBody: !!req.body,
-        bodyKeys: Object.keys(req.body || {})
-      });
+      logger.warn('Webhook received invalid request body');
       return res.status(400).json({ 
         fulfillmentText: "I'm having trouble processing your request. Please try again." 
       });
     }
 
-    let user = null;
+    // 🚨 SUPER DETAILED DEBUG LOGGING
+    logger.debug('=== WEBHOOK DEBUG START ===');
+    logger.debug('Full queryResult keys:', Object.keys(queryResult));
+    logger.debug('queryParams exists:', !!queryResult.queryParams);
     
-    // 🚨 ENHANCED TOKEN EXTRACTION - Handle multiple payload formats
-    const payload = queryResult.queryParams?.payload;
-    let token = null;
-    
-    if (payload) {
-      logger.debug('Webhook received payload', { 
-        hasPayload: !!payload,
-        hasFields: !!payload.fields,
-        payloadKeys: Object.keys(payload || {})
-      });
+    if (queryResult.queryParams) {
+      logger.debug('queryParams keys:', Object.keys(queryResult.queryParams));
+      logger.debug('queryParams.payload exists:', !!queryResult.queryParams.payload);
       
-      // Try multiple extraction methods
-      if (payload.fields && payload.fields.token) {
-        // Method 1: Struct format with fields
-        token = payload.fields.token.stringValue || payload.fields.token;
-        logger.debug('Token extracted via fields.token.stringValue');
-      } else if (payload.token) {
-        // Method 2: Direct token property
-        token = payload.token;
-        logger.debug('Token extracted via direct payload.token');
-      } else if (payload.fields) {
-        // Method 3: Search through all fields
-        for (const [key, value] of Object.entries(payload.fields)) {
-          if (key === 'token' && value.stringValue) {
-            token = value.stringValue;
-            logger.debug('Token found in fields iteration');
-            break;
-          }
-        }
-      }
-      
-      // 🚨 TEMPORARY FULL PAYLOAD DEBUG (remove after testing)
-      if (!token) {
-        logger.debug('FULL PAYLOAD DEBUG - No token found', JSON.stringify(payload, null, 2));
+      if (queryResult.queryParams.payload) {
+        logger.debug('FULL PAYLOAD STRUCTURE:', JSON.stringify(queryResult.queryParams.payload, null, 2));
       }
     }
+    
+    let user = null;
+    let token = null;
+    
+    // Try to extract token from ANY possible location
+    const payload = queryResult.queryParams?.payload;
+    
+    if (payload) {
+      // Log the full payload structure
+      console.log('PAYLOAD DEBUG:', JSON.stringify(payload, null, 2));
+      
+      // Try every possible extraction method
+      if (payload.fields?.token?.stringValue) {
+        token = payload.fields.token.stringValue;
+        logger.debug('✅ Token found: fields.token.stringValue');
+      } else if (payload.fields?.token) {
+        token = payload.fields.token;
+        logger.debug('✅ Token found: fields.token');
+      } else if (payload.token) {
+        token = payload.token;
+        logger.debug('✅ Token found: payload.token');
+      } else {
+        logger.debug('❌ NO TOKEN FOUND IN PAYLOAD');
+        logger.debug('Available payload keys:', Object.keys(payload));
+        if (payload.fields) {
+          logger.debug('Available fields keys:', Object.keys(payload.fields));
+        }
+      }
+    } else {
+      logger.debug('❌ NO PAYLOAD IN queryParams');
+    }
 
-    // 🚨 ADDITIONAL DEBUG LOGGING
-    logger.debug('Token extraction result', {
+    logger.debug('Final token result:', {
       hasToken: !!token,
       tokenLength: token ? token.length : 0,
-      tokenStart: token ? token.substring(0, 20) + '...' : null
+      tokenPreview: token ? token.substring(0, 30) + '...' : 'null'
     });
 
-    // Verify JWT token if present
+    // JWT verification
     if (token) {
       try {
         user = jwt.verify(token, process.env.JWT_SECRET);
-        logger.debug('Token verified successfully', { 
-          userId: user.userId,
-          username: user.username 
-        });
+        logger.debug('✅ JWT VERIFIED SUCCESSFULLY', { userId: user.userId });
       } catch (error) {
-        logger.warn('Invalid JWT token in webhook', { 
-          error: error.message,
-          tokenLength: token.length 
-        });
+        logger.error('❌ JWT VERIFICATION FAILED', { error: error.message });
         user = null;
       }
-    } else {
-      logger.debug('No token found in webhook payload');
     }
 
     const intentName = queryResult.intent?.displayName;
-    const parameters = queryResult.parameters || {};
+    logger.debug('Processing intent:', { intentName, hasUser: !!user });
+
+    // Auth check
+    const authRequiredIntents = ['account.balance', 'account.transfer', 'account.transfer - yes', 'transaction.history'];
     
-    logger.debug('Processing intent', { 
-      intentName, 
-      hasUser: !!user,
-      parametersCount: Object.keys(parameters).length,
-      sessionId: session?.split('/').pop()
-    });
-
-    // List of intents that require authentication - only the actual ones
-    const authRequiredIntents = [
-      'account.balance', 
-      'account.transfer', 
-      'account.transfer - yes',
-      'transaction.history'
-    ];
-
-    // Check if authentication is required
     if (authRequiredIntents.includes(intentName) && !user) {
-      logger.debug('Authentication required for intent', { intentName });
+      logger.debug('🔒 RETURNING AUTH_REQUIRED for intent:', intentName);
       return res.status(200).json(buildAuthRequiredResponse(intentName));
     }
 
-    // Get the appropriate handler function
+    // If we get here with a user, return balance data
+    if (intentName === 'account.balance' && user) {
+      logger.debug('🎉 AUTHENTICATED BALANCE REQUEST - SHOULD RETURN DATA');
+      const handlerFn = intentHandlers[intentName];
+      const responseData = await handlerFn(queryResult.parameters, user, session, queryResult.outputContexts);
+      logger.debug('Response data has confidentialData:', !!(responseData.fulfillmentMessages?.find(msg => msg.payload?.confidentialData)));
+      return res.status(200).json(responseData);
+    }
+
+    // Default handler
     const handlerFn = intentHandlers[intentName] || handleDefault;
-    
-    // Execute the handler
-    const responseData = await handlerFn(
-      parameters, 
-      user, 
-      session, 
-      queryResult.outputContexts
-    );
-
-    logger.debug('Handler execution completed', { 
-      intentName,
-      hasResponseData: !!responseData,
-      hasCustomPayload: !!(responseData.fulfillmentMessages?.find(msg => msg.payload))
-    });
-
+    const responseData = await handlerFn(queryResult.parameters, user, session, queryResult.outputContexts);
     return res.status(200).json(responseData);
 
   } catch (error) {
-    logger.error('Webhook fulfillment error', { 
-      message: error.message, 
-      stack: error.stack,
-      intent: req.body?.queryResult?.intent?.displayName
-    });
-    
+    logger.error('Webhook error:', error);
     return res.status(500).json({ 
       fulfillmentText: "I'm experiencing technical difficulties. Please try again in a moment." 
     });
