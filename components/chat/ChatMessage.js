@@ -103,6 +103,17 @@ function ChatMessage({ id, author, type, content, timestamp }) {
 
   const textContent = getSafeContent(content);
 
+  // 🚨 DEBUG: Log the content structure for bot messages
+  if (!isUser) {
+    console.log('🔍 Bot Message Debug:', {
+      id,
+      type,
+      content,
+      hasConfidentialData: !!(typeof content === 'object' && content?.confidentialData),
+      confidentialDataType: content?.confidentialData?.type
+    });
+  }
+
   return (
     <motion.div
       variants={messageVariants}
@@ -128,9 +139,18 @@ function ChatMessage({ id, author, type, content, timestamp }) {
           </div>
         </div>
 
-        {type === 'structured' && content.confidentialData && (
+        {/* 🚨 DEBUG: Always show confidential data section with debug info */}
+        {type === 'structured' && (
           <div className="mt-1 w-full max-w-xs lg:max-w-md">
-             <ConfidentialDisplay data={content.confidentialData} />
+            {content.confidentialData ? (
+              <ConfidentialDisplay data={content.confidentialData} />
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 p-2 rounded text-xs text-yellow-800">
+                DEBUG: No confidentialData found in structured message
+                <br />
+                Content keys: {typeof content === 'object' ? Object.keys(content).join(', ') : 'N/A'}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -296,21 +296,14 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     }
   }, [addAnalyticsEntry]);
 
-  // 🚨 NEW: Retry last message after successful login
+  // 🚨 FIXED: Retry last message function - now manually triggered only
   const retryLastMessage = useCallback(async () => {
-    if (lastMessage) {
+    if (lastMessage && isAuthenticated) {
       logger.debug('Retrying last message after login', { message: lastMessage.message, tab: lastMessage.tab });
+      setLastMessage(null); // Clear the stored message
       await handleMessage(lastMessage.message, lastMessage.tab);
-      setLastMessage(null);
     }
-  }, [lastMessage]);
-
-  // 🚨 NEW: Expose retry function for ChatWidget to call after login
-  useEffect(() => {
-    if (isAuthenticated && lastMessage) {
-      retryLastMessage();
-    }
-  }, [isAuthenticated, retryLastMessage]);
+  }, [lastMessage, isAuthenticated]);
 
   // 🚨 STREAMLINED: Front-loaded auth check with single Dialogflow call
   const handleMessage = useCallback(async (message, tab) => {
@@ -351,6 +344,13 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
 
         if (data.success) {
           const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
+          
+          // 🚨 DEBUG: Log the response structure
+          logger.debug('Banking response data:', {
+            hasConfidentialData: !!data.response.confidentialData,
+            confidentialDataType: data.response.confidentialData?.type,
+            fullResponse: JSON.stringify(data.response, null, 2)
+          });
           
           if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
             onAgentRequest(messages.banking);

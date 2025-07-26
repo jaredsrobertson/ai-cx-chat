@@ -86,14 +86,24 @@ const ChatWidgetInner = () => {
   }, [stop]);
 
   const handleLoginRequired = useCallback(() => {
+    logger.debug('Login required, showing modal');
     dispatch({ type: 'SHOW_LOGIN_MODAL' });
   }, []);
 
-  // 🚨 SIMPLIFIED: Login success handler now just closes modal
-  // The useChat hook will automatically retry the last message
+  // 🚨 FIXED: Improved login success handler with proper timing
   const handleLoginSuccess = useCallback(() => {
-    logger.debug('Login successful, closing modal');
+    logger.debug('Login successful, closing modal and triggering retry');
+    
+    // Close modal immediately
     dispatch({ type: 'HIDE_LOGIN_MODAL' });
+    
+    // Wait a brief moment for modal to close, then retry
+    setTimeout(() => {
+      if (chatHookRef.current?.retryLastMessage) {
+        logger.debug('Calling retryLastMessage after login success');
+        chatHookRef.current.retryLastMessage();
+      }
+    }, 100);
   }, []);
   
   const handleAgentRequest = useCallback((history = []) => {
