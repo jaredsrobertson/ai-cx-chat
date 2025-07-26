@@ -6,25 +6,66 @@ import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { logger } from '@/lib/logger';
 import { BOTS } from '@/lib/bots';
 
+// --- Auth Configuration ---
+const AUTH_REQUIRED_INTENTS = [
+  'account.balance',
+  'account.transfer', 
+  'account.transfer - yes',
+  'transaction.history'
+];
+
+function needsAuth(intentName) {
+  return AUTH_REQUIRED_INTENTS.includes(intentName);
+}
+
+// --- Quick Intent Classification ---
+async function quickClassifyIntent(message) {
+  // Simple keyword-based classification for common banking intents
+  const msg = message.toLowerCase().trim();
+  
+  // Balance-related keywords
+  if (msg.includes('balance') || msg.includes('money') || msg.includes('account')) {
+    return 'account.balance';
+  }
+  
+  // Transfer-related keywords  
+  if (msg.includes('transfer') || msg.includes('move') || msg.includes('send')) {
+    return 'account.transfer';
+  }
+  
+  // Transaction-related keywords
+  if (msg.includes('transaction') || msg.includes('history') || msg.includes('recent')) {
+    return 'transaction.history';
+  }
+  
+  // Agent-related keywords
+  if (msg.includes('agent') || msg.includes('human') || msg.includes('person')) {
+    return 'agent.handoff';
+  }
+  
+  // Default - no auth required
+  return 'general';
+}
+
 // Helper to convert Dialogflow's Struct format to a plain JSON object
 function structToJson(struct) {
-    if (!struct || !struct.fields) {
-        return struct;
-    }
-    const json = {};
-    for (const key in struct.fields) {
-        const field = struct.fields[key];
-        const valueType = Object.keys(field)[0];
-        let value = field[valueType];
+  if (!struct || !struct.fields) {
+    return struct;
+  }
+  const json = {};
+  for (const key in struct.fields) {
+    const field = struct.fields[key];
+    const valueType = Object.keys(field)[0];
+    let value = field[valueType];
 
-        if (valueType === 'structValue') {
-            value = structToJson(value);
-        } else if (valueType === 'listValue') {
-            value = value.values.map(item => structToJson({ fields: { item } }).item);
-        }
-        json[key] = value;
+    if (valueType === 'structValue') {
+      value = structToJson(value);
+    } else if (valueType === 'listValue') {
+      value = value.values.map(item => structToJson({ fields: { item } }).item);
     }
-    return json;
+    json[key] = value;
+  }
+  return json;
 }
 
 async function detectDialogflowIntent(message, sessionId, token) {
@@ -33,17 +74,10 @@ async function detectDialogflowIntent(message, sessionId, token) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, sessionId, token }),
   });
-
-  if (!response.ok) {
-    throw new Error('Failed to detect intent');
-  }
-
-  const result = await response.json();
-  return result.data;
+  if (!response.ok) throw new Error('Failed to detect intent');
+  return (await response.json()).data;
 }
 
-// This helper function parses the rich response we get back from Dialogflow
-// after our webhook has processed the intent.
 function formatDialogflowResponse(response) {
   const firstMessage = response.fulfillmentMessages?.[0];
 
@@ -51,7 +85,7 @@ function formatDialogflowResponse(response) {
     return { speakableText: response.fulfillmentText || "I'm sorry, I'm having trouble responding right now." };
   }
 
-  // Check for the custom payload we designed in our webhook
+  // Check for the custom payload with fields structure
   if (firstMessage.payload && firstMessage.payload.fields) {
     const fields = firstMessage.payload.fields;
     const responseData = {
@@ -112,37 +146,19 @@ function formatDialogflowResponse(response) {
   };
 }
 
-async function processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest }) {
-    const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
-    localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
-    const token = localStorage.getItem('authToken');
+// --- Streamlined Banking Message Processing ---
+async function processBankingMessage({ message, user, sessionId }) {
+  const token = localStorage.getItem('authToken');
 
-    // 🚨 ADD THIS DEBUG LOGGING:
-    console.log('processBankingMessage DEBUG:', {
-        hasUser: !!user,
-        isAuthenticated,
-        hasToken: !!token,
-        tokenLength: token ? token.length : 0,
-        allTokens: Object.keys(localStorage).filter(k => k.includes('token'))
-    });
+  try {
+    const dialogflowResponse = await detectDialogflowIntent(message, sessionId, token);
+    const responsePayload = formatDialogflowResponse(dialogflowResponse);
 
-    try {
-        const dialogflowResponse = await detectDialogflowIntent(message, sessionId, token); 
-        const responsePayload = formatDialogflowResponse(dialogflowResponse);
-
-        if (responsePayload.action === 'AUTH_REQUIRED' && !isAuthenticated) {
-            const loginMessage = getLoginMessage(responsePayload.intentName);
-            const pending = { message, tab: 'banking', sessionId, intentName: responsePayload.intentName, timestamp: new Date() };
-            setPendingRequest(pending);
-            onLoginRequired();
-            return { requiresAuth: true, loginMessage };
-        }
-        
-        return { success: true, response: responsePayload };
-    } catch (error) {
-        logger.error('Banking message processing failed', error);
-        throw new Error("I'm having trouble connecting to my services. Please try again.");
-    }
+    return { success: true, response: responsePayload };
+  } catch (error) {
+    logger.error('Banking message processing failed', error);
+    throw new Error("I'm having trouble connecting to my services. Please try again.");
+  }
 }
 
 async function processAdvisorMessage(message, messageHistory) {
@@ -177,24 +193,16 @@ async function processKnowledgeMessage(message) {
   return response.text();
 }
 
-const getLoginMessage = (intentName) => {
-    const messages = {
-      'account.balance': "Please log in to view your account balance. I'll show you the information right after you sign in.",
-      'account.transfer': "Please log in to complete your transfer. I'll process your request right after you sign in.",
-      'transaction.history': "Please log in to view your transaction history. I'll show you the information right after you sign in.",
-    };
-    return messages[intentName] || "For security, please log in to access your account information.";
+const initialMessages = {
+  banking: [{ ...BOTS.banking.initialMessage }],
+  advisor: [{ ...BOTS.advisor.initialMessage }],
+  knowledge: [{ ...BOTS.knowledge.initialMessage }]
 };
 
 export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgentRequest) {
-  const [messages, setMessages] = useState({
-    banking: [{ ...BOTS.banking.initialMessage }],
-    advisor: [{ ...BOTS.advisor.initialMessage }],
-    knowledge: [{ ...BOTS.knowledge.initialMessage }]
-  });
-
+  const [messages, setMessages] = useState(initialMessages);
   const [loading, setLoading] = useState(false);
-  const [pendingRequest, setPendingRequest] = useState(null);
+  const [lastMessage, setLastMessage] = useState(null); // Store last message for retry after login
 
   const { isAuthenticated, user } = useAuth();
   const { play, isAutoResponseEnabled, isNotificationEnabled } = useTTS();
@@ -232,10 +240,10 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     clearTimeout(inactivityTimer.current);
 
     const currentMessages = messages[activeBot] || [];
-    const lastMessage = currentMessages[currentMessages.length - 1];
+    const lastMsg = currentMessages[currentMessages.length - 1];
 
-    if (lastMessage && lastMessage.author === 'bot' && proactiveCount.current < 2) {
-      const delay = proactiveCount.current === 0 ? 20000 : 30000; // 20s then 30s
+    if (lastMsg && lastMsg.author === 'bot' && proactiveCount.current < 2) {
+      const delay = proactiveCount.current === 0 ? 20000 : 30000;
       
       inactivityTimer.current = setTimeout(() => {
         addMessage(activeBot, 'bot', 'text', { speakableText: "Is there anything else I can help you with today?" });
@@ -288,67 +296,72 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     }
   }, [addAnalyticsEntry]);
 
-  // 🚨 CRITICAL FIX: Corrected authentication flow using the working pattern
-  const processPendingRequest = useCallback(async (request) => {
-    logger.debug('Processing pending request', { intent: request.intentName });
-
-    try {
-        const data = await processBankingMessage({
-            message: request.message,
-            user,
-            isAuthenticated: true,
-            onLoginRequired: () => {},
-            setPendingRequest: () => {}
-        });
-
-        if (data.success) {
-            const newMessageId = addMessage(request.tab, 'bot', 'structured', data.response);
-            await playNotificationSound();
-            
-            if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
-              onAgentRequest(messages.banking);
-            }
-            
-            if (isAutoResponseEnabled && data.response.speakableText) {
-              play(data.response.speakableText, newMessageId);
-            }
-            
-            logger.debug('Pending request completed successfully');
-        } else {
-            throw new Error(data.error || "Pending request failed");
-        }
-    } catch (error) {
-        logger.error('Error processing pending request', error);
-        const msgId = addMessage(request.tab, 'bot', 'structured', { 
-          speakableText: "I'm sorry, there was an issue processing your request after login. Please try again." 
-        });
-        await playNotificationSound();
-        
-        if (isAutoResponseEnabled) {
-          play("I'm sorry, there was an issue processing your request after login. Please try again.", msgId);
-        }
+  // 🚨 NEW: Retry last message after successful login
+  const retryLastMessage = useCallback(async () => {
+    if (lastMessage) {
+      logger.debug('Retrying last message after login', { message: lastMessage.message, tab: lastMessage.tab });
+      await handleMessage(lastMessage.message, lastMessage.tab);
+      setLastMessage(null);
     }
-  }, [addMessage, user, playNotificationSound, onAgentRequest, messages.banking, isAutoResponseEnabled, play]);
+  }, [lastMessage]);
 
-  // 🚨 CRITICAL FIX: Proper useEffect with correct dependencies and parameter passing
+  // 🚨 NEW: Expose retry function for ChatWidget to call after login
   useEffect(() => {
-    if (isAuthenticated && pendingRequest) {
-      logger.debug('Login detected. Processing pending request...');
-      processPendingRequest(pendingRequest);
-      setPendingRequest(null);
+    if (isAuthenticated && lastMessage) {
+      retryLastMessage();
     }
-  }, [isAuthenticated, pendingRequest, processPendingRequest]);
+  }, [isAuthenticated, retryLastMessage]);
 
-  const processMessage = useCallback(async (message, tab) => {
+  // 🚨 STREAMLINED: Front-loaded auth check with single Dialogflow call
+  const handleMessage = useCallback(async (message, tab) => {
     clearTimeout(inactivityTimer.current);
-    proactiveCount.current = 0; // Reset proactive counter on new user message
+    proactiveCount.current = 0;
 
     addMessage(tab, 'user', 'text', message);
     setLoading(true);
     analyzeMessage(message);
 
     try {
-      if (tab === 'advisor') {
+      if (tab === 'banking') {
+        // 🎯 FRONT-LOADED AUTH CHECK
+        const classifiedIntent = await quickClassifyIntent(message);
+        
+        if (needsAuth(classifiedIntent) && !isAuthenticated) {
+          logger.debug('Auth required for classified intent', { classifiedIntent, message });
+          
+          // Store message for retry after login
+          setLastMessage({ message, tab });
+          
+          // Show login prompt immediately
+          addMessage('banking', 'bot', 'structured', { 
+            speakableText: "Please log in to view your account information. I'll process your request right after you sign in." 
+          });
+          
+          await playNotificationSound();
+          onLoginRequired();
+          return;
+        }
+
+        // 🎯 SINGLE AUTHENTICATED DIALOGFLOW CALL
+        const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
+        localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
+
+        const data = await processBankingMessage({ message, user, sessionId });
+        await playNotificationSound();
+
+        if (data.success) {
+          const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
+          
+          if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
+            onAgentRequest(messages.banking);
+          }
+          
+          if (isAutoResponseEnabled && data.response.speakableText) {
+            play(data.response.speakableText, newMessageId);
+          }
+        }
+
+      } else if (tab === 'advisor') {
         const messageHistory = messages.advisor.map(msg => ({
           role: msg.author === 'user' ? 'user' : 'assistant',
           content: msg.type === 'text' ? msg.content : msg.content.speakableText
@@ -370,22 +383,8 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
         if (isAutoResponseEnabled && responseText) {
           play(responseText, newMessageId);
         }
-      } else {
-        const data = await processBankingMessage({ message, user, isAuthenticated, onLoginRequired, setPendingRequest });
-        await playNotificationSound();
-
-        if (data.requiresAuth) {
-            addMessage('banking', 'bot', 'structured', { speakableText: data.loginMessage });
-        } else if (data.success) {
-            const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
-            if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
-              onAgentRequest(messages.banking);
-            }
-            if(isAutoResponseEnabled && data.response.speakableText){
-                play(data.response.speakableText, newMessageId);
-            }
-        }
       }
+
     } catch (error) {
       logger.error('Chat processing error', error);
       const msgId = addMessage(tab, 'bot', 'structured', {
@@ -399,11 +398,12 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     } finally {
       setLoading(false);
     }
-  }, [addMessage, messages, user, isAuthenticated, onLoginRequired, setPendingRequest, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play, analyzeMessage]);
+  }, [addMessage, messages, user, isAuthenticated, onLoginRequired, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play, analyzeMessage]);
 
   return {
     messages,
     loading,
-    processMessage
+    processMessage: handleMessage, // Renamed for clarity
+    retryLastMessage // Expose for ChatWidget
   };
 }

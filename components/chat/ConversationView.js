@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import ChatMessage from './ChatMessage';
 import { HiPaperAirplane, HiMicrophone } from 'react-icons/hi2';
 import { useChat } from '@/hooks/useChat';
@@ -13,8 +13,8 @@ function debounce(func, delay) {
   };
 }
 
-export default function ConversationView({ activeBot, onLoginRequired, notificationAudioRef, onAgentRequest }) {
-  const { messages, loading, processMessage } = useChat(activeBot, onLoginRequired, notificationAudioRef, onAgentRequest);
+const ConversationView = forwardRef(function ConversationView({ activeBot, onLoginRequired, notificationAudioRef, onAgentRequest }, ref) {
+  const { messages, loading, processMessage, retryLastMessage } = useChat(activeBot, onLoginRequired, notificationAudioRef, onAgentRequest);
   const { play, isAutoResponseEnabled } = useTTS();
 
   const [input, setInput] = useState('');
@@ -24,6 +24,11 @@ export default function ConversationView({ activeBot, onLoginRequired, notificat
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messageCount = useRef(0);
+
+  // Expose retry method to parent via ref
+  useImperativeHandle(ref, () => ({
+    retryLastMessage
+  }));
 
   useEffect(() => {
     const currentMessages = messages[activeBot] || [];
@@ -174,4 +179,6 @@ export default function ConversationView({ activeBot, onLoginRequired, notificat
       </div>
     </div>
   );
-}
+});
+
+export default ConversationView;

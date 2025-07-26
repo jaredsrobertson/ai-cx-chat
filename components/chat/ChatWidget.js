@@ -59,6 +59,7 @@ const ChatWidgetInner = () => {
 
   const notificationAudioRef = useRef(null);
   const handoffMessageHistory = useRef([]);
+  const chatHookRef = useRef(null); // Reference to the chat hook for retry
 
   const { user, logout } = useAuth();
   const { stop, isAutoResponseEnabled, toggleAutoResponse, isNotificationEnabled, toggleNotificationSound } = useTTS();
@@ -88,7 +89,10 @@ const ChatWidgetInner = () => {
     dispatch({ type: 'SHOW_LOGIN_MODAL' });
   }, []);
 
+  // 🚨 SIMPLIFIED: Login success handler now just closes modal
+  // The useChat hook will automatically retry the last message
   const handleLoginSuccess = useCallback(() => {
+    logger.debug('Login successful, closing modal');
     dispatch({ type: 'HIDE_LOGIN_MODAL' });
   }, []);
   
@@ -115,7 +119,6 @@ const ChatWidgetInner = () => {
     document.addEventListener('click', handleToggle);
     return () => document.removeEventListener('click', handleToggle);
   }, [isOpen, handleOpen]);
-
 
   return (
     <>
@@ -154,9 +157,19 @@ const ChatWidgetInner = () => {
 
               <div className="flex-grow overflow-hidden bg-brand-ui-02 dark:bg-dark-brand-ui-02">
                 <ErrorBoundary>
-                  {isHandoff ? ( <Handoff messageHistory={handoffMessageHistory.current} onCancel={handleCancelHandoff} /> ) 
-                  : !selectedBot ? ( <BotSelection onSelect={handleBotSelection} onAgentRequest={handleAgentRequest} /> ) 
-                  : ( <ConversationView activeBot={selectedBot} onLoginRequired={handleLoginRequired} notificationAudioRef={notificationAudioRef} onAgentRequest={handleAgentRequest}/> )}
+                  {isHandoff ? ( 
+                    <Handoff messageHistory={handoffMessageHistory.current} onCancel={handleCancelHandoff} /> 
+                  ) : !selectedBot ? ( 
+                    <BotSelection onSelect={handleBotSelection} onAgentRequest={handleAgentRequest} /> 
+                  ) : ( 
+                    <ConversationView 
+                      activeBot={selectedBot} 
+                      onLoginRequired={handleLoginRequired} 
+                      notificationAudioRef={notificationAudioRef} 
+                      onAgentRequest={handleAgentRequest}
+                      ref={chatHookRef} // Pass ref to access chat hook methods
+                    /> 
+                  )}
                 </ErrorBoundary>
               </div>
             </div>
