@@ -1,4 +1,4 @@
-    import { createApiHandler } from '@/lib/apiUtils';
+import { createApiHandler } from '@/lib/apiUtils';
 import { detectIntent } from '@/lib/dialogflow';
 import { logger } from '@/lib/logger';
 
@@ -10,7 +10,23 @@ const detectHandler = async (req, res) => {
   }
 
   try {
+    // Log what we're sending to Dialogflow
+    logger.debug('Sending to Dialogflow:', {
+      message: message.substring(0, 50),
+      sessionId,
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
+    });
+
     const queryResult = await detectIntent(sessionId, message, token);
+    
+    // Log what we got back
+    logger.debug('Received from Dialogflow:', {
+      intent: queryResult.intent?.displayName,
+      hasWebhookResponse: !!queryResult.fulfillmentMessages?.length,
+      webhookLatency: queryResult.diagnosticInfo?.fields?.webhook_latency_ms?.numberValue
+    });
+
     return res.status(200).json({ success: true, data: queryResult });
   } catch (error) {
     logger.error('Error in detectIntent API route:', error);
