@@ -6,7 +6,6 @@ import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { logger } from '@/lib/logger';
 import { BOTS } from '@/lib/bots';
 
-// --- Auth Configuration ---
 const AUTH_REQUIRED_INTENTS = [
   'account.balance',
   'account.transfer', 
@@ -18,36 +17,28 @@ function needsAuth(intentName) {
   return AUTH_REQUIRED_INTENTS.includes(intentName);
 }
 
-// --- Quick Intent Classification ---
 async function quickClassifyIntent(message) {
-  // Simple keyword-based classification for common banking intents
   const msg = message.toLowerCase().trim();
   
-  // Balance-related keywords
   if (msg.includes('balance') || msg.includes('money') || msg.includes('account')) {
     return 'account.balance';
   }
   
-  // Transfer-related keywords  
   if (msg.includes('transfer') || msg.includes('move') || msg.includes('send')) {
     return 'account.transfer';
   }
   
-  // Transaction-related keywords
   if (msg.includes('transaction') || msg.includes('history') || msg.includes('recent')) {
     return 'transaction.history';
   }
   
-  // Agent-related keywords
   if (msg.includes('agent') || msg.includes('human') || msg.includes('person')) {
     return 'agent.handoff';
   }
   
-  // Default - no auth required
   return 'general';
 }
 
-// Helper to convert Dialogflow's Struct format to a plain JSON object
 function structToJson(struct) {
   if (!struct || !struct.fields) {
     return struct;
@@ -85,7 +76,6 @@ function formatDialogflowResponse(response) {
     return { speakableText: response.fulfillmentText || "I'm sorry, I'm having trouble responding right now." };
   }
 
-  // Check for the custom payload with fields structure
   if (firstMessage.payload && firstMessage.payload.fields) {
     const fields = firstMessage.payload.fields;
     const responseData = {
@@ -94,7 +84,6 @@ function formatDialogflowResponse(response) {
       intentName: fields.intentName?.stringValue || response.intent?.displayName,
     };
     
-    // Unpack the confidentialData struct if it exists
     const confidentialData = fields.confidentialData?.structValue?.fields;
     if (confidentialData) {
       const formattedData = {};
@@ -126,7 +115,6 @@ function formatDialogflowResponse(response) {
     return responseData;
   }
 
-  // Check for simple payload format (without fields wrapper)
   if (firstMessage.payload && !firstMessage.payload.fields) {
     const customPayload = structToJson(firstMessage.payload);
     if (customPayload) {
@@ -139,14 +127,12 @@ function formatDialogflowResponse(response) {
     }
   }
 
-  // Fallback to a standard text response
   return { 
     speakableText: firstMessage.text?.text?.[0] || response.fulfillmentText,
     intentName: response.intent?.displayName,
   };
 }
 
-// --- Streamlined Banking Message Processing ---
 async function processBankingMessage({ message, user, sessionId }) {
   const token = localStorage.getItem('authToken');
 
@@ -202,7 +188,7 @@ const initialMessages = {
 export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgentRequest) {
   const [messages, setMessages] = useState(initialMessages);
   const [loading, setLoading] = useState(false);
-  const [lastMessage, setLastMessage] = useState(null); // Store last message for retry after login
+  const [pendingMessage, setPendingMessage] = useState(null);
 
   const { isAuthenticated, user } = useAuth();
   const { play, isAutoResponseEnabled, isNotificationEnabled } = useTTS();
@@ -210,7 +196,6 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
   const inactivityTimer = useRef(null);
   const proactiveCount = useRef(0);
 
-  // Load messages from localStorage on initial render
   useEffect(() => {
     try {
       const savedMessages = localStorage.getItem('chatMessages');
@@ -226,7 +211,6 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     }
   }, []);
 
-  // Save messages to localStorage whenever they change
   useEffect(() => {
     try {
       localStorage.setItem('chatMessages', JSON.stringify(messages));
@@ -235,7 +219,6 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     }
   }, [messages]);
   
-  // Proactive engagement timer
   useEffect(() => {
     clearTimeout(inactivityTimer.current);
 
@@ -296,16 +279,48 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     }
   }, [addAnalyticsEntry]);
 
-  // 🚨 FIXED: Retry last message function - now manually triggered only
   const retryLastMessage = useCallback(async () => {
-    if (lastMessage && isAuthenticated) {
-      logger.debug('Retrying last message after login', { message: lastMessage.message, tab: lastMessage.tab });
-      setLastMessage(null); // Clear the stored message
-      await handleMessage(lastMessage.message, lastMessage.tab);
-    }
-  }, [lastMessage, isAuthenticated]);
+    if (pendingMessage && isAuthenticated) {
+      const { message, tab } = pendingMessage;
+      setPendingMessage(null);
+      setLoading(true);
 
-  // 🚨 STREAMLINED: Front-loaded auth check with single Dialogflow call
+      try {
+        if (tab === 'banking') {
+          const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
+          localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
+
+          const data = await processBankingMessage({ message, user, sessionId });
+          await playNotificationSound();
+
+          if (data.success) {
+            const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
+            
+            if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
+              onAgentRequest(messages.banking);
+            }
+            
+            if (isAutoResponseEnabled && data.response.speakableText) {
+              play(data.response.speakableText, newMessageId);
+            }
+          }
+        }
+      } catch (error) {
+        logger.error('Retry processing error', error);
+        const msgId = addMessage(tab, 'bot', 'structured', {
+          speakableText: error.message || "Sorry, I encountered an error. Please try again."
+        });
+        await playNotificationSound();
+        
+        if (isAutoResponseEnabled) {
+          play(error.message || "Sorry, I encountered an error. Please try again.", msgId);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [pendingMessage, isAuthenticated, user, addMessage, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play]);
+
   const handleMessage = useCallback(async (message, tab) => {
     clearTimeout(inactivityTimer.current);
     proactiveCount.current = 0;
@@ -316,16 +331,11 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
 
     try {
       if (tab === 'banking') {
-        // 🎯 FRONT-LOADED AUTH CHECK
         const classifiedIntent = await quickClassifyIntent(message);
         
         if (needsAuth(classifiedIntent) && !isAuthenticated) {
-          logger.debug('Auth required for classified intent', { classifiedIntent, message });
+          setPendingMessage({ message, tab });
           
-          // Store message for retry after login
-          setLastMessage({ message, tab });
-          
-          // Show login prompt immediately
           addMessage('banking', 'bot', 'structured', { 
             speakableText: "Please log in to view your account information. I'll process your request right after you sign in." 
           });
@@ -335,7 +345,6 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
           return;
         }
 
-        // 🎯 SINGLE AUTHENTICATED DIALOGFLOW CALL
         const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
         localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
 
@@ -344,13 +353,6 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
 
         if (data.success) {
           const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
-          
-          // 🚨 DEBUG: Log the response structure
-          logger.debug('Banking response data:', {
-            hasConfidentialData: !!data.response.confidentialData,
-            confidentialDataType: data.response.confidentialData?.type,
-            fullResponse: JSON.stringify(data.response, null, 2)
-          });
           
           if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
             onAgentRequest(messages.banking);
@@ -403,7 +405,7 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
   return {
     messages,
     loading,
-    processMessage: handleMessage, // Renamed for clarity
-    retryLastMessage // Expose for ChatWidget
+    processMessage: handleMessage,
+    retryLastMessage
   };
 }

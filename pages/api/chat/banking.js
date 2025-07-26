@@ -38,32 +38,96 @@ function buildAuthRequiredResponse(intentName) {
 }
 
 function buildBalanceResponse(user) {
-  const confidentialData = {
-    type: 'balances',
-    accounts: [
-      { name: 'Checking', balance: user.accounts.checking.balance },
-      { name: 'Savings', balance: user.accounts.savings.balance }
-    ]
-  };
-  
-  const totalBalance = user.accounts.checking.balance + user.accounts.savings.balance;
   const speakableText = `Here are your current account balances. Your checking account has ${formatCurrency(user.accounts.checking.balance)} and your savings account has ${formatCurrency(user.accounts.savings.balance)}.`;
   
-  return buildFulfillmentResponse({ confidentialData }, speakableText);
+  return {
+    fulfillmentText: speakableText,
+    fulfillmentMessages: [
+      {
+        payload: {
+          fields: {
+            speakableText: {
+              stringValue: speakableText
+            },
+            confidentialData: {
+              structValue: {
+                fields: {
+                  type: {
+                    stringValue: "balances"
+                  },
+                  accounts: {
+                    listValue: {
+                      values: [
+                        {
+                          structValue: {
+                            fields: {
+                              name: { stringValue: "Checking" },
+                              balance: { numberValue: user.accounts.checking.balance }
+                            }
+                          }
+                        },
+                        {
+                          structValue: {
+                            fields: {
+                              name: { stringValue: "Savings" },
+                              balance: { numberValue: user.accounts.savings.balance }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  };
 }
 
 function buildTransactionHistoryResponse(user) {
-  const confidentialData = {
-    type: 'transaction_history',
-    transactions: user.accounts.checking.recent.slice(0, 5).map(tx => ({
-      date: tx.date,
-      description: tx.description,
-      amount: tx.amount
-    }))
-  };
-  
+  const transactions = user.accounts.checking.recent.slice(0, 5).map(tx => ({
+    structValue: {
+      fields: {
+        date: { stringValue: tx.date },
+        description: { stringValue: tx.description },
+        amount: { numberValue: tx.amount }
+      }
+    }
+  }));
+
   const speakableText = "Here are your recent transactions from your checking account.";
-  return buildFulfillmentResponse({ confidentialData }, speakableText);
+  
+  return {
+    fulfillmentText: speakableText,
+    fulfillmentMessages: [
+      {
+        payload: {
+          fields: {
+            speakableText: {
+              stringValue: speakableText
+            },
+            confidentialData: {
+              structValue: {
+                fields: {
+                  type: {
+                    stringValue: "transaction_history"
+                  },
+                  transactions: {
+                    listValue: {
+                      values: transactions
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  };
 }
 
 function buildTransferConfirmationResponse(amount, source, destination, sessionPath) {
@@ -84,13 +148,40 @@ function buildTransferConfirmationResponse(amount, source, destination, sessionP
 }
 
 function buildTransferCompletionResponse(amount, source, destination) {
-  const confidentialData = {
-    type: 'transfer_confirmation',
-    details: { amount, fromAccount: source, toAccount: destination }
-  };
-  
   const speakableText = `Transfer completed! I've moved ${formatCurrency(amount)} from your ${source} account to your ${destination} account.`;
-  return buildFulfillmentResponse({ confidentialData }, speakableText);
+  
+  return {
+    fulfillmentText: speakableText,
+    fulfillmentMessages: [
+      {
+        payload: {
+          fields: {
+            speakableText: {
+              stringValue: speakableText
+            },
+            confidentialData: {
+              structValue: {
+                fields: {
+                  type: {
+                    stringValue: "transfer_confirmation"
+                  },
+                  details: {
+                    structValue: {
+                      fields: {
+                        amount: { numberValue: amount },
+                        fromAccount: { stringValue: source },
+                        toAccount: { stringValue: destination }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  };
 }
 
 function getUserFromToken(user) {
@@ -119,7 +210,6 @@ async function handleAccountBalance(parameters, user, session) {
     return buildAuthRequiredResponse('account.balance');
   }
   
-  logger.debug('Processing balance request', { userId: fullUser.id });
   return buildBalanceResponse(fullUser);
 }
 
@@ -129,7 +219,6 @@ async function handleTransactionHistory(parameters, user, session) {
     return buildAuthRequiredResponse('transaction.history');
   }
   
-  logger.debug('Processing transaction history request', { userId: fullUser.id });
   return buildTransactionHistoryResponse(fullUser);
 }
 
@@ -138,11 +227,6 @@ async function handleAccountTransfer(parameters, user, session) {
   if (!fullUser) {
     return buildAuthRequiredResponse('account.transfer');
   }
-  
-  logger.debug('Processing transfer request', { 
-    userId: fullUser.id, 
-    parameters: JSON.stringify(parameters) 
-  });
   
   // Extract parameters - handle different parameter formats
   let amount = parameters.amount;
@@ -196,22 +280,12 @@ async function handleTransferConfirmation(parameters, user, session, outputConte
   );
   
   if (!transferContext || !transferContext.parameters) {
-    logger.warn('Transfer context not found', { 
-      contexts: outputContexts?.map(ctx => ctx.name),
-      userId: fullUser.id 
-    });
     return buildFulfillmentResponse(null, "I couldn't find the transfer details. Please start the transfer process again.");
   }
 
   const { amount, source_account, destination_account } = transferContext.parameters;
   
   if (!amount || !source_account || !destination_account) {
-    logger.warn('Incomplete transfer parameters', { 
-      amount, 
-      source_account, 
-      destination_account,
-      userId: fullUser.id 
-    });
     return buildFulfillmentResponse(null, "Transfer details are incomplete. Please start over with a new transfer request.");
   }
 
@@ -246,7 +320,7 @@ async function handleGreeting(parameters, user, session) {
   return buildFulfillmentResponse(null, speakableText);
 }
 
-// Intent handler mapping - only the actual intents that exist
+// Intent handler mapping
 const intentHandlers = {
   'account.balance': handleAccountBalance,
   'transaction.history': handleTransactionHistory,
@@ -269,95 +343,30 @@ export default async function handler(req, res) {
     const { queryResult, session } = req.body;
     
     if (!queryResult) {
-      logger.warn('Webhook received invalid request body');
       return res.status(400).json({ 
         fulfillmentText: "I'm having trouble processing your request. Please try again." 
       });
     }
 
-    // 🚨 SUPER DETAILED DEBUG LOGGING
-    logger.debug('=== WEBHOOK DEBUG START ===');
-    logger.debug('Full queryResult keys:', Object.keys(queryResult));
-    logger.debug('queryParams exists:', !!queryResult.queryParams);
-    
-    if (queryResult.queryParams) {
-      logger.debug('queryParams keys:', Object.keys(queryResult.queryParams));
-      logger.debug('queryParams.payload exists:', !!queryResult.queryParams.payload);
-      
-      if (queryResult.queryParams.payload) {
-        logger.debug('FULL PAYLOAD STRUCTURE:', JSON.stringify(queryResult.queryParams.payload, null, 2));
-      }
-    }
-    
     let user = null;
-    let token = null;
-    
-    // Try to extract token from ANY possible location
     const payload = queryResult.queryParams?.payload;
     
-    if (payload) {
-      // Log the full payload structure
-      console.log('PAYLOAD DEBUG:', JSON.stringify(payload, null, 2));
-      
-      // Try every possible extraction method
-      if (payload.fields?.token?.stringValue) {
-        token = payload.fields.token.stringValue;
-        logger.debug('✅ Token found: fields.token.stringValue');
-      } else if (payload.fields?.token) {
-        token = payload.fields.token;
-        logger.debug('✅ Token found: fields.token');
-      } else if (payload.token) {
-        token = payload.token;
-        logger.debug('✅ Token found: payload.token');
-      } else {
-        logger.debug('❌ NO TOKEN FOUND IN PAYLOAD');
-        logger.debug('Available payload keys:', Object.keys(payload));
-        if (payload.fields) {
-          logger.debug('Available fields keys:', Object.keys(payload.fields));
-        }
-      }
-    } else {
-      logger.debug('❌ NO PAYLOAD IN queryParams');
-    }
-
-    logger.debug('Final token result:', {
-      hasToken: !!token,
-      tokenLength: token ? token.length : 0,
-      tokenPreview: token ? token.substring(0, 30) + '...' : 'null'
-    });
-
-    // JWT verification
-    if (token) {
+    if (payload?.fields?.token?.stringValue) {
+      const token = payload.fields.token.stringValue;
       try {
         user = jwt.verify(token, process.env.JWT_SECRET);
-        logger.debug('✅ JWT VERIFIED SUCCESSFULLY', { userId: user.userId });
       } catch (error) {
-        logger.error('❌ JWT VERIFICATION FAILED', { error: error.message });
         user = null;
       }
     }
 
     const intentName = queryResult.intent?.displayName;
-    logger.debug('Processing intent:', { intentName, hasUser: !!user });
-
-    // Auth check
     const authRequiredIntents = ['account.balance', 'account.transfer', 'account.transfer - yes', 'transaction.history'];
     
     if (authRequiredIntents.includes(intentName) && !user) {
-      logger.debug('🔒 RETURNING AUTH_REQUIRED for intent:', intentName);
       return res.status(200).json(buildAuthRequiredResponse(intentName));
     }
 
-    // If we get here with a user, return balance data
-    if (intentName === 'account.balance' && user) {
-      logger.debug('🎉 AUTHENTICATED BALANCE REQUEST - SHOULD RETURN DATA');
-      const handlerFn = intentHandlers[intentName];
-      const responseData = await handlerFn(queryResult.parameters, user, session, queryResult.outputContexts);
-      logger.debug('Response data has confidentialData:', !!(responseData.fulfillmentMessages?.find(msg => msg.payload?.confidentialData)));
-      return res.status(200).json(responseData);
-    }
-
-    // Default handler
     const handlerFn = intentHandlers[intentName] || handleDefault;
     const responseData = await handlerFn(queryResult.parameters, user, session, queryResult.outputContexts);
     return res.status(200).json(responseData);
