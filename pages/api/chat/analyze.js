@@ -9,6 +9,7 @@ export const config = {
   runtime: 'edge',
 };
 
+// Correctly instantiate the OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -34,7 +35,9 @@ const analyzeHandler = async (req) => {
       prompt: `Analyze the following user message and return a JSON object with "intent" and "sentiment" classifications: "${sanitizedMessage}"`,
     });
 
-    return result.toAIStreamResponse();
+    // The result directly streams a JSON object.
+    // The AI SDK handles the correct content-type header for the response stream.
+    return new Response(result.JSONStream);
 
   } catch (error) {
     logger.error('Analysis stream error:', error);

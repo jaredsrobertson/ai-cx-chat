@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { logger } from '@/lib/logger';
 import { mockUsers, getUserById } from '@/lib/mockData';
 import { getSessionToken } from '@/lib/dialogflow';
-import { CONFIG } from '@/lib/config';
+import { formatCurrency } from '@/lib/utils'; // Correctly import formatCurrency
 
 // Helper to build the final JSON response for Dialogflow
 function buildFulfillmentResponse(payload) {
@@ -57,7 +57,7 @@ function buildAuthRequiredResponse(intentName) {
 }
 
 function buildBalanceResponse(user) {
-  const speakableText = `Here are your current account balances. Your checking account has ${CONFIG.MESSAGES.SUCCESS.formatCurrency(user.accounts.checking.balance)} and your savings account has ${CONFIG.MESSAGES.SUCCESS.formatCurrency(user.accounts.savings.balance)}.`;
+  const speakableText = `Here are your current account balances. Your checking account has ${formatCurrency(user.accounts.checking.balance)} and your savings account has ${formatCurrency(user.accounts.savings.balance)}.`;
   const payload = buildCustomPayload({
     speakableText,
     confidentialData: {
@@ -84,7 +84,7 @@ function buildTransactionHistoryResponse(user) {
 }
 
 function buildTransferConfirmationResponse(user, amount, fromAccount, toAccount) {
-    const speakableText = `The transfer of ${CONFIG.MESSAGES.SUCCESS.formatCurrency(amount)} has been completed successfully.`;
+    const speakableText = `The transfer of ${formatCurrency(amount)} has been completed successfully.`;
     const payload = buildCustomPayload({
         speakableText,
         confidentialData: {
@@ -133,12 +133,9 @@ async function handleTransfer(sessionId, parameters) {
     const user = getUserFromToken(token);
     if (!user) return buildAuthRequiredResponse('account.transfer');
 
-    const amount = parameters.fields.amount.numberValue;
-    const fromAccount = parameters.fields.fromAccount.stringValue;
-    const toAccount = parameters.fields.toAccount.stringValue;
-
-    // In a real app, you would perform the transfer here.
-    // For this demo, we'll just confirm it.
+    const amount = parameters.fields.amount.structValue.fields.amount.numberValue;
+    const fromAccount = 'checking'; // Simplified for demo
+    const toAccount = 'savings'; // Simplified for demo
     
     return buildTransferConfirmationResponse(user, amount, fromAccount, toAccount);
 }
