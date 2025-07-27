@@ -11,7 +11,7 @@ const Avatar = () => (
   </div>
 );
 
-const SpeakButton = memo(({ textToSpeak, messageId }) => {
+const SpeakButton = memo(function SpeakButton({ textToSpeak, messageId }) {
   const { play, stop, retryPlay, nowPlayingId, isLoading, error } = useTTS();
   const isThisMessagePlaying = nowPlayingId === messageId;
 
@@ -103,17 +103,6 @@ function ChatMessage({ id, author, type, content, timestamp }) {
 
   const textContent = getSafeContent(content);
 
-  // 🚨 DEBUG: Log the content structure for bot messages
-  if (!isUser) {
-    console.log('🔍 Bot Message Debug:', {
-      id,
-      type,
-      content,
-      hasConfidentialData: !!(typeof content === 'object' && content?.confidentialData),
-      confidentialDataType: content?.confidentialData?.type
-    });
-  }
-
   return (
     <motion.div
       variants={messageVariants}
@@ -139,18 +128,9 @@ function ChatMessage({ id, author, type, content, timestamp }) {
           </div>
         </div>
 
-        {/* 🚨 DEBUG: Always show confidential data section with debug info */}
-        {type === 'structured' && (
+        {type === 'structured' && content?.confidentialData && (
           <div className="mt-1 w-full max-w-xs lg:max-w-md">
-            {content.confidentialData ? (
-              <ConfidentialDisplay data={content.confidentialData} />
-            ) : (
-              <div className="bg-yellow-50 border border-yellow-200 p-2 rounded text-xs text-yellow-800">
-                DEBUG: No confidentialData found in structured message
-                <br />
-                Content keys: {typeof content === 'object' ? Object.keys(content).join(', ') : 'N/A'}
-              </div>
-            )}
+            <ConfidentialDisplay data={content.confidentialData} />
           </div>
         )}
       </div>

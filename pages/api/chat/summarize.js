@@ -1,51 +1,50 @@
-import { createApiHandler, createStandardResponse, OpenAIStream } from '@/lib/apiUtils';
-import { getOpenAICompletion } from '@/lib/openai';
+import { OpenAI } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
-import { CONFIG } from '@/lib/config';
 
 export const config = {
   runtime: 'edge',
 };
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 const summarizeHandler = async (req) => {
-  const body = await req.json();
-  const { messages, user } = body;
-
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return new Response(JSON.stringify(createStandardResponse(false, null, 'Message history is required')), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const sanitizedHistory = messages.map(msg => 
-    `[${msg.author === 'user' ? 'Customer' : 'Bot'}]: ${sanitizeInput(msg.content.speakableText || msg.content)}`
-  ).join('\n');
-
-  const systemPrompt = `
-    You are an expert at summarizing customer service chats for a human agent.
-    The customer, ${user ? user.name : 'a guest'}, needs help.
-    Review the following conversation and provide a concise, one-sentence summary of the customer's primary goal.
-    
-    Conversation History:
-    ---
-    ${sanitizedHistory}
-    ---
-
-    Summary for Agent:
-  `;
-
   try {
-    const completion = await getOpenAICompletion([], systemPrompt);
-    const stream = OpenAIStream(completion);
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      },
+    const { messages, user } = await req.json();
+
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify(createStandardResponse(false, null, 'Message history is required')), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const sanitizedHistory = messages.map(msg => 
+      `[${msg.author === 'user' ? 'Customer' : 'Bot'}]: ${sanitizeInput(msg.content.speakableText || msg.content)}`
+    ).join('\n');
+
+    const result = await streamText({
+      model: openai('gpt-4o-mini'),
+      prompt: `
+        You are an expert at summarizing customer service chats for a human agent.
+        The customer, ${user ? user.name : 'a guest'}, needs help.
+        Review the following conversation and provide a concise, one-sentence summary of the customer's primary goal.
+        
+        Conversation History:
+        ---
+        ${sanitizedHistory}
+        ---
+
+        Summary for Agent:
+      `,
     });
+
+    return result.toAIStreamResponse();
+    
   } catch (error) {
     logger.error('Summarization stream error:', error);
     const errorResponse = createStandardResponse(false, null, 'Failed to generate summary.');

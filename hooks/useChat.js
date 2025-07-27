@@ -5,37 +5,28 @@ import { useTTS } from '@/contexts/TTSContext';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { logger } from '@/lib/logger';
 import { BOTS } from '@/lib/bots';
+import { CONFIG } from '@/lib/config';
 
-const AUTH_REQUIRED_INTENTS = [
-  'account.balance',
-  'account.transfer', 
-  'account.transfer - yes',
-  'transaction.history'
-];
+// Debounce function
+function debounce(func, delay) {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+}
 
 function needsAuth(intentName) {
-  return AUTH_REQUIRED_INTENTS.includes(intentName);
+  return CONFIG.AUTH_REQUIRED_INTENTS.includes(intentName);
 }
 
 async function quickClassifyIntent(message) {
   const msg = message.toLowerCase().trim();
-  
-  if (msg.includes('balance') || msg.includes('money') || msg.includes('account')) {
-    return 'account.balance';
+  for (const keyword in CONFIG.INTENT_CLASSIFICATION) {
+    if (msg.includes(keyword)) {
+      return CONFIG.INTENT_CLASSIFICATION[keyword];
+    }
   }
-  
-  if (msg.includes('transfer') || msg.includes('move') || msg.includes('send')) {
-    return 'account.transfer';
-  }
-  
-  if (msg.includes('transaction') || msg.includes('history') || msg.includes('recent')) {
-    return 'transaction.history';
-  }
-  
-  if (msg.includes('agent') || msg.includes('human') || msg.includes('person')) {
-    return 'agent.handoff';
-  }
-  
   return 'general';
 }
 
@@ -77,54 +68,13 @@ function formatDialogflowResponse(response) {
   }
 
   if (firstMessage.payload && firstMessage.payload.fields) {
-    const fields = firstMessage.payload.fields;
-    const responseData = {
-      speakableText: fields.speakableText?.stringValue || response.fulfillmentText,
-      action: fields.action?.stringValue,
-      intentName: fields.intentName?.stringValue || response.intent?.displayName,
-    };
-    
-    const confidentialData = fields.confidentialData?.structValue?.fields;
-    if (confidentialData) {
-      const formattedData = {};
-      formattedData.type = confidentialData.type?.stringValue;
-
-      if (confidentialData.accounts) {
-        formattedData.accounts = confidentialData.accounts.listValue.values.map(v => ({
-          name: v.structValue.fields.name.stringValue,
-          balance: v.structValue.fields.balance.numberValue,
-        }));
-      }
-      if (confidentialData.transactions) {
-        formattedData.transactions = confidentialData.transactions.listValue.values.map(v => ({
-          date: v.structValue.fields.date.stringValue,
-          description: v.structValue.fields.description.stringValue,
-          amount: v.structValue.fields.amount.numberValue,
-        }));
-      }
-      if (confidentialData.details) {
-        const detailsFields = confidentialData.details.structValue.fields;
-        formattedData.details = {
-          amount: detailsFields.amount.numberValue,
-          fromAccount: detailsFields.fromAccount.stringValue,
-          toAccount: detailsFields.toAccount.stringValue,
-        };
-      }
-      responseData.confidentialData = formattedData;
-    }
-    return responseData;
-  }
-
-  if (firstMessage.payload && !firstMessage.payload.fields) {
     const customPayload = structToJson(firstMessage.payload);
-    if (customPayload) {
-      return {
-        speakableText: customPayload.authMessage || response.fulfillmentText,
-        action: customPayload.action,
-        intentName: customPayload.intentName || response.intent?.displayName,
-        confidentialData: customPayload.confidentialData,
-      };
-    }
+    return {
+      speakableText: customPayload.speakableText || response.fulfillmentText,
+      action: customPayload.action,
+      intentName: customPayload.intentName || response.intent?.displayName,
+      confidentialData: customPayload.confidentialData,
+    };
   }
 
   return { 
@@ -139,7 +89,6 @@ async function processBankingMessage({ message, user, sessionId }) {
   try {
     const dialogflowResponse = await detectDialogflowIntent(message, sessionId, token);
     const responsePayload = formatDialogflowResponse(dialogflowResponse);
-
     return { success: true, response: responsePayload };
   } catch (error) {
     logger.error('Banking message processing failed', error);
@@ -195,6 +144,14 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
   const { addAnalyticsEntry } = useAnalytics();
   const inactivityTimer = useRef(null);
   const proactiveCount = useRef(0);
+  
+  const debouncedSaveMessages = useCallback(debounce((msgs) => {
+    try {
+      localStorage.setItem('chatMessages', JSON.stringify(msgs));
+    } catch (error) {
+      logger.error("Failed to save messages to localStorage", error);
+    }
+  }, 500), []);
 
   useEffect(() => {
     try {
@@ -212,12 +169,8 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('chatMessages', JSON.stringify(messages));
-    } catch (error) {
-      logger.error("Failed to save messages to localStorage", error);
-    }
-  }, [messages]);
+    debouncedSaveMessages(messages);
+  }, [messages, debouncedSaveMessages]);
   
   useEffect(() => {
     clearTimeout(inactivityTimer.current);
@@ -261,15 +214,7 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
         body: JSON.stringify({ message }),
       });
       if (response.ok) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let result = '';
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          result += decoder.decode(value, { stream: true });
-        }
-        const analysis = JSON.parse(result);
+        const analysis = await response.json();
         if(analysis.intent && analysis.sentiment) {
           addAnalyticsEntry({ message, ...analysis });
         }
@@ -319,7 +264,7 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
         setLoading(false);
       }
     }
-  }, [pendingMessage, isAuthenticated, user, addMessage, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play]);
+  }, [pendingMessage, isAuthenticated, user, addMessage, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play, messages.banking]);
 
   const handleMessage = useCallback(async (message, tab) => {
     clearTimeout(inactivityTimer.current);
@@ -342,6 +287,7 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
           
           await playNotificationSound();
           onLoginRequired();
+          setLoading(false); // Stop loading while waiting for login
           return;
         }
 

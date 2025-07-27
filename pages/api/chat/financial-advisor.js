@@ -1,5 +1,6 @@
-import { getOpenAICompletion } from '@/lib/openai';
-import { createApiHandler, createStandardResponse, OpenAIStream } from '@/lib/apiUtils';
+import { OpenAI } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import { createApiHandler } from '@/lib/apiUtils';
 import { sanitizeInput } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { CONFIG } from '@/lib/config';
@@ -7,6 +8,10 @@ import { CONFIG } from '@/lib/config';
 export const config = {
   runtime: 'edge',
 };
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 const sanitizeMessages = (messages) => {
   if (!Array.isArray(messages)) return [];
@@ -21,41 +26,37 @@ const sanitizeMessages = (messages) => {
 };
 
 const advisorHandler = async (req) => {
-  const body = await req.json();
-  const { messages } = body;
-  const sanitizedMessages = sanitizeMessages(messages);
-
-  if (sanitizedMessages.length === 0) {
-    return new Response(JSON.stringify(createStandardResponse(false, null, 'Valid messages are required')), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-  
-  const systemPrompt = `
-      You are a helpful AI customer experience chat bot for a corporate bank.
-      Your goal is to answer questions and provide tips related to basic, general personal finance.
-      Follow these rules strictly:
-      1. Keep your entire response concise and easy to understand.
-      2. Do not use bullet points or numbered lists.
-      3. Your tone should be light, encouraging, and educational.
-      4. Frame your answer so it can be spoken aloud in under 20 seconds.
-    `;
-
   try {
-    const completion = await getOpenAICompletion(sanitizedMessages, systemPrompt, { max_tokens: 70 });
-    const stream = OpenAIStream(completion);
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
+    const { messages } = await req.json();
+    const sanitizedMessages = sanitizeMessages(messages);
+
+    if (sanitizedMessages.length === 0) {
+      return new Response(JSON.stringify({ error: 'Valid messages are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const result = await streamText({
+      model: openai('gpt-4o-mini'),
+      system: `
+        You are a helpful AI customer experience chat bot for a corporate bank.
+        Your goal is to answer questions and provide tips related to basic, general personal finance.
+        Follow these rules strictly:
+        1. Keep your entire response concise and easy to understand.
+        2. Do not use bullet points or numbered lists.
+        3. Your tone should be light, encouraging, and educational.
+        4. Frame your answer so it can be spoken aloud in under 20 seconds.
+      `,
+      messages: sanitizedMessages,
+      maxTokens: 70,
     });
+
+    return result.toAIStreamResponse();
+
   } catch (error) {
     logger.error('Financial advisor stream error:', error);
-    const errorResponse = createStandardResponse(false, null, CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR);
-    return new Response(JSON.stringify(errorResponse), {
+    return new Response(JSON.stringify({ error: CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
