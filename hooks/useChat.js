@@ -50,16 +50,6 @@ function structToJson(struct) {
   return json;
 }
 
-async function detectDialogflowIntent(message, sessionId, token) {
-  const response = await fetch('/api/dialogflow/detect', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, sessionId, token }),
-  });
-  if (!response.ok) throw new Error('Failed to detect intent');
-  return (await response.json()).data;
-}
-
 function formatDialogflowResponse(response) {
   const firstMessage = response.fulfillmentMessages?.[0];
 
@@ -81,51 +71,6 @@ function formatDialogflowResponse(response) {
     speakableText: firstMessage.text?.text?.[0] || response.fulfillmentText,
     intentName: response.intent?.displayName,
   };
-}
-
-async function processBankingMessage({ message, user, sessionId }) {
-  const token = localStorage.getItem('authToken');
-
-  try {
-    const dialogflowResponse = await detectDialogflowIntent(message, sessionId, token);
-    const responsePayload = formatDialogflowResponse(dialogflowResponse);
-    return { success: true, response: responsePayload };
-  } catch (error) {
-    logger.error('Banking message processing failed', error);
-    throw new Error("I'm having trouble connecting to my services. Please try again.");
-  }
-}
-
-async function processAdvisorMessage(message, messageHistory) {
-  const response = await fetch('/api/chat/financial-advisor', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messages: [...messageHistory, { role: 'user', content: message }]
-    })
-  });
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.error || 'Failed to fetch advisor response');
-  }
-
-  return response.text();
-}
-
-async function processKnowledgeMessage(message) {
-  const response = await fetch('/api/chat/knowledge', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message })
-  });
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.error || 'Failed to fetch knowledge base response');
-  }
-
-  return response.text();
 }
 
 const initialMessages = {
@@ -190,13 +135,6 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     return () => clearTimeout(inactivityTimer.current);
   }, [messages, activeBot]);
 
-  const playNotificationSound = useCallback(async () => {
-    if (isNotificationEnabled && notificationAudioRef.current) {
-      notificationAudioRef.current.volume = 0.5;
-      await notificationAudioRef.current.play().catch(e => logger.error("Error playing notification sound", e));
-    }
-  }, [isNotificationEnabled, notificationAudioRef]);
-
   const addMessage = useCallback((tab, author, type, content, id = uuidv4()) => {
     setMessages(prev => {
       const newMessages = { ...prev };
@@ -205,7 +143,20 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     });
     return id;
   }, []);
-  
+
+  const playNotificationSound = useCallback(async () => {
+    if (isNotificationEnabled && notificationAudioRef.current) {
+      notificationAudioRef.current.volume = 0.5;
+      await notificationAudioRef.current.play().catch(e => logger.error("Error playing notification sound", e));
+    }
+  }, [isNotificationEnabled, notificationAudioRef]);
+
+  const _playBotResponse = useCallback((text, id) => {
+    if (isAutoResponseEnabled && text) {
+      play(text, id);
+    }
+  }, [isAutoResponseEnabled, play]);
+
   const analyzeMessage = useCallback(async (message) => {
     try {
       const response = await fetch('/api/chat/analyze', {
@@ -224,134 +175,134 @@ export function useChat(activeBot, onLoginRequired, notificationAudioRef, onAgen
     }
   }, [addAnalyticsEntry]);
 
+  const _handleBankingMessage = async (message) => {
+    const classifiedIntent = await quickClassifyIntent(message);
+    if (needsAuth(classifiedIntent) && !isAuthenticated) {
+      setPendingMessage({ message, tab: 'banking' });
+      const msgId = addMessage('banking', 'bot', 'structured', { speakableText: "Please log in to continue. I'll process your request right after." });
+      await playNotificationSound();
+      _playBotResponse("Please log in to continue. I'll process your request right after.", msgId);
+      onLoginRequired();
+      return; // Stop processing until login
+    }
+
+    const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
+    localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
+    const token = localStorage.getItem('authToken');
+
+    const response = await fetch('/api/dialogflow/detect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, sessionId, token }),
+    });
+
+    if (!response.ok) throw new Error(CONFIG.MESSAGES.ERRORS.DIALOGFLOW_ERROR);
+    
+    const dialogflowData = (await response.json()).data;
+    const responsePayload = formatDialogflowResponse(dialogflowData);
+    
+    await playNotificationSound();
+    const newMessageId = addMessage('banking', 'bot', 'structured', responsePayload);
+    _playBotResponse(responsePayload.speakableText, newMessageId);
+
+    if (responsePayload.action === 'AGENT_HANDOFF' && onAgentRequest) {
+      onAgentRequest(messages.banking);
+    }
+  };
+
+  const _handleAdvisorMessage = async (message) => {
+    const messageHistory = messages.advisor.map(msg => ({
+      role: msg.author === 'user' ? 'user' : 'assistant',
+      content: (typeof msg.content === 'object' && msg.content !== null) ? msg.content.speakableText : msg.content
+    }));
+
+    const response = await fetch('/api/chat/financial-advisor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [...messageHistory, { role: 'user', content: message }] })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR);
+    }
+
+    const responseText = await response.text();
+    await playNotificationSound();
+    const newMessageId = addMessage('advisor', 'bot', 'text', { speakableText: responseText });
+    _playBotResponse(responseText, newMessageId);
+  };
+  
+  const _handleKnowledgeMessage = async (message) => {
+      const response = await fetch('/api/chat/knowledge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, messages: messages.knowledge })
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to get knowledge base response.');
+      }
+      
+      const responseText = await response.text();
+      await playNotificationSound();
+      const newMessageId = addMessage('knowledge', 'bot', 'text', { speakableText: responseText });
+      _playBotResponse(responseText, newMessageId);
+  };
+
+  const processMessage = useCallback(async (message, tab) => {
+    clearTimeout(inactivityTimer.current);
+    proactiveCount.current = 0;
+    
+    addMessage(tab, 'user', 'text', message);
+    setLoading(true);
+    analyzeMessage(message);
+    
+    try {
+      if (tab === 'banking') await _handleBankingMessage(message);
+      else if (tab === 'advisor') await _handleAdvisorMessage(message);
+      else if (tab === 'knowledge') await _handleKnowledgeMessage(message);
+
+    } catch (error) {
+      logger.error(`Chat processing error in tab: ${tab}`, error);
+      const msgId = addMessage(tab, 'bot', 'structured', {
+        speakableText: error.message || CONFIG.MESSAGES.ERRORS.SERVER_ERROR
+      });
+      await playNotificationSound();
+      _playBotResponse(error.message, msgId);
+    } finally {
+      setLoading(false);
+    }
+  }, [addMessage, messages, user, isAuthenticated, onLoginRequired, playNotificationSound, onAgentRequest, _playBotResponse, analyzeMessage]);
+
   const retryLastMessage = useCallback(async () => {
     if (pendingMessage && isAuthenticated) {
       const { message, tab } = pendingMessage;
-      setPendingMessage(null);
+      setPendingMessage(null); // Clear pending message immediately
       setLoading(true);
 
       try {
         if (tab === 'banking') {
-          const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
-          localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
-
-          const data = await processBankingMessage({ message, user, sessionId });
-          await playNotificationSound();
-
-          if (data.success) {
-            const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
-            
-            if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
-              onAgentRequest(messages.banking);
-            }
-            
-            if (isAutoResponseEnabled && data.response.speakableText) {
-              play(data.response.speakableText, newMessageId);
-            }
-          }
+          await _handleBankingMessage(message);
         }
+        // Add retry logic for other tabs if needed
       } catch (error) {
         logger.error('Retry processing error', error);
         const msgId = addMessage(tab, 'bot', 'structured', {
-          speakableText: error.message || "Sorry, I encountered an error. Please try again."
+          speakableText: error.message || CONFIG.MESSAGES.ERRORS.SERVER_ERROR
         });
         await playNotificationSound();
-        
-        if (isAutoResponseEnabled) {
-          play(error.message || "Sorry, I encountered an error. Please try again.", msgId);
-        }
+        _playBotResponse(error.message, msgId);
       } finally {
         setLoading(false);
       }
     }
-  }, [pendingMessage, isAuthenticated, user, addMessage, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play, messages.banking]);
-
-  const handleMessage = useCallback(async (message, tab) => {
-    clearTimeout(inactivityTimer.current);
-    proactiveCount.current = 0;
-
-    addMessage(tab, 'user', 'text', message);
-    setLoading(true);
-    analyzeMessage(message);
-
-    try {
-      if (tab === 'banking') {
-        const classifiedIntent = await quickClassifyIntent(message);
-        
-        if (needsAuth(classifiedIntent) && !isAuthenticated) {
-          setPendingMessage({ message, tab });
-          
-          addMessage('banking', 'bot', 'structured', { 
-            speakableText: "Please log in to view your account information. I'll process your request right after you sign in." 
-          });
-          
-          await playNotificationSound();
-          onLoginRequired();
-          setLoading(false); // Stop loading while waiting for login
-          return;
-        }
-
-        const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
-        localStorage.setItem(`sessionId_${user?.id || 'guest'}`, sessionId);
-
-        const data = await processBankingMessage({ message, user, sessionId });
-        await playNotificationSound();
-
-        if (data.success) {
-          const newMessageId = addMessage('banking', 'bot', 'structured', data.response);
-          
-          if (data.response.action === 'AGENT_HANDOFF' && onAgentRequest) {
-            onAgentRequest(messages.banking);
-          }
-          
-          if (isAutoResponseEnabled && data.response.speakableText) {
-            play(data.response.speakableText, newMessageId);
-          }
-        }
-
-      } else if (tab === 'advisor') {
-        const messageHistory = messages.advisor.map(msg => ({
-          role: msg.author === 'user' ? 'user' : 'assistant',
-          content: msg.type === 'text' ? msg.content : msg.content.speakableText
-        }));
-        
-        const responseText = await processAdvisorMessage(message, messageHistory);
-        await playNotificationSound();
-        const newMessageId = addMessage('advisor', 'bot', 'text', { speakableText: responseText });
-        
-        if (isAutoResponseEnabled && responseText) {
-          play(responseText, newMessageId);
-        }
-
-      } else if (tab === 'knowledge') {
-        const responseText = await processKnowledgeMessage(message);
-        await playNotificationSound();
-        const newMessageId = addMessage('knowledge', 'bot', 'text', { speakableText: responseText });
-
-        if (isAutoResponseEnabled && responseText) {
-          play(responseText, newMessageId);
-        }
-      }
-
-    } catch (error) {
-      logger.error('Chat processing error', error);
-      const msgId = addMessage(tab, 'bot', 'structured', {
-        speakableText: error.message || "Sorry, I encountered an error. Please try again."
-      });
-      await playNotificationSound();
-      
-      if (isAutoResponseEnabled) {
-        play(error.message || "Sorry, I encountered an error. Please try again.", msgId);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [addMessage, messages, user, isAuthenticated, onLoginRequired, playNotificationSound, onAgentRequest, isAutoResponseEnabled, play, analyzeMessage]);
+  }, [pendingMessage, isAuthenticated, addMessage, playNotificationSound, _playBotResponse]);
 
   return {
     messages,
     loading,
-    processMessage: handleMessage,
+    processMessage,
     retryLastMessage
   };
 }

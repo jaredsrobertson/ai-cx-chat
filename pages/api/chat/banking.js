@@ -2,31 +2,12 @@ import jwt from 'jsonwebtoken';
 import { logger } from '@/lib/logger';
 import { mockUsers, getUserById } from '@/lib/mockData';
 import { getSessionToken } from '@/lib/dialogflow';
-import { formatCurrency } from '@/lib/utils'; // Correctly import formatCurrency
-
-// Helper to build the final JSON response for Dialogflow
-function buildFulfillmentResponse(payload) {
-  return {
-    fulfillmentMessages: [{ payload }],
-  };
-}
-
-// Helper to build a structured payload for the frontend
-function buildCustomPayload({ speakableText, action, intentName, confidentialData, authMessage }) {
-  const payload = {
-    fields: {
-      speakableText: { stringValue: speakableText || authMessage || '' },
-      ...(action && { action: { stringValue: action } }),
-      ...(intentName && { intentName: { stringValue: intentName } }),
-      ...(confidentialData && { confidentialData: { structValue: formatAsStruct(confidentialData) } }),
-      ...(authMessage && { authMessage: { stringValue: authMessage } }),
-    }
-  };
-  return payload;
-}
+import { formatCurrency } from '@/lib/utils';
 
 // Recursively formats a JS object into Dialogflow's Struct format
 function formatAsStruct(obj) {
+  if (obj === null) return { nullValue: null };
+
   const fields = {};
   for (const key in obj) {
     const value = obj[key];
@@ -40,25 +21,33 @@ function formatAsStruct(obj) {
       fields[key] = { listValue: { values: value.map(item => ({ structValue: formatAsStruct(item) })) } };
     } else if (typeof value === 'object' && value !== null) {
       fields[key] = { structValue: formatAsStruct(value) };
+    } else {
+      fields[key] = { nullValue: null };
     }
   }
   return { fields };
 }
 
+// Helper to build the final JSON response for Dialogflow
+function buildFulfillmentResponse(payload) {
+  return {
+    fulfillmentMessages: [{
+      payload: { fields: formatAsStruct(payload).fields }
+    }],
+  };
+}
 
 function buildAuthRequiredResponse(intentName) {
-  const payload = buildCustomPayload({
+  return buildFulfillmentResponse({
     action: 'AUTH_REQUIRED',
     intentName,
-    authMessage: "Please log in to view your account information.",
     speakableText: "Please log in to view your account information."
   });
-  return buildFulfillmentResponse(payload);
 }
 
 function buildBalanceResponse(user) {
   const speakableText = `Here are your current account balances. Your checking account has ${formatCurrency(user.accounts.checking.balance)} and your savings account has ${formatCurrency(user.accounts.savings.balance)}.`;
-  const payload = buildCustomPayload({
+  return buildFulfillmentResponse({
     speakableText,
     confidentialData: {
       type: "balances",
@@ -68,24 +57,22 @@ function buildBalanceResponse(user) {
       ]
     }
   });
-  return buildFulfillmentResponse(payload);
 }
 
 function buildTransactionHistoryResponse(user) {
     const speakableText = "Here are your most recent transactions from your checking account.";
-    const payload = buildCustomPayload({
+    return buildFulfillmentResponse({
         speakableText,
         confidentialData: {
             type: "transaction_history",
             transactions: user.accounts.checking.recent,
         },
     });
-    return buildFulfillmentResponse(payload);
 }
 
-function buildTransferConfirmationResponse(user, amount, fromAccount, toAccount) {
+function buildTransferConfirmationResponse(amount, fromAccount, toAccount) {
     const speakableText = `The transfer of ${formatCurrency(amount)} has been completed successfully.`;
-    const payload = buildCustomPayload({
+    return buildFulfillmentResponse({
         speakableText,
         confidentialData: {
             type: "transfer_confirmation",
@@ -96,9 +83,7 @@ function buildTransferConfirmationResponse(user, amount, fromAccount, toAccount)
             },
         },
     });
-    return buildFulfillmentResponse(payload);
 }
-
 
 function getUserFromToken(token) {
   if (!token) return null;
@@ -113,38 +98,32 @@ function getUserFromToken(token) {
 
 // --- Intent Handlers ---
 async function handleAccountBalance(sessionId) {
-  const token = getSessionToken(sessionId);
-  const user = getUserFromToken(token);
+  const user = getUserFromToken(getSessionToken(sessionId));
   if (!user) return buildAuthRequiredResponse('account.balance');
-  
   return buildBalanceResponse(user);
 }
 
 async function handleTransactionHistory(sessionId) {
-    const token = getSessionToken(sessionId);
-    const user = getUserFromToken(token);
+    const user = getUserFromToken(getSessionToken(sessionId));
     if (!user) return buildAuthRequiredResponse('transaction.history');
-
     return buildTransactionHistoryResponse(user);
 }
 
 async function handleTransfer(sessionId, parameters) {
-    const token = getSessionToken(sessionId);
-    const user = getUserFromToken(token);
+    const user = getUserFromToken(getSessionToken(sessionId));
     if (!user) return buildAuthRequiredResponse('account.transfer');
 
     const amount = parameters.fields.amount.structValue.fields.amount.numberValue;
     const fromAccount = 'checking'; // Simplified for demo
     const toAccount = 'savings'; // Simplified for demo
     
-    return buildTransferConfirmationResponse(user, amount, fromAccount, toAccount);
+    return buildTransferConfirmationResponse(amount, fromAccount, toAccount);
 }
 
 async function handleDefault() {
-  const payload = buildCustomPayload({
+  return buildFulfillmentResponse({
     speakableText: "I can help with account balances, transactions, and transfers. How can I assist?"
   });
-  return buildFulfillmentResponse(payload);
 }
 
 const intentHandlers = {

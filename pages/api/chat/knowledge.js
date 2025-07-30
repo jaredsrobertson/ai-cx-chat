@@ -1,56 +1,50 @@
-import { OpenAI } from '@ai-sdk/openai';
-import { streamText } from 'ai';
-import { createApiHandler } from '@/lib/apiUtils';
+import { createApiHandler, createOpenAIStreamHandler } from '@/lib/apiUtils';
 import { knowledgeBase } from '@/lib/knowledgeBase';
-import { sanitizeInput } from '@/lib/utils';
-import { logger } from '@/lib/logger';
 import { CONFIG } from '@/lib/config';
 
 export const config = {
   runtime: 'edge',
 };
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// A simple retriever for the knowledge base
+function getRelevantContext(message) {
+  const lowerCaseMessage = message.toLowerCase();
+  const relevantDoc = knowledgeBase.find(doc =>
+    lowerCaseMessage.includes(doc.topic.toLowerCase())
+  );
+  // Fallback to a general context if no specific topic is found.
+  return relevantDoc ? relevantDoc.content : knowledgeBase[0].content;
+}
 
+const systemPromptTemplate = (context) => `
+  You are a helpful Knowledge Base Assistant for CloudBank.
+  Your role is to answer user questions based *only* on the provided context.
+  Do not use any outside information. If the answer is not in the context, say "I do not have information on that topic."
+
+  Context:
+  ---
+  ${context}
+  ---
+`;
+
+// This handler is slightly different as it needs to dynamically create the system prompt.
 const knowledgeHandler = async (req) => {
-  try {
-    const { message } = await req.json();
-    const sanitizedMessage = sanitizeInput(message);
+  const { message, messages } = await req.json(); // Assuming messages for history context might be sent
+  const relevantContext = getRelevantContext(message);
+  const dynamicSystemPrompt = systemPromptTemplate(relevantContext);
 
-    if (!sanitizedMessage) {
-      return new Response(JSON.stringify({ error: 'Valid message is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+  const streamHandler = createOpenAIStreamHandler({
+    systemPrompt: dynamicSystemPrompt,
+    maxTokens: 100, // Slightly more tokens for knowledge base answers
+  });
 
-    const relevantDoc = knowledgeBase.find(doc =>
-      sanitizedMessage.toLowerCase().includes(doc.topic.toLowerCase())
-    ) || knowledgeBase[0];
-    
-    const result = await streamText({
-      model: openai('gpt-4o-mini'),
-      system: `You are a helpful Knowledge Base Assistant for CloudBank. Your role is to answer user questions based *only* on the provided context. Do not use any outside information. If the answer is not in the context, say "I do not have information on that topic."
+  // Re-create a request-like object for the stream handler
+  const newReq = {
+    json: async () => ({ messages: messages || [{ role: 'user', content: message }] })
+  };
 
-      Context:
-      ---
-      ${relevantDoc.content}
-      ---
-      `,
-      messages: [{ role: 'user', content: sanitizedMessage }],
-    });
-
-    return result.toAIStreamResponse();
-
-  } catch (error) {
-    logger.error('Knowledge base stream error:', error);
-    return new Response(JSON.stringify({ error: CONFIG.MESSAGES.ERRORS.ADVISOR_ERROR }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  return streamHandler(newReq);
 };
+
 
 export default createApiHandler(knowledgeHandler);
