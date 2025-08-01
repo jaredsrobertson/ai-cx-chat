@@ -1,8 +1,7 @@
-import jwt from 'jsonwebtoken';
 import { logger } from '@/lib/logger';
 import { mockUsers, getUserById } from '@/lib/mockData';
-import { getSessionToken } from '@/lib/dialogflow';
 import { formatCurrency } from '@/lib/utils';
+import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 
 // Recursively formats a JS object into Dialogflow's Struct format
 function formatAsStruct(obj) {
@@ -35,14 +34,6 @@ function buildFulfillmentResponse(payload) {
       payload: { fields: formatAsStruct(payload).fields }
     }],
   };
-}
-
-function buildAuthRequiredResponse(intentName) {
-  return buildFulfillmentResponse({
-    action: 'AUTH_REQUIRED',
-    intentName,
-    speakableText: "Please log in to view your account information."
-  });
 }
 
 function buildBalanceResponse(user) {
@@ -85,39 +76,32 @@ function buildTransferConfirmationResponse(amount, fromAccount, toAccount) {
     });
 }
 
-function getUserFromToken(token) {
-  if (!token) return null;
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return decoded && decoded.userId ? getUserById(decoded.userId) : null;
-  } catch (error) {
-    logger.error('JWT verification failed in webhook', { error: error.message });
-    return null;
-  }
-}
-
 // --- Intent Handlers ---
-async function handleAccountBalance(sessionId) {
-  const user = getUserFromToken(getSessionToken(sessionId));
-  if (!user) return buildAuthRequiredResponse('account.balance');
+async function handleAccountBalance(queryResult) {
+  const userId = queryResult.parameters?.fields?.userId?.stringValue;
+  if (!userId) {
+    return buildFulfillmentResponse({ speakableText: "I can't access account details without user identification." });
+  }
+  const user = getUserById(userId);
   return buildBalanceResponse(user);
 }
 
-async function handleTransactionHistory(sessionId) {
-    const user = getUserFromToken(getSessionToken(sessionId));
-    if (!user) return buildAuthRequiredResponse('transaction.history');
-    return buildTransactionHistoryResponse(user);
+async function handleTransactionHistory(queryResult) {
+  const userId = queryResult.parameters?.fields?.userId?.stringValue;
+  if (!userId) {
+    return buildFulfillmentResponse({ speakableText: "I can't access account details without user identification." });
+  }
+  const user = getUserById(userId);
+  return buildTransactionHistoryResponse(user);
 }
 
-async function handleTransfer(sessionId, parameters) {
-    const user = getUserFromToken(getSessionToken(sessionId));
-    if (!user) return buildAuthRequiredResponse('account.transfer');
-
-    const amount = parameters.fields.amount.structValue.fields.amount.numberValue;
-    const fromAccount = 'checking'; // Simplified for demo
-    const toAccount = 'savings'; // Simplified for demo
-    
-    return buildTransferConfirmationResponse(amount, fromAccount, toAccount);
+async function handleTransfer(queryResult) {
+  const userId = queryResult.parameters?.fields?.userId?.stringValue;
+  if (!userId) {
+    return buildFulfillmentResponse({ speakableText: "I can't access account details without user identification." });
+  }
+  const amount = queryResult.parameters.fields.amount.structValue.fields.amount.numberValue;
+  return buildTransferConfirmationResponse(amount, 'checking', 'savings');
 }
 
 async function handleDefault() {
@@ -134,32 +118,19 @@ const intentHandlers = {
 };
 
 // --- Main Handler ---
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+const bankingWebhookHandler = async (req, res) => {
+  const { queryResult } = req.body;
+  if (!queryResult) {
+    return res.status(400).json(createStandardResponse(false, null, "Invalid Dialogflow request."));
   }
 
-  try {
-    const { queryResult, session } = req.body;
-    const sessionId = session ? session.split('/').pop() : null;
+  const intentName = queryResult.intent?.displayName;
+  const handlerFn = intentHandlers[intentName] || handleDefault;
+  
+  const responseData = await handlerFn(queryResult);
+  return res.status(200).json(responseData);
+};
 
-    if (!queryResult || !sessionId) {
-      return res.status(400).json({ fulfillmentText: "Invalid request." });
-    }
-
-    const intentName = queryResult.intent?.displayName;
-    const parameters = queryResult.parameters;
-    const handlerFn = intentHandlers[intentName] || handleDefault;
-    
-    const responseData = await handlerFn(sessionId, parameters);
-    
-    return res.status(200).json(responseData);
-
-  } catch (error) {
-    logger.error('Webhook error:', error);
-    return res.status(500).json({ 
-      fulfillmentText: "I'm experiencing technical difficulties. Please try again." 
-    });
-  }
-}
+export default createApiHandler(bankingWebhookHandler, {
+  allowedMethods: ['POST'],
+});

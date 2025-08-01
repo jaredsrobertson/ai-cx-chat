@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { mockUsers } from '@/lib/mockData';
-import { createApiHandler } from '@/lib/apiUtils';
+import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 import { sanitizeCredentials } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { CONFIG } from '@/lib/config';
@@ -20,20 +20,14 @@ const loginHandler = async (req, res) => {
   const { username, pin } = sanitizeCredentials(rawUsername, rawPin);
 
   if (!username || !pin) {
-    return res.status(400).json({
-      success: false,
-      error: 'Username and PIN are required'
-    });
+    return res.status(400).json(createStandardResponse(false, null, 'Username and PIN are required'));
   }
 
   const user = validateUser(username, pin);
 
   if (!user) {
     logger.warn('Invalid login attempt', { username });
-    return res.status(401).json({
-      success: false,
-      error: CONFIG.MESSAGES.ERRORS.INVALID_CREDENTIALS
-    });
+    return res.status(401).json(createStandardResponse(false, null, CONFIG.MESSAGES.ERRORS.INVALID_CREDENTIALS));
   }
 
   const token = jwt.sign(
@@ -49,18 +43,15 @@ const loginHandler = async (req, res) => {
 
   logger.info('Login successful', { username });
 
-  return res.status(200).json({
-    success: true,
-    data: {
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        username: username
-      }
+  return res.status(200).json(createStandardResponse(true, {
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      username: username
     }
-  });
+  }));
 };
 
 export default createApiHandler(loginHandler, {

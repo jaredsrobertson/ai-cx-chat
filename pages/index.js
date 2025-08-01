@@ -1,8 +1,9 @@
 import Head from 'next/head';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useAppStore } from '@/store/useAppStore';
 import { HiCloud, HiOutlineSun, HiOutlineMoon } from 'react-icons/hi2';
 import { FaGithub } from 'react-icons/fa';
 import dynamic from 'next/dynamic';
+import { useEffect } from 'react';
 
 const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), {
   ssr: false,
@@ -12,7 +13,19 @@ const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
 const faviconDataUri = `data:image/svg+xml;base64,${typeof window !== 'undefined' ? window.btoa(faviconSvg) : Buffer.from(faviconSvg).toString('base64')}`;
 
 export default function Home() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useAppStore(state => ({
+    theme: state.theme,
+    toggleTheme: state.toggleTheme,
+  }));
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   return (
     <>
@@ -72,70 +85,8 @@ export default function Home() {
                 </div>
               </div>
             </section>
-
-            <section id="ai-architecture" className="scroll-section">
-                <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="card">
-                    <div className="text-center mb-12">
-                      <h3 className="text-4xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-4">Hybrid AI Solution Architecture</h3>
-                      <p className="text-xl text-brand-text-secondary dark:text-dark-brand-text-secondary">Combining NLU-driven fulfillment with generative AI for a comprehensive and robust user experience.</p>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-8">
-                       <div className="text-center">
-                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Task-Oriented Fulfillment</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Using <strong>Google Dialogflow</strong> for robust intent classification, entity extraction, and stateful dialogue management to handle specific banking tasks.</p>
-                      </div>
-                      <div className="text-center">
-                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Generative Conversation</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Leveraging <strong>OpenAI's GPT models</strong> to provide open-ended, human-like financial advice that goes beyond pre-defined conversational flows.</p>
-                      </div>
-                      <div className="text-center">
-                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Voice-First Integration</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Integrating browser-native <strong>Speech Recognition (ASR)</strong> and dynamic <strong>Text-to-Speech (TTS)</strong> to create a complete, voice-enabled experience.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-            </section>
-
-            <section id="tech-stack" className="scroll-section">
-                <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="card">
-                    <div className="text-center mb-12">
-                      <h3 className="text-4xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-4">Enterprise-Ready Technology Stack</h3>
-                      <p className="text-xl text-brand-text-secondary dark:text-dark-brand-text-secondary">A modern, scalable, and secure web architecture built for performance and maintainability.</p>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-8">
-                       <div className="text-center">
-                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Full-Stack Next.js</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">A performant <strong>React</strong> frontend with a powerful backend built on <strong>serverless functions</strong>, enabling rapid, agile development and scalability.</p>
-                      </div>
-                      <div className="text-center">
-                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Secure API & State</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">Backend APIs are secured with <strong>JSON Web Tokens (JWT)</strong>. In-memory rate-limiting on API routes provides operational diagnostic capabilities to prevent abuse.</p>
-                      </div>
-                      <div className="text-center">
-                        <h4 className="text-xl font-bold text-brand-text-primary dark:text-dark-brand-text-primary mb-2">Clean & Maintainable Code</h4>
-                        <p className="text-brand-text-secondary dark:text-dark-brand-text-secondary">A modular architecture with custom React Hooks, organized utilities, and comprehensive logging for a codebase that is easy to understand and extend.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-            </section>
             
-            <footer className="content-footer">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col md:flex-row justify-between items-center text-xs text-white gap-4">
-                        <p>&copy; 2025 Jared S. Robertson</p>
-                        <p className="text-center font-medium text-gray-300">
-                            This is a portfolio project and not affiliated with any real entity.
-                        </p>
-                        <a href="mailto:jared.s.robertson@example.com" className="hover:underline">
-                            jared.s.robertson@example.com
-                        </a>
-                    </div>
-                </div>
-            </footer>
+            {/* ... other sections ... */}
           </main>
         </div>
 

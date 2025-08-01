@@ -1,6 +1,6 @@
 import { HiOutlineSpeakerWave, HiOutlineExclamationTriangle, HiCloud } from 'react-icons/hi2';
 import ConfidentialDisplay from './ConfidentialDisplay';
-import { useTTS } from '@/contexts/TTSContext';
+import { useAppStore } from '@/store/useAppStore';
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
@@ -14,7 +14,14 @@ const Avatar = () => (
 
 // Internal component for the Speak button
 const SpeakButton = memo(function SpeakButton({ textToSpeak, messageId }) {
-  const { play, stop, retryPlay, nowPlayingId, isLoading, error } = useTTS();
+  const { play, stop, retryPlay, nowPlayingId, isLoading, error } = useAppStore(state => ({
+    play: state.play,
+    stop: state.stop,
+    retryPlay: state.retryPlay,
+    nowPlayingId: state.nowPlayingId,
+    isLoading: state.isLoading,
+    error: state.error,
+  }));
   const isThisMessagePlaying = nowPlayingId === messageId;
 
   const handleSpeakButtonClick = () => isThisMessagePlaying ? stop() : play(textToSpeak, messageId);

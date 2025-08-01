@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAppStore } from '@/store/useAppStore';
 import { HiOutlineUserGroup } from 'react-icons/hi2';
 
 export default function Handoff({ messageHistory, onCancel }) {
   const [summary, setSummary] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const user = useAppStore(state => state.user);
 
   useEffect(() => {
     const generateSummary = async () => {

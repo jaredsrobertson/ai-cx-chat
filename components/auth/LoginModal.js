@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAppStore } from '@/store/useAppStore';
 import { logger } from '@/lib/logger';
 import { HiOutlineLockClosed } from 'react-icons/hi2';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }) {
   const [pin, setPin] = useState('aicx0123');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const login = useAppStore(state => state.login);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

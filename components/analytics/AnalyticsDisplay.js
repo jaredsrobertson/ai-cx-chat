@@ -1,4 +1,4 @@
-import { useAnalytics } from '@/contexts/AnalyticsContext';
+import { useAppStore } from '@/store/useAppStore';
 import { HiOutlineLightBulb, HiOutlineFaceSmile, HiOutlineFaceFrown, HiOutlineMinus } from 'react-icons/hi2';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,7 +20,9 @@ const itemVariants = {
 };
 
 export default function AnalyticsDisplay() {
-  const { latest } = useAnalytics();
+  const latest = useAppStore(state => state.latestAnalytics);
+
+  if (!latest) return null;
 
   return (
     <div className="bg-brand-ui-01 dark:bg-dark-brand-ui-03/50 px-3 py-2 border-b border-brand-ui-03 dark:border-dark-brand-ui-03/50">

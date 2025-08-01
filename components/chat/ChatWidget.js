@@ -1,25 +1,19 @@
-import { useReducer, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import ConversationView from './ConversationView';
 import ErrorBoundary from '../ErrorBoundary';
 import BotSelection from './BotSelection';
 import Handoff from './Handoff';
 import AnalyticsDisplay from '../analytics/AnalyticsDisplay';
-import { useAuth } from '@/hooks/useAuth';
-import { TTSProvider, useTTS } from '@/contexts/TTSContext';
+import { useAppStore } from '@/store/useAppStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  HiOutlineSpeakerWave,
-  HiOutlineSpeakerXMark,
   HiOutlineArrowUturnLeft,
   HiOutlineArrowLeftOnRectangle,
   HiOutlineShieldCheck,
   HiOutlineXMark,
-  HiOutlineBell,
-  HiOutlineBellSlash,
   HiOutlineChatBubbleOvalLeftEllipsis,
 } from 'react-icons/hi2';
-import { logger } from '@/lib/logger';
 
 const LoginModal = dynamic(() => import('../auth/LoginModal'));
 
@@ -46,7 +40,6 @@ function widgetReducer(state, action) {
     case 'START_HANDOFF':
       return { ...state, view: 'handoff' };
     case 'END_HANDOFF':
-      // Return to the bot selection screen after handoff is cancelled
       return { ...state, view: 'selecting', selectedBot: null };
     default:
       throw new Error(`Unhandled action type: ${action.type}`);
@@ -60,28 +53,24 @@ const ChatWidgetInner = () => {
 
   const notificationAudioRef = useRef(null);
   const handoffMessageHistory = useRef([]);
-  const chatHookRef = useRef(null); 
 
-  const { user, logout } = useAuth();
-  const { stop, isAutoResponseEnabled, toggleAutoResponse, isNotificationEnabled, toggleNotificationSound } = useTTS();
+  const { user, logout, retryLastMessage } = useAppStore(state => ({
+    user: state.user,
+    logout: state.logout,
+    retryLastMessage: state.retryLastMessage,
+  }));
 
   const handleOpen = useCallback(() => dispatch({ type: 'OPEN' }), []);
-  const handleClose = useCallback(() => {
-    stop();
-    dispatch({ type: 'CLOSE' });
-  }, [stop]);
+  const handleClose = useCallback(() => dispatch({ type: 'CLOSE' }), []);
 
   const handleBotSelection = useCallback((bot) => dispatch({ type: 'SELECT_BOT', payload: bot }), []);
-  const backToSelection = useCallback(() => {
-    stop();
-    dispatch({ type: 'BACK_TO_SELECTION' });
-  }, [stop]);
+  const backToSelection = useCallback(() => dispatch({ type: 'BACK_TO_SELECTION' }), []);
   
   const handleLoginRequired = useCallback(() => dispatch({ type: 'SHOW_LOGIN_MODAL' }), []);
   const handleLoginSuccess = useCallback(() => {
     dispatch({ type: 'HIDE_LOGIN_MODAL' });
-    setTimeout(() => chatHookRef.current?.retryLastMessage?.(), 100);
-  }, []);
+    setTimeout(() => retryLastMessage(), 100);
+  }, [retryLastMessage]);
   
   const handleAgentRequest = useCallback((history = []) => {
     handoffMessageHistory.current = history;
@@ -95,7 +84,7 @@ const ChatWidgetInner = () => {
       case 'selecting':
         return <BotSelection onSelect={handleBotSelection} onAgentRequest={handleAgentRequest} />;
       case 'chatting':
-        return <ConversationView activeBot={selectedBot} onLoginRequired={handleLoginRequired} notificationAudioRef={notificationAudioRef} onAgentRequest={handleAgentRequest} ref={chatHookRef} />;
+        return <ConversationView activeBot={selectedBot} onLoginRequired={handleLoginRequired} notificationAudioRef={notificationAudioRef} onAgentRequest={handleAgentRequest} />;
       case 'handoff':
         return <Handoff messageHistory={handoffMessageHistory.current} onCancel={handleCancelHandoff} />;
       default:
@@ -108,11 +97,27 @@ const ChatWidgetInner = () => {
       <audio ref={notificationAudioRef} src="/notify.mp3" preload="auto" />
       <AnimatePresence>
         {isOpen && (
-          <motion.div /* ...animation props... */ className="chat-widget-container">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="chat-widget-container"
+          >
             <div className="chat-widget-inner">
-              {/* Header */}
               <div className="bg-brand-blue dark:bg-dark-brand-ui-01 text-white p-3 flex items-center justify-between">
-                {/* ...header content... */}
+                <div>
+                    {view === 'chatting' && (
+                        <button onClick={backToSelection} className="text-white hover:bg-white/20 p-2 rounded-full"><HiOutlineArrowUturnLeft /></button>
+                    )}
+                </div>
+                <div className="text-center">
+                    <h3 className="font-bold">{user ? `Welcome, ${user.name}` : 'CloudBank Assistant'}</h3>
+                </div>
+                <div>
+                    {user && <button onClick={logout} className="text-white hover:bg-white/20 p-2 rounded-full"><HiOutlineArrowLeftOnRectangle /></button>}
+                    <button onClick={handleClose} className="text-white hover:bg-white/20 p-2 rounded-full"><HiOutlineXMark /></button>
+                </div>
               </div>
 
               {view === 'chatting' && <AnalyticsDisplay />}
@@ -126,7 +131,13 @@ const ChatWidgetInner = () => {
       </AnimatePresence>
       
       {!isOpen && (
-          <motion.button /* ...animation props... */ onClick={handleOpen} className="chat-fab ...">
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            onClick={handleOpen}
+            className="chat-fab bg-brand-blue text-white rounded-full shadow-lg flex items-center justify-center"
+          >
               <HiOutlineChatBubbleOvalLeftEllipsis className="w-8 h-8" />
           </motion.button>
       )}
@@ -138,10 +149,8 @@ const ChatWidgetInner = () => {
 
 export default function ChatWidget() {
   return (
-    <TTSProvider>
-      <ErrorBoundary>
-        <ChatWidgetInner />
-      </ErrorBoundary>
-    </TTSProvider>
+    <ErrorBoundary>
+      <ChatWidgetInner />
+    </ErrorBoundary>
   );
 }

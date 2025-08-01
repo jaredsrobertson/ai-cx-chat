@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { mockUsers } from '@/lib/mockData';
-import { createApiHandler } from '@/lib/apiUtils';
+import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 import { logger } from '@/lib/logger';
 
 const getUserByUsername = (username) => {
@@ -15,7 +15,7 @@ const getUserByUsername = (username) => {
 const verifyHandler = async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, error: 'No token provided' });
+    return res.status(401).json(createStandardResponse(false, null, 'No token provided'));
   }
 
   const token = authHeader.substring(7);
@@ -25,18 +25,15 @@ const verifyHandler = async (req, res) => {
     const user = getUserByUsername(decoded.username);
 
     if (!user) {
-      return res.status(401).json({ success: false, error: 'User not found' });
+      return res.status(401).json(createStandardResponse(false, null, 'User not found'));
     }
 
-    res.status(200).json({
-      success: true,
-      data: {
-        user: { id: user.id, name: user.name, email: user.email, username: decoded.username, accounts: user.accounts }
-      }
-    });
+    res.status(200).json(createStandardResponse(true, {
+      user: { id: user.id, name: user.name, email: user.email, username: decoded.username, accounts: user.accounts }
+    }));
   } catch (error) {
     logger.error('Token verification error:', error.message);
-    return res.status(401).json({ success: false, error: 'Invalid token' });
+    return res.status(401).json(createStandardResponse(false, null, 'Invalid token'));
   }
 };
 
