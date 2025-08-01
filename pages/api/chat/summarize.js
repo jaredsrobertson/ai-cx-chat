@@ -1,4 +1,4 @@
-import { OpenAI } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 import { sanitizeInput } from '@/lib/utils';
@@ -8,7 +8,7 @@ export const config = {
   runtime: 'edge',
 };
 
-const openai = new OpenAI({
+const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 

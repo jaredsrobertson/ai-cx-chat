@@ -1,13 +1,13 @@
 import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
 import { detectIntent } from '@/lib/dialogflow';
 import { logger } from '@/lib/logger';
-import { OpenAI } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { CONFIG } from '@/lib/config';
 import { sanitizeInput } from '@/lib/utils';
 import { knowledgeBase } from '@/lib/knowledgeBase';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function handleBankingBot(req, user) {
     const { message, sessionId } = req.body;

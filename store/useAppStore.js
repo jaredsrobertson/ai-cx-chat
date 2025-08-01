@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { logger } from '@/lib/logger';
-import jwt_decode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import { v4 as uuidv4 } from 'uuid';
 import { BOTS } from '@/lib/bots';
 import { CONFIG } from '@/lib/config';
@@ -51,7 +51,7 @@ const createAuthSlice = (set, get) => ({
             return;
         }
         try {
-            const decoded = jwt_decode(token);
+            const decoded = jwtDecode(token);
             if (decoded.exp < Date.now() / 1000) {
                 get().logout();
                 return;
