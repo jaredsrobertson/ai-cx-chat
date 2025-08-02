@@ -1,4 +1,4 @@
-import { OpenAI } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { streamObject } from 'ai';
 import { z } from 'zod';
 import { createApiHandler, createStandardResponse } from '@/lib/apiUtils';
@@ -10,7 +10,7 @@ export const config = {
 };
 
 // Correctly instantiate the OpenAI client
-const openai = new OpenAI({
+const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
