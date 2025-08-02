@@ -167,3 +167,8 @@ export const useAppStore = create((set, get) => ({
     ...createChatSlice(set, get),
     ...createAnalyticsSlice(set, get),
 }));
+
+// This check ensures that the token verification only runs in the browser environment.
+if (typeof window !== 'undefined') {
+    useAppStore.getState().verifyToken();
+}
