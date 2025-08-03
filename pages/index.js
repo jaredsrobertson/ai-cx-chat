@@ -13,10 +13,8 @@ const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
 const faviconDataUri = `data:image/svg+xml;base64,${typeof window !== 'undefined' ? window.btoa(faviconSvg) : Buffer.from(faviconSvg).toString('base64')}`;
 
 export default function Home() {
-  const { theme, toggleTheme } = useAppStore(state => ({
-    theme: state.theme,
-    toggleTheme: state.toggleTheme,
-  }));
+  const theme = useAppStore(state => state.theme);
+  const toggleTheme = useAppStore(state => state.toggleTheme);
 
   useEffect(() => {
     if (theme === 'dark') {

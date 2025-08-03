@@ -14,14 +14,13 @@ const Avatar = () => (
 
 // Internal component for the Speak button
 const SpeakButton = memo(function SpeakButton({ textToSpeak, messageId }) {
-  const { play, stop, retryPlay, nowPlayingId, isLoading, error } = useAppStore(state => ({
-    play: state.play,
-    stop: state.stop,
-    retryPlay: state.retryPlay,
-    nowPlayingId: state.nowPlayingId,
-    isLoading: state.isLoading,
-    error: state.error,
-  }));
+  const play = useAppStore(state => state.play);
+  const stop = useAppStore(state => state.stop);
+  const retryPlay = useAppStore(state => state.retryPlay);
+  const nowPlayingId = useAppStore(state => state.nowPlayingId);
+  const isLoading = useAppStore(state => state.isLoading);
+  const error = useAppStore(state => state.error);
+  
   const isThisMessagePlaying = nowPlayingId === messageId;
 
   const handleSpeakButtonClick = () => isThisMessagePlaying ? stop() : play(textToSpeak, messageId);

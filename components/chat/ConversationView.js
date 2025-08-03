@@ -5,23 +5,14 @@ import { useAppStore } from '@/store/useAppStore';
 import { useVoiceExperience } from '@/hooks/useVoiceExperience';
 import { logger } from '@/lib/logger';
 
-const ConversationView = forwardRef(function ConversationView({ activeBot, onLoginRequired }, ref) {
-  const { messages, loading, processMessage, pendingMessage } = useAppStore(state => ({
-    messages: state.messages,
-    loading: state.loading,
-    processMessage: state.processMessage,
-    pendingMessage: state.pendingMessage,
-  }));
+const ConversationView = forwardRef(function ConversationView({ activeBot, onAgentRequest }, ref) {
+  const messages = useAppStore(state => state.messages);
+  const loading = useAppStore(state => state.loading);
+  const processMessage = useAppStore(state => state.processMessage);
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
   const { isListening, startListening, stopListening } = useVoiceExperience();
-
-  useEffect(() => {
-    if (pendingMessage && onLoginRequired) {
-      onLoginRequired();
-    }
-  }, [pendingMessage, onLoginRequired]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

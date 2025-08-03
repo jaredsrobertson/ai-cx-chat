@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useRef } from 'react';
+import { useReducer, useCallback, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import ConversationView from './ConversationView';
 import ErrorBoundary from '../ErrorBoundary';
@@ -54,11 +54,17 @@ const ChatWidgetInner = () => {
   const notificationAudioRef = useRef(null);
   const handoffMessageHistory = useRef([]);
 
-  const { user, logout, retryLastMessage } = useAppStore(state => ({
-    user: state.user,
-    logout: state.logout,
-    retryLastMessage: state.retryLastMessage,
-  }));
+  const user = useAppStore(state => state.user);
+  const logout = useAppStore(state => state.logout);
+  const retryLastMessage = useAppStore(state => state.retryLastMessage);
+  const pendingMessage = useAppStore(state => state.pendingMessage);
+  
+  // This new useEffect hook correctly handles the logic in the parent component
+  useEffect(() => {
+    if (pendingMessage) {
+      dispatch({ type: 'SHOW_LOGIN_MODAL' });
+    }
+  }, [pendingMessage]);
 
   const handleOpen = useCallback(() => dispatch({ type: 'OPEN' }), []);
   const handleClose = useCallback(() => dispatch({ type: 'CLOSE' }), []);
@@ -66,7 +72,6 @@ const ChatWidgetInner = () => {
   const handleBotSelection = useCallback((bot) => dispatch({ type: 'SELECT_BOT', payload: bot }), []);
   const backToSelection = useCallback(() => dispatch({ type: 'BACK_TO_SELECTION' }), []);
   
-  const handleLoginRequired = useCallback(() => dispatch({ type: 'SHOW_LOGIN_MODAL' }), []);
   const handleLoginSuccess = useCallback(() => {
     dispatch({ type: 'HIDE_LOGIN_MODAL' });
     setTimeout(() => retryLastMessage(), 100);
@@ -84,7 +89,7 @@ const ChatWidgetInner = () => {
       case 'selecting':
         return <BotSelection onSelect={handleBotSelection} onAgentRequest={handleAgentRequest} />;
       case 'chatting':
-        return <ConversationView activeBot={selectedBot} onLoginRequired={handleLoginRequired} notificationAudioRef={notificationAudioRef} onAgentRequest={handleAgentRequest} />;
+        return <ConversationView activeBot={selectedBot} notificationAudioRef={notificationAudioRef} onAgentRequest={handleAgentRequest} />;
       case 'handoff':
         return <Handoff messageHistory={handoffMessageHistory.current} onCancel={handleCancelHandoff} />;
       default:
