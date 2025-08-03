@@ -6,6 +6,7 @@ import { streamText } from 'ai';
 import { CONFIG } from '@/lib/config';
 import { sanitizeInput } from '@/lib/utils';
 import { knowledgeBase } from '@/lib/knowledgeBase';
+import { parseDialogflowResponse } from '@/lib/dialogflowUtils'; // <-- Import the new utility
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -25,7 +26,15 @@ async function handleBankingBot(req, user) {
         return createStandardResponse(true, { action: 'AUTH_REQUIRED', intentName });
     }
 
-    return createStandardResponse(true, queryResult);
+    // New logic: Parse the payload on the server before sending it to the client.
+    const payload = queryResult.fulfillmentMessages?.[0]?.payload?.fields;
+    if (payload) {
+        const parsedPayload = parseDialogflowResponse(payload);
+        return createStandardResponse(true, parsedPayload);
+    }
+
+    // Fallback to simple text if there's no complex payload.
+    return createStandardResponse(true, { speakableText: queryResult.fulfillmentText });
 }
 
 async function handleAdvisorBot(req) {

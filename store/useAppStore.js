@@ -5,33 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { BOTS } from '@/lib/bots';
 import { CONFIG } from '@/lib/config';
 
-// --- Helper function to parse Dialogflow's Struct format ---
-function parseDialogflowResponse(fields) {
-  if (!fields) return null;
-  const result = {};
-  for (const key in fields) {
-    const value = fields[key];
-    const valueType = Object.keys(value)[0];
-    switch (valueType) {
-      case 'stringValue':
-      case 'numberValue':
-      case 'boolValue':
-        result[key] = value[valueType];
-        break;
-      case 'structValue':
-        result[key] = parseDialogflowResponse(value[valueType].fields);
-        break;
-      case 'listValue':
-        result[key] = value[valueType].values.map(item => parseDialogflowResponse(item.structValue.fields));
-        break;
-      default:
-        result[key] = null;
-        break;
-    }
-  }
-  return result;
-}
-
+// The parseDialogflowResponse function is no longer needed here.
 
 const initialMessages = {
   banking: [{ ...BOTS.banking.initialMessage }],
@@ -121,7 +95,6 @@ const createChatSlice = (set, get) => ({
         }
         set({ loading: true });
 
-        // Fire-and-forget analytics call
         (async () => {
             try {
                 const analyzeRes = await fetch('/api/chat/analyze', {
@@ -138,7 +111,6 @@ const createChatSlice = (set, get) => ({
                         if (done) break;
                         result += decoder.decode(value, { stream: true });
                     }
-                    // The streamed object might have multiple parts, parse the final complete one
                     const finalJson = JSON.parse(result.trim().split('\n').pop());
                     get().addAnalyticsEntry(finalJson);
                 }
@@ -181,9 +153,8 @@ const createChatSlice = (set, get) => ({
                     set({ pendingMessage: { message, tab } });
                     get().addMessage(tab, 'bot', 'text', "Please log in to continue.");
                 } else {
-                    const payload = res.data.fulfillmentMessages[0]?.payload?.fields;
-                    const parsedPayload = parseDialogflowResponse(payload);
-                    get().addMessage(tab, 'bot', 'structured', parsedPayload);
+                    // The response data is now a clean, parsed object from the server.
+                    get().addMessage(tab, 'bot', 'structured', res.data);
                 }
             } else {
                 const text = await response.text();
@@ -200,7 +171,6 @@ const createChatSlice = (set, get) => ({
         const { pendingMessage } = get();
         if (pendingMessage) {
             set({ pendingMessage: null });
-            // Call processMessage again, but flag it as a retry
             get().processMessage(pendingMessage.message, pendingMessage.tab, true);
         }
     }
@@ -226,7 +196,6 @@ export const useAppStore = create((set, get) => ({
     ...createAnalyticsSlice(set, get),
 }));
 
-// This check ensures that the token verification only runs in the browser environment.
 if (typeof window !== 'undefined') {
     useAppStore.getState().verifyToken();
 }
