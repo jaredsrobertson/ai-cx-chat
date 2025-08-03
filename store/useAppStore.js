@@ -5,6 +5,34 @@ import { v4 as uuidv4 } from 'uuid';
 import { BOTS } from '@/lib/bots';
 import { CONFIG } from '@/lib/config';
 
+// --- Helper function to parse Dialogflow's Struct format ---
+function parseDialogflowResponse(fields) {
+  if (!fields) return null;
+  const result = {};
+  for (const key in fields) {
+    const value = fields[key];
+    const valueType = Object.keys(value)[0];
+    switch (valueType) {
+      case 'stringValue':
+      case 'numberValue':
+      case 'boolValue':
+        result[key] = value[valueType];
+        break;
+      case 'structValue':
+        result[key] = parseDialogflowResponse(value[valueType].fields);
+        break;
+      case 'listValue':
+        result[key] = value[valueType].values.map(item => parseDialogflowResponse(item.structValue.fields));
+        break;
+      default:
+        result[key] = null;
+        break;
+    }
+  }
+  return result;
+}
+
+
 const initialMessages = {
   banking: [{ ...BOTS.banking.initialMessage }],
   advisor: [{ ...BOTS.advisor.initialMessage }],
@@ -87,9 +115,37 @@ const createChatSlice = (set, get) => ({
         }));
         return id;
     },
-    processMessage: async (message, tab) => {
-        get().addMessage(tab, 'user', 'text', message);
+    processMessage: async (message, tab, isRetry = false) => {
+        if (!isRetry) {
+          get().addMessage(tab, 'user', 'text', message);
+        }
         set({ loading: true });
+
+        // Fire-and-forget analytics call
+        (async () => {
+            try {
+                const analyzeRes = await fetch('/api/chat/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message }),
+                });
+                if (analyzeRes.ok) {
+                    const reader = analyzeRes.body.getReader();
+                    const decoder = new TextDecoder();
+                    let result = '';
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        result += decoder.decode(value, { stream: true });
+                    }
+                    // The streamed object might have multiple parts, parse the final complete one
+                    const finalJson = JSON.parse(result.trim().split('\n').pop());
+                    get().addAnalyticsEntry(finalJson);
+                }
+            } catch (error) {
+                logger.warn('Could not analyze message', error);
+            }
+        })();
 
         const { user } = get();
         const sessionId = localStorage.getItem(`sessionId_${user?.id || 'guest'}`) || uuidv4();
@@ -123,10 +179,11 @@ const createChatSlice = (set, get) => ({
                 const res = await response.json();
                 if (res.data.action === 'AUTH_REQUIRED') {
                     set({ pendingMessage: { message, tab } });
-                    get().addMessage(tab, 'bot', 'text', { speakableText: "Please log in to continue." });
+                    get().addMessage(tab, 'bot', 'text', "Please log in to continue.");
                 } else {
                     const payload = res.data.fulfillmentMessages[0]?.payload?.fields;
-                    get().addMessage(tab, 'bot', 'structured', payload);
+                    const parsedPayload = parseDialogflowResponse(payload);
+                    get().addMessage(tab, 'bot', 'structured', parsedPayload);
                 }
             } else {
                 const text = await response.text();
@@ -143,7 +200,8 @@ const createChatSlice = (set, get) => ({
         const { pendingMessage } = get();
         if (pendingMessage) {
             set({ pendingMessage: null });
-            get().processMessage(pendingMessage.message, pendingMessage.tab);
+            // Call processMessage again, but flag it as a retry
+            get().processMessage(pendingMessage.message, pendingMessage.tab, true);
         }
     }
 });

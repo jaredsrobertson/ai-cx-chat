@@ -60,7 +60,7 @@ const BotMessage = ({ id, content, timestamp }) => {
           <p className="text-sm whitespace-pre-wrap">{textContent}</p>
           <div className="flex items-center justify-between mt-1.5">
             <span className="text-xs opacity-70">{new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            <SpeakButton textToSpeak={textContent} messageId={id} />
+            {textContent && <SpeakButton textToSpeak={textContent} messageId={id} />}
           </div>
         </div>
         {content?.confidentialData && (
