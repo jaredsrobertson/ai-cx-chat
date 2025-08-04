@@ -6,34 +6,41 @@ import { streamText } from 'ai';
 import { CONFIG } from '@/lib/config';
 import { sanitizeInput } from '@/lib/utils';
 import { knowledgeBase } from '@/lib/knowledgeBase';
-import { parseDialogflowResponse } from '@/lib/dialogflowUtils'; // <-- Import the new utility
+// dialogflowUtils is no longer needed here as parsing is handled by the webhook.
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function handleBankingBot(req, user) {
     const { message, sessionId } = req.body;
     
-    const sessionParams = {
-        fields: {
-            ...(user && { userId: { stringValue: user.userId } })
-        }
-    };
-
-    const queryResult = await detectIntent(sessionId, message, sessionParams);
+    // We no longer need to pass user data to Dialogflow.
+    const queryResult = await detectIntent(sessionId, message);
     const intentName = queryResult.intent?.displayName;
 
     if (CONFIG.AUTH_REQUIRED_INTENTS.includes(intentName) && !user) {
         return createStandardResponse(true, { action: 'AUTH_REQUIRED', intentName });
     }
 
-    // New logic: Parse the payload on the server before sending it to the client.
-    const payload = queryResult.fulfillmentMessages?.[0]?.payload?.fields;
-    if (payload) {
-        const parsedPayload = parseDialogflowResponse(payload);
-        return createStandardResponse(true, parsedPayload);
-    }
+    // If the intent requires a webhook, call our banking API with the user's token.
+    if (queryResult.webhookSource) {
+        const token = req.headers.authorization?.substring(7);
+        const webhookResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/chat/banking`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ dialogflowRequest: req.body }) // Forward the original request
+        });
 
-    // Fallback to simple text if there's no complex payload.
+        if (!webhookResponse.ok) {
+            throw new Error('Banking webhook failed');
+        }
+        const webhookData = await webhookResponse.json();
+        return webhookData; // Forward the clean JSON response to the client
+    }
+    
+    // If no webhook is needed, return Dialogflow's static response.
     return createStandardResponse(true, { speakableText: queryResult.fulfillmentText });
 }
 
