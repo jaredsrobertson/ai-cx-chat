@@ -158,11 +158,11 @@ const createChatSlice = (set, get) => ({
                 }
             } else {
                 const text = await response.text();
-                get().addMessage(tab, 'bot', 'text', { speakableText: text });
+                get().addMessage(tab, 'bot', 'text', text);
             }
         } catch (error) {
             logger.error('Chat processing error', error);
-            get().addMessage(tab, 'bot', 'text', { speakableText: error.message || CONFIG.MESSAGES.ERRORS.SERVER_ERROR });
+            get().addMessage(tab, 'bot', 'text', error.message || CONFIG.MESSAGES.ERRORS.SERVER_ERROR);
         } finally {
             set({ loading: false });
         }

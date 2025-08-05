@@ -30,7 +30,7 @@ async function handleBankingBot(req, user) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ dialogflowRequest: req.body }) // Forward the original request
+            body: JSON.stringify({ queryResult }) // Forward the corrected Dialogflow result
         });
 
         if (!webhookResponse.ok) {

@@ -76,7 +76,7 @@ const intentHandlers = {
 // --- Main Handler ---
 // The handler now receives the 'user' object from the createApiHandler wrapper.
 const bankingWebhookHandler = async (req, res, user) => {
-  const { queryResult } = req.body.dialogflowRequest; // The original request is now nested.
+  const { queryResult } = req.body;
   
   if (!queryResult) {
     return res.status(400).json(createStandardResponse(false, null, "Invalid Dialogflow request."));
