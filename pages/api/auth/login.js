@@ -30,6 +30,11 @@ const loginHandler = async (req, res) => {
     return res.status(401).json(createStandardResponse(false, null, CONFIG.MESSAGES.ERRORS.INVALID_CREDENTIALS));
   }
 
+  const secret = process.env.JWT_SECRET;
+  // --- DIAGNOSTIC LOGGING ---
+  logger.debug(`[DIAGNOSTIC] /login using JWT_SECRET starting with "${secret?.substring(0, 4)}" and ending with "${secret?.slice(-4)}"`);
+  // --- END DIAGNOSTIC LOGGING ---
+
   const token = jwt.sign(
     {
       userId: user.id,
@@ -37,7 +42,7 @@ const loginHandler = async (req, res) => {
       name: user.name,
       accounts: user.accounts
     },
-    process.env.JWT_SECRET,
+    secret,
     { expiresIn: CONFIG.JWT.EXPIRES_IN }
   );
 
