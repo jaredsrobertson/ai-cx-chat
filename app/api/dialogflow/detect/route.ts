@@ -1,7 +1,6 @@
 // app/api/dialogflow/detect/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import * as dialogflow from '@google-cloud/dialogflow';
-import { Struct } from 'google-protobuf/google/protobuf/struct_pb';
 
 // Initialize Dialogflow client
 const sessionClient = new dialogflow.SessionsClient({
@@ -46,10 +45,18 @@ export async function POST(request: NextRequest) {
     };
 
     if (isAuthenticated && detectRequest.queryParams) {
+      // THIS OBJECT IS THE FIX: Manually creating the parameter structure
       const authenticatedContext = {
         name: `${sessionPath}/contexts/authenticated`,
         lifespanCount: 20,
-        parameters: Struct.fromJavaScript({ authenticated: true }),
+        parameters: {
+          fields: {
+            authenticated: {
+              kind: 'boolValue' as const,
+              boolValue: true,
+            },
+          },
+        },
       };
       detectRequest.queryParams.contexts = [authenticatedContext];
     }
