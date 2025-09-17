@@ -4,9 +4,16 @@
 import { useState, useEffect } from 'react';
 import DialogflowClient from '@/lib/dialogflow-client';
 
+interface Message {
+  text: string;
+  isUser: boolean;
+  quickReplies?: string[];
+  payload?: Record<string, unknown>;
+}
+
 export default function DialogflowTestPage() {
   const [client, setClient] = useState<DialogflowClient | null>(null);
-  const [messages, setMessages] = useState<Array<{text: string, isUser: boolean, quickReplies?: string[], payload?: any}>>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState('');
@@ -243,12 +250,12 @@ export default function DialogflowTestPage() {
         <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <h3 className="font-semibold mb-2">Testing Instructions:</h3>
           <ol className="text-sm space-y-1 list-decimal list-inside">
-            <li>Start with "hi" to test the welcome intent</li>
-            <li>Try "check my balance" - it should ask for authentication</li>
-            <li>Click the "Login" button when prompted</li>
+            <li>Start with &quot;hi&quot; to test the welcome intent</li>
+            <li>Try &quot;check my balance&quot; - it should ask for authentication</li>
+            <li>Click the &quot;Login&quot; button when prompted</li>
             <li>Try the same command again - it should now show balances</li>
-            <li>Test transfer with full params: "transfer $100 from checking to savings"</li>
-            <li>Test partial transfer: "transfer money" (bot should ask for details)</li>
+            <li>Test transfer with full params: &quot;transfer $100 from checking to savings&quot;</li>
+            <li>Test partial transfer: &quot;transfer money&quot; (bot should ask for details)</li>
             <li>Quick replies should appear after bot responses</li>
           </ol>
         </div>

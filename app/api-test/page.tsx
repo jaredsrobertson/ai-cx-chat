@@ -3,11 +3,16 @@
 
 import { useState } from 'react';
 
+interface ApiResponse {
+  status: number | string;
+  data: unknown;
+}
+
 export default function APITestPage() {
-  const [results, setResults] = useState<any>({});
+  const [results, setResults] = useState<Record<string, ApiResponse>>({});
   const [loading, setLoading] = useState<string>('');
 
-  const testEndpoint = async (endpoint: string, method: string = 'GET', body?: any) => {
+  const testEndpoint = async (endpoint: string, method: string = 'GET', body?: unknown) => {
     setLoading(endpoint);
     try {
       const options: RequestInit = {
@@ -37,7 +42,7 @@ export default function APITestPage() {
         ...prev,
         [endpoint]: {
           status: 'error',
-          data: error.message
+          data: error instanceof Error ? error.message : 'Unknown error'
         }
       }));
     }
@@ -135,7 +140,7 @@ export default function APITestPage() {
                     ...prev,
                     unauthorized: {
                       status: 'error',
-                      data: error.message
+                      data: error instanceof Error ? error.message : 'Unknown error'
                     }
                   }));
                 }

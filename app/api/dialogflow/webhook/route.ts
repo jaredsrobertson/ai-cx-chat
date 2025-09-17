@@ -2,6 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockAccounts, mockTransactions, processTransfer } from '@/lib/mock-data';
 
+interface DialogflowParameter {
+  [key: string]: unknown;
+}
+
+interface DialogflowContext {
+  name: string;
+  parameters?: DialogflowParameter;
+}
+
 interface DialogflowRequest {
   responseId: string;
   queryResult: {
@@ -10,32 +19,35 @@ interface DialogflowRequest {
       name: string;
       displayName: string;
     };
-    parameters: any;
-    outputContexts: Array<{
-      name: string;
-      parameters?: any;
-    }>;
+    parameters: DialogflowParameter;
+    outputContexts: DialogflowContext[];
   };
   session: string;
 }
 
-interface QuickReply {
-  text: string;
-  payload?: string;
+interface DialogflowMessage {
+  platform?: string;
+  text?: {
+    text: string[];
+  };
+  quickReplies?: {
+    quickReplies: string[];
+  };
+  payload?: Record<string, unknown>;
 }
 
 interface DialogflowResponse {
   fulfillmentText: string;
-  fulfillmentMessages?: Array<any>;
+  fulfillmentMessages?: DialogflowMessage[];
   outputContexts?: Array<{
     name: string;
     lifespanCount: number;
-    parameters: any;
+    parameters: DialogflowParameter;
   }>;
 }
 
 // Helper function to create quick replies
-function createQuickReplies(text: string, replies: string[]): any {
+function createQuickReplies(text: string, replies: string[]): DialogflowMessage {
   return {
     platform: 'PLATFORM_UNSPECIFIED',
     text: {
@@ -48,7 +60,7 @@ function createQuickReplies(text: string, replies: string[]): any {
 }
 
 // Helper function to check if user is authenticated
-function isAuthenticated(contexts: Array<any>): boolean {
+function isAuthenticated(contexts: DialogflowContext[]): boolean {
   return contexts.some(ctx => 
     ctx.name.endsWith('/contexts/authenticated') && 
     ctx.parameters?.authenticated === true
@@ -157,14 +169,15 @@ export async function POST(request: NextRequest) {
             }]
           };
         } else {
-          // Extract parameters
-          const amount = parameters.amount?.amount || parameters.amount;
-          const fromAccount = parameters.fromAccount;
-          const toAccount = parameters.toAccount;
+          // Extract parameters with type checking
+          const amountParam = parameters.amount as { amount?: number } | number | undefined;
+          const amount = typeof amountParam === 'object' ? amountParam?.amount : amountParam;
+          const fromAccount = parameters.fromAccount as string;
+          const toAccount = parameters.toAccount as string;
 
           // Check if we have all required parameters
           if (!amount || !fromAccount || !toAccount) {
-            let missingParams = [];
+            const missingParams: string[] = [];
             if (!amount) missingParams.push('amount');
             if (!fromAccount) missingParams.push('source account');
             if (!toAccount) missingParams.push('destination account');
@@ -179,8 +192,10 @@ export async function POST(request: NextRequest) {
               ]
             };
           } else {
-            // Process the transfer
-            const result = processTransfer(fromAccount, toAccount, amount);
+            // Process the transfer - ensure account types are valid
+            const validFromAccount = fromAccount as 'checking' | 'savings';
+            const validToAccount = toAccount as 'checking' | 'savings';
+            const result = processTransfer(validFromAccount, validToAccount, amount);
             
             if (result.success) {
               response = {

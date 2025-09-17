@@ -6,7 +6,18 @@ export interface DialogflowMessage {
   isUser: boolean;
   timestamp: Date;
   quickReplies?: string[];
-  payload?: any;
+  payload?: Record<string, unknown>;
+}
+
+export interface DialogflowFulfillmentMessage {
+  platform?: string;
+  text?: {
+    text: string[];
+  };
+  quickReplies?: {
+    quickReplies: string[];
+  };
+  payload?: Record<string, unknown>;
 }
 
 export interface DialogflowResponse {
@@ -14,13 +25,16 @@ export interface DialogflowResponse {
   queryResult: {
     queryText: string;
     fulfillmentText: string;
-    fulfillmentMessages?: Array<any>;
+    fulfillmentMessages?: DialogflowFulfillmentMessage[];
     intent?: {
       name: string;
       displayName: string;
     };
-    parameters?: any;
-    outputContexts?: Array<any>;
+    parameters?: Record<string, unknown>;
+    outputContexts?: Array<{
+      name: string;
+      parameters?: Record<string, unknown>;
+    }>;
   };
 }
 
@@ -67,7 +81,7 @@ class DialogflowClient {
   }
 
   // Parse quick replies from Dialogflow response
-  parseQuickReplies(fulfillmentMessages?: Array<any>): string[] {
+  parseQuickReplies(fulfillmentMessages?: DialogflowFulfillmentMessage[]): string[] {
     if (!fulfillmentMessages) return [];
     
     for (const message of fulfillmentMessages) {
@@ -79,7 +93,7 @@ class DialogflowClient {
   }
 
   // Parse custom payload (for auth requirements, agent transfer, etc.)
-  parsePayload(fulfillmentMessages?: Array<any>): any {
+  parsePayload(fulfillmentMessages?: DialogflowFulfillmentMessage[]): Record<string, unknown> | null {
     if (!fulfillmentMessages) return null;
     
     for (const message of fulfillmentMessages) {
