@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       detectRequest.queryParams.contexts = [
         {
           name: `${sessionPath}/contexts/authenticated`,
-          lifespanCount: 2, // Lives long enough for the webhook to use it
+          lifespanCount: 25, // Lives long enough for the webhook to use it
           parameters: {
             fields: {
               // CORRECTED STRUCTURE: The Value object expects the type key directly.

@@ -8,6 +8,7 @@ interface DialogflowParameter {
 
 interface DialogflowContext {
   name: string;
+  lifespanCount?: number;
   parameters?: DialogflowParameter;
 }
 
@@ -67,8 +68,6 @@ export async function POST(request: NextRequest) {
     const intentName = queryResult.intent.displayName;
     const parameters = queryResult.parameters;
     const contexts = queryResult.outputContexts || [];
-    
-    // Use the environment variable set in Vercel for the base URL.
     const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
     const API_TOKEN = process.env.MOCK_API_TOKEN || 'demo-token';
 
@@ -77,12 +76,21 @@ export async function POST(request: NextRequest) {
         throw new Error("Application is not configured correctly; missing base URL.");
     }
     
-    console.log(`Webhook using BASE_URL: ${BASE_URL}`);
-    console.log('Dialogflow webhook received:', intentName, parameters);
-
     let response: DialogflowResponse = {
-      fulfillmentText: 'I can help you with that.'
+      fulfillmentText: 'I can help with that.'
     };
+
+    // Find the current auth context to refresh it later
+    const authContext = contexts.find(ctx => ctx.name.endsWith('/contexts/authenticated'));
+
+    // Helper to refresh the auth context on every successful action
+    const refreshAuthContext = (existingContext: DialogflowContext | undefined) => {
+        return existingContext ? [{ 
+            name: existingContext.name, 
+            lifespanCount: 20, // Reset lifespan to 20
+            parameters: existingContext.parameters || {}
+        }] : [];
+    }
 
     switch (intentName) {
       case 'Default Welcome Intent':
@@ -103,15 +111,10 @@ export async function POST(request: NextRequest) {
         if (!isAuthenticated(contexts)) {
           response = {
             fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
-            fulfillmentMessages: [
-              {
+            fulfillmentMessages: [{
                 platform: 'PLATFORM_UNSPECIFIED',
-                payload: {
-                  action: 'REQUIRE_AUTH',
-                  message: 'Please authenticate to check your balance'
-                }
-              }
-            ]
+                payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to check your balance' }
+            }]
           };
         } else {
           const apiResponse = await fetch(`${BASE_URL}/api/banking/accounts`, {
@@ -125,17 +128,11 @@ export async function POST(request: NextRequest) {
             const data = await apiResponse.json();
             const checkingAccount = data.data.accounts.find((a: Account) => a.type === 'checking');
             const savingsAccount = data.data.accounts.find((a: Account) => a.type === 'savings');
-
-            const text = `Here are your account balances:\n\n` +
-              `Checking ${checkingAccount?.accountNumber}: ${formatCurrency(checkingAccount?.balance || 0)}\n` +
-              `Savings ${savingsAccount?.accountNumber}: ${formatCurrency(savingsAccount?.balance || 0)}`;
-
+            const text = `Here are your account balances:\n\nChecking ${checkingAccount?.accountNumber}: ${formatCurrency(checkingAccount?.balance || 0)}\nSavings ${savingsAccount?.accountNumber}: ${formatCurrency(savingsAccount?.balance || 0)}`;
             response = {
               fulfillmentText: text,
-              fulfillmentMessages: [
-                { text: { text: [text] } },
-                { quickReplies: { quickReplies: ['Transfer Funds', 'Transaction History', 'Done'] } }
-              ]
+              fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: ['Transfer Funds', 'Transaction History', 'Done'] } }],
+              outputContexts: refreshAuthContext(authContext)
             };
           }
         }
@@ -145,24 +142,9 @@ export async function POST(request: NextRequest) {
         if (!isAuthenticated(contexts)) {
           response = {
             fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
-            fulfillmentMessages: [
-              {
-                platform: 'PLATFORM_UNSPECIFIED',
-                payload: {
-                  action: 'REQUIRE_AUTH',
-                  message: 'Please authenticate to transfer funds'
-                }
-              }
-            ],
-            outputContexts: [{
-              name: `${session}/contexts/awaiting-auth`,
-              lifespanCount: 5,
-              parameters: {
-                pendingIntent: 'transfer.funds',
-                amount: parameters.amount,
-                fromAccount: parameters.fromAccount,
-                toAccount: parameters.toAccount
-              }
+            fulfillmentMessages: [{
+              platform: 'PLATFORM_UNSPECIFIED',
+              payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to transfer funds' }
             }]
           };
         } else {
@@ -171,22 +153,19 @@ export async function POST(request: NextRequest) {
           let fromAccount = parameters.fromAccount as string;
           let toAccount = parameters.toAccount as string;
 
-          if (fromAccount && !toAccount) {
-            toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
-          } else if (!fromAccount && toAccount) {
-            fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
-          }
+          if (fromAccount && !toAccount) toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
+          else if (!fromAccount && toAccount) fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
 
           if (!amount || !fromAccount || !toAccount) {
             const missingParams: string[] = [];
             if (!amount) missingParams.push('amount');
             if (!fromAccount) missingParams.push('source account');
             if (!toAccount) missingParams.push('destination account');
-            
             const promptText = `I need some more information. Please provide the ${missingParams.join(' and ')}.`;
             response = {
               fulfillmentText: promptText,
-              fulfillmentMessages: [{ text: { text: [promptText] } }, { quickReplies: { quickReplies: ['Cancel'] } }]
+              fulfillmentMessages: [{ text: { text: [promptText] } }, { quickReplies: { quickReplies: ['Cancel'] } }],
+              outputContexts: refreshAuthContext(authContext)
             };
           } else {
             const apiResponse = await fetch(`${BASE_URL}/api/banking/transfer`, {
@@ -198,7 +177,6 @@ export async function POST(request: NextRequest) {
                 amount: amount
               })
             });
-
             const result = await apiResponse.json();
 
             if (apiResponse.ok && result.success) {
@@ -208,7 +186,8 @@ export async function POST(request: NextRequest) {
                 fulfillmentMessages: [
                   { text: { text: [successText] } },
                   { quickReplies: { quickReplies: ['Check Balance', 'Another Transfer', 'Done'] } }
-                ]
+                ],
+                outputContexts: refreshAuthContext(authContext)
               };
             } else {
               const errorMsg = result.message || 'Transfer failed. Please try again.';
@@ -217,7 +196,8 @@ export async function POST(request: NextRequest) {
                 fulfillmentMessages: [
                   { text: { text: [`Transfer failed: ${errorMsg}. Please try again.`]}},
                   { quickReplies: { quickReplies: ['Try Again', 'Check Balance', 'Talk to Agent']}}
-                ]
+                ],
+                outputContexts: refreshAuthContext(authContext)
               };
             }
           }
@@ -226,40 +206,41 @@ export async function POST(request: NextRequest) {
 
       case 'transaction.history':
         if (!isAuthenticated(contexts)) {
-          response = {
+           response = {
             fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
             fulfillmentMessages: [{
-              platform: 'PLAT_UNSPECIFIED',
+              platform: 'PLATFORM_UNSPECIFIED',
               payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to view transactions' }
             }]
           };
         } else {
-          const apiResponse = await fetch(`${BASE_URL}/api/banking/transactions?limit=5`, {
-             headers: { 'Authorization': `Bearer ${API_TOKEN}` }
-          });
+            const apiResponse = await fetch(`${BASE_URL}/api/banking/transactions?limit=5`, {
+                headers: { 'Authorization': `Bearer ${API_TOKEN}` }
+            });
           
-          if (!apiResponse.ok) {
-             console.error('API Error (transactions):', apiResponse.status, await apiResponse.text());
-             response = { fulfillmentText: "I'm sorry, I couldn't retrieve your transactions right now." };
-          } else {
-            const data = await apiResponse.json();
-            const recentTxns = data.data.transactions || [];
-            let transactionText = 'Here are your recent transactions:\n\n';
-            if (recentTxns.length === 0) {
-              transactionText = "You have no recent transactions.";
+            if (!apiResponse.ok) {
+                console.error('API Error (transactions):', apiResponse.status, await apiResponse.text());
+                response = { fulfillmentText: "I'm sorry, I couldn't retrieve your transactions right now." };
             } else {
-              recentTxns.forEach((txn: Transaction, index: number) => {
-                transactionText += `${index + 1}. ${txn.date} - ${txn.description}\n   Amount: ${formatCurrency(txn.amount)} ${txn.type === 'credit' ? '(Credit)' : '(Debit)'}\n\n`;
-              });
+                const data = await apiResponse.json();
+                const recentTxns: Transaction[] = data.data.transactions || [];
+                let transactionText = 'Here are your recent transactions:\n\n';
+                if (recentTxns.length === 0) {
+                    transactionText = "You have no recent transactions.";
+                } else {
+                    recentTxns.forEach((txn, index) => {
+                        transactionText += `${index + 1}. ${txn.date} - ${txn.description}\n   Amount: ${formatCurrency(txn.amount)} ${txn.type === 'credit' ? '(Credit)' : '(Debit)'}\n\n`;
+                    });
+                }
+                response = {
+                    fulfillmentText: transactionText,
+                    fulfillmentMessages: [
+                        { text: { text: [transactionText] } },
+                        { quickReplies: { quickReplies: ['Check Balance', 'Transfer Funds', 'Done'] } }
+                    ],
+                    outputContexts: refreshAuthContext(authContext)
+                };
             }
-            response = {
-              fulfillmentText: transactionText,
-              fulfillmentMessages: [
-                { text: { text: [transactionText] } },
-                { quickReplies: { quickReplies: ['Check Balance', 'Transfer Funds', 'Done'] } }
-              ]
-            };
-          }
         }
         break;
 
