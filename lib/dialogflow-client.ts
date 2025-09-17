@@ -64,7 +64,7 @@ class DialogflowClient {
     this.projectId = process.env.NEXT_PUBLIC_DIALOGFLOW_PROJECT_ID || '';
   }
 
-  async sendMessage(text: string): Promise<DialogflowResponse> {
+  async sendMessage(text: string, isAuthenticated: boolean = false): Promise<DialogflowResponse> {
     try {
       const response = await fetch('/api/dialogflow/detect', {
         method: 'POST',
@@ -74,6 +74,7 @@ class DialogflowClient {
         body: JSON.stringify({
           text,
           sessionId: this.sessionId,
+          isAuthenticated,
         }),
       });
 

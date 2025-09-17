@@ -18,7 +18,6 @@ interface ChatMessage {
 }
 
 export default function ChatWidget() {
-  // State management
   const [isOpen, setIsOpen] = useState(false);
   const [selectedBot, setSelectedBot] = useState<'dialogflow' | 'lex' | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -32,10 +31,10 @@ export default function ChatWidget() {
   const [lastQuickReplies, setLastQuickReplies] = useState<string[]>([]);
   const [hasResumeOption, setHasResumeOption] = useState(false);
   const [lastBot, setLastBot] = useState<'dialogflow' | 'lex' | null>(null);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize clients on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const dfClient = new DialogflowClient();
@@ -55,12 +54,10 @@ export default function ChatWidget() {
     }
   }, []);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Save session
   useEffect(() => {
     if (selectedBot && messages.length > 0) {
       localStorage.setItem('lastBot', selectedBot);
@@ -68,7 +65,6 @@ export default function ChatWidget() {
     }
   }, [selectedBot, messages]);
 
-  // Fetch initial welcome message from Dialogflow
   const fetchWelcomeMessage = async () => {
     if (!dialogflowClient) return;
     setIsTyping(true);
@@ -99,7 +95,6 @@ export default function ChatWidget() {
     }
   };
 
-  // Handle bot selection
   const handleSelectBot = (bot: 'dialogflow' | 'lex') => {
     setSelectedBot(bot);
     setMessages([]);
@@ -119,7 +114,6 @@ export default function ChatWidget() {
     }
   };
 
-  // Resume previous chat
   const handleResume = () => {
     if (lastBot) {
       const savedMessages = localStorage.getItem(`${lastBot}-messages`);
@@ -135,45 +129,38 @@ export default function ChatWidget() {
     }
   };
 
-  // Send message
   const sendMessage = async (text: string) => {
     if (!selectedBot || !text.trim()) return;
 
-    const userMessage: ChatMessage = { text, isUser: true, timestamp: new Date() };
-    setMessages(prev => [...prev, userMessage]);
+    if (text !== 'I am now authenticated') {
+        const userMessage: ChatMessage = { text, isUser: true, timestamp: new Date() };
+        setMessages(prev => [...prev, userMessage]);
+    }
     setInput('');
     setLastQuickReplies([]);
     setIsTyping(true);
 
     try {
       if (selectedBot === 'dialogflow' && dialogflowClient) {
-        const response = await dialogflowClient.sendMessage(text);
+        const response = await dialogflowClient.sendMessage(text, isAuthenticated);
         const botText = response.queryResult.fulfillmentText;
         const quickReplies = dialogflowClient.parseQuickReplies(response.queryResult.fulfillmentMessages);
         const payload = dialogflowClient.parsePayload(response.queryResult.fulfillmentMessages);
-
-        if (payload?.action === 'TRANSFER_AGENT') {
-          setMessages(prev => [...prev, {
-            text: '👤 Connecting you to a live agent. Please wait...\n\n[Agent John has joined the chat]\nAgent: Hello! I\'m John. How can I assist you today?',
-            isUser: false,
-            timestamp: new Date()
-          }]);
-        } else {
-          const botMessage: ChatMessage = {
-            text: botText, isUser: false, timestamp: new Date(), quickReplies, payload
-          };
-          setMessages(prev => [...prev, botMessage]);
-        }
+        
+        const botMessage: ChatMessage = {
+          text: botText, isUser: false, timestamp: new Date(), quickReplies, payload
+        };
+        setMessages(prev => [...prev, botMessage]);
         
         if (quickReplies.length > 0) {
           setLastQuickReplies(quickReplies);
         }
 
         if (payload?.action === 'REQUIRE_AUTH' && !isAuthenticated) {
+          setPendingMessage(text);
           setLoginMessage(payload.message as string || 'Please authenticate to continue');
           setTimeout(() => setShowLoginModal(true), 500);
         }
-
       } else if (selectedBot === 'lex' && lexClient) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         const lexMessage: ChatMessage = {
@@ -195,7 +182,6 @@ export default function ChatWidget() {
     }
   };
 
-  // Handle authentication
   const handleLogin = () => {
     if (dialogflowClient) {
       dialogflowClient.setAuthenticated(true);
@@ -208,7 +194,10 @@ export default function ChatWidget() {
         timestamp: new Date()
       }]);
       
-      sendMessage('I am now authenticated');
+      if (pendingMessage) {
+        sendMessage(pendingMessage);
+        setPendingMessage(null);
+      }
     }
   };
 

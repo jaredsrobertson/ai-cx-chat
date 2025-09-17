@@ -1,6 +1,7 @@
 // app/api/dialogflow/detect/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import * as dialogflow from '@google-cloud/dialogflow';
+import { Struct } from 'google-protobuf/google/protobuf/struct_pb';
 
 // Initialize Dialogflow client
 const sessionClient = new dialogflow.SessionsClient({
@@ -13,7 +14,7 @@ const sessionClient = new dialogflow.SessionsClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, sessionId } = await request.json();
+    const { text, sessionId, isAuthenticated } = await request.json();
 
     if (!text || !sessionId) {
       return NextResponse.json(
@@ -31,11 +32,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create session path
     const sessionPath = sessionClient.projectAgentSessionPath(projectId, sessionId);
 
-    // Create detect intent request
-    const detectRequest = {
+    const detectRequest: dialogflow.protos.google.cloud.dialogflow.v2.IDetectIntentRequest = {
       session: sessionPath,
       queryInput: {
         text: {
@@ -43,16 +42,21 @@ export async function POST(request: NextRequest) {
           languageCode: 'en-US',
         },
       },
+      queryParams: {},
     };
 
-    // Detect intent
+    if (isAuthenticated && detectRequest.queryParams) {
+      const authenticatedContext = {
+        name: `${sessionPath}/contexts/authenticated`,
+        lifespanCount: 20,
+        parameters: Struct.fromJavaScript({ authenticated: true }),
+      };
+      detectRequest.queryParams.contexts = [authenticatedContext];
+    }
+    
     const [response] = await sessionClient.detectIntent(detectRequest);
 
-    // Check if we have a webhook response
     const queryResult = response.queryResult;
-    
-    // If webhook was used, the fulfillment messages will be in webhookPayload
-    // Otherwise, they'll be in fulfillmentMessages
     
     return NextResponse.json({
       responseId: response.responseId,
