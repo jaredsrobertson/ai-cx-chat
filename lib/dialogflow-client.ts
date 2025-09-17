@@ -9,6 +9,13 @@ export interface DialogflowMessage {
   payload?: Record<string, unknown>;
 }
 
+interface DialogflowPayloadField {
+  kind: string;
+  stringValue?: string;
+  numberValue?: number;
+  boolValue?: boolean;
+}
+
 export interface DialogflowFulfillmentMessage {
   platform?: string;
   text?: {
@@ -17,7 +24,11 @@ export interface DialogflowFulfillmentMessage {
   quickReplies?: {
     quickReplies: string[];
   };
-  payload?: Record<string, unknown>;
+  payload?: {
+    fields?: {
+      [key: string]: DialogflowPayloadField;
+    };
+  };
 }
 
 export interface DialogflowResponse {
@@ -44,14 +55,12 @@ class DialogflowClient {
   private accessToken?: string;
 
   constructor() {
-    // Get or create session ID
     const stored = localStorage.getItem('dialogflow-session');
     this.sessionId = stored || uuidv4();
     if (!stored) {
       localStorage.setItem('dialogflow-session', this.sessionId);
     }
     
-    // Project ID will be set from environment variable
     this.projectId = process.env.NEXT_PUBLIC_DIALOGFLOW_PROJECT_ID || '';
   }
 
@@ -80,7 +89,6 @@ class DialogflowClient {
     }
   }
 
-  // Parse quick replies from Dialogflow response
   parseQuickReplies(fulfillmentMessages?: DialogflowFulfillmentMessage[]): string[] {
     if (!fulfillmentMessages) return [];
     
@@ -92,36 +100,40 @@ class DialogflowClient {
     return [];
   }
 
-  // Parse custom payload (for auth requirements, agent transfer, etc.)
   parsePayload(fulfillmentMessages?: DialogflowFulfillmentMessage[]): Record<string, unknown> | null {
     if (!fulfillmentMessages) return null;
     
     for (const message of fulfillmentMessages) {
-      if (message.payload) {
-        return message.payload;
+      if (message.payload && message.payload.fields) {
+        const formattedPayload: Record<string, any> = {};
+        for (const key in message.payload.fields) {
+          // THIS LINE IS THE FIX: Added explicit type DialogflowPayloadField
+          const field: DialogflowPayloadField = message.payload.fields[key];
+          const valueKey = field.kind as keyof typeof field;
+          if (valueKey && field[valueKey]) {
+            formattedPayload[key] = field[valueKey];
+          }
+        }
+        return formattedPayload;
       }
     }
     return null;
   }
 
-  // Set authenticated context
   setAuthenticated(authenticated: boolean) {
     localStorage.setItem('dialogflow-authenticated', authenticated.toString());
   }
 
-  // Check if authenticated
   isAuthenticated(): boolean {
     return localStorage.getItem('dialogflow-authenticated') === 'true';
   }
 
-  // Clear session
   clearSession() {
     this.sessionId = uuidv4();
     localStorage.setItem('dialogflow-session', this.sessionId);
     localStorage.removeItem('dialogflow-authenticated');
   }
 
-  // Get session ID
   getSessionId(): string {
     return this.sessionId;
   }
