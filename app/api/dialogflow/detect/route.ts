@@ -13,7 +13,7 @@ const sessionClient = new dialogflow.SessionsClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, sessionId } = await request.json();
+    const { text, sessionId, authContext } = await request.json();
 
     if (!text || !sessionId) {
       return NextResponse.json(
@@ -41,7 +41,27 @@ export async function POST(request: NextRequest) {
           languageCode: 'en-US',
         },
       },
+      queryParams: {},
     };
+    
+    // If authContext is true, it means the user just logged in.
+    // We add the authenticated context to this specific request.
+    if (authContext && detectRequest.queryParams) {
+      detectRequest.queryParams.contexts = [
+        {
+          name: `${sessionPath}/contexts/authenticated`,
+          lifespanCount: 2, // Lives long enough for the webhook to use it
+          parameters: {
+            fields: {
+              // CORRECTED STRUCTURE: The Value object expects the type key directly.
+              authenticated: {
+                boolValue: true,
+              },
+            },
+          },
+        },
+      ];
+    }
     
     const [response] = await sessionClient.detectIntent(detectRequest);
 

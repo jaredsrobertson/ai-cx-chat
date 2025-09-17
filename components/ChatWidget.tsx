@@ -129,20 +129,18 @@ export default function ChatWidget() {
     }
   };
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (text: string, authContext = false) => {
     if (!selectedBot || !text.trim()) return;
 
-    if (text !== 'I am now authenticated') {
-        const userMessage: ChatMessage = { text, isUser: true, timestamp: new Date() };
-        setMessages(prev => [...prev, userMessage]);
-    }
+    const userMessage: ChatMessage = { text, isUser: true, timestamp: new Date() };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLastQuickReplies([]);
     setIsTyping(true);
 
     try {
       if (selectedBot === 'dialogflow' && dialogflowClient) {
-        const response = await dialogflowClient.sendMessage(text, isAuthenticated);
+        const response = await dialogflowClient.sendMessage(text, isAuthenticated, authContext);
         const botText = response.queryResult.fulfillmentText;
         const quickReplies = dialogflowClient.parseQuickReplies(response.queryResult.fulfillmentMessages);
         const payload = dialogflowClient.parsePayload(response.queryResult.fulfillmentMessages);
@@ -188,10 +186,10 @@ export default function ChatWidget() {
       setIsAuthenticated(true);
       setShowLoginModal(false);
       
-      await sendMessage('I am now authenticated');
-      
       if (pendingMessage) {
-        await sendMessage(pendingMessage);
+        // Resend the original message, but this time with the authContext flag
+        // which tells the backend to inject the authenticated context for this one call.
+        await sendMessage(pendingMessage, true);
         setPendingMessage(null);
       }
     }

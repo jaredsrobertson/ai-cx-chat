@@ -308,26 +308,6 @@ export async function POST(request: NextRequest) {
         };
         break;
 
-      case 'authenticate.success':
-        {
-          const authText = 'Great! You\'re now authenticated. How can I help you?';
-          response = {
-            fulfillmentText: authText,
-            fulfillmentMessages: [
-              { text: { text: [authText] } },
-              { quickReplies: { quickReplies: ['Check Balance', 'Transfer Funds', 'Transaction History'] } }
-            ],
-            outputContexts: [{
-              name: `${session}/contexts/authenticated`,
-              lifespanCount: 20,
-              parameters: {
-                authenticated: true
-              }
-            }]
-          };
-        }
-        break;
-
       default:
         {
           const defaultText = 'I can help you check balances, transfer funds, or view recent transactions. What would you like to do?';
