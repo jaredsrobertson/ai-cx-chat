@@ -1,4 +1,5 @@
 // app/api/dialogflow/webhook/route.ts
+import { Account, Transaction } from '@/lib/mock-data';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface DialogflowParameter {
@@ -121,8 +122,8 @@ export async function POST(request: NextRequest) {
             response = { fulfillmentText: "I'm sorry, I couldn't connect to the banking system right now." };
           } else {
             const data = await apiResponse.json();
-            const checkingAccount = data.data.accounts.find((a: any) => a.type === 'checking');
-            const savingsAccount = data.data.accounts.find((a: any) => a.type === 'savings');
+            const checkingAccount = data.data.accounts.find((a: Account) => a.type === 'checking');
+            const savingsAccount = data.data.accounts.find((a: Account) => a.type === 'savings');
 
             const text = `Here are your account balances:\n\n` +
               `Checking ${checkingAccount?.accountNumber}: ${formatCurrency(checkingAccount?.balance || 0)}\n` +
@@ -255,7 +256,7 @@ export async function POST(request: NextRequest) {
             if (recentTxns.length === 0) {
               transactionText = "You have no recent transactions.";
             } else {
-              recentTxns.forEach((txn: any, index: number) => {
+              recentTxns.forEach((txn: Transaction, index: number) => {
                 transactionText += `${index + 1}. ${txn.date} - ${txn.description}\n`;
                 transactionText += `   Amount: ${formatCurrency(txn.amount)} ${txn.type === 'credit' ? '(Credit)' : '(Debit)'}\n\n`;
               });
