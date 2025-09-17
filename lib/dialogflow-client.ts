@@ -105,9 +105,8 @@ class DialogflowClient {
     
     for (const message of fulfillmentMessages) {
       if (message.payload && message.payload.fields) {
-        const formattedPayload: Record<string, any> = {};
+        const formattedPayload: Record<string, unknown> = {};
         for (const key in message.payload.fields) {
-          // THIS LINE IS THE FIX: Added explicit type DialogflowPayloadField
           const field: DialogflowPayloadField = message.payload.fields[key];
           const valueKey = field.kind as keyof typeof field;
           if (valueKey && field[valueKey]) {
