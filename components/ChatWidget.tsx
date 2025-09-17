@@ -225,7 +225,7 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition-all hover:scale-110"
+          className="fixed bottom-6 right-6 z-40 bg-sky-600 text-white rounded-full p-4 shadow-lg hover:bg-sky-700 transition-all hover:scale-110"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -236,11 +236,9 @@ export default function ChatWidget() {
 
       {/* Chat Widget */}
       {isOpen && (
-        <div className="fixed z-40 bg-white shadow-2xl flex flex-col
-                        md:bottom-6 md:right-6 md:w-96 md:h-[600px] md:rounded-lg
-                        bottom-0 right-0 left-0 top-0 w-full h-full rounded-none">
+        <div className="fixed bottom-6 right-6 z-40 bg-white shadow-2xl flex flex-col w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-lg">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 md:rounded-t-lg flex items-center justify-between">
+          <div className="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 rounded-t-lg flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-3">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,7 +325,7 @@ export default function ChatWidget() {
                     <span>Bot: {selectedBot === 'dialogflow' ? 'Dialogflow' : 'Lex'}</span>
                     {isAuthenticated && <span className="text-green-600">● Authenticated</span>}
                     <button
-                      className="text-blue-600 hover:text-blue-700"
+                      className="text-sky-600 hover:text-sky-700"
                       title="Transfer to agent"
                       onClick={() => sendMessage('talk to an agent')}
                     >
@@ -351,12 +349,12 @@ export default function ChatWidget() {
                       }}
                       placeholder="Type your message..."
                       disabled={isTyping}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-gray-100"
                     />
                     <button
                       onClick={() => sendMessage(input)}
                       disabled={isTyping || !input.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
