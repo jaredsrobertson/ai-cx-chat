@@ -1,6 +1,4 @@
 // lib/mock-data.ts
-export interface Account { /* ... */ }
-export interface Transaction { /* ... */ }
 
 export interface Account {
   id: string;
