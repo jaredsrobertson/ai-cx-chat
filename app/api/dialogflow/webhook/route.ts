@@ -80,14 +80,12 @@ export async function POST(request: NextRequest) {
       fulfillmentText: 'I can help with that.'
     };
 
-    // Find the current auth context to refresh it later
     const authContext = contexts.find(ctx => ctx.name.endsWith('/contexts/authenticated'));
 
-    // Helper to refresh the auth context on every successful action
-    const refreshAuthContext = (existingContext: DialogflowContext | undefined) => {
+    const refreshAuthContext = (existingContext?: DialogflowContext) => {
         return existingContext ? [{ 
             name: existingContext.name, 
-            lifespanCount: 20, // Reset lifespan to 20
+            lifespanCount: 20, 
             parameters: existingContext.parameters || {}
         }] : [];
     }
@@ -138,71 +136,74 @@ export async function POST(request: NextRequest) {
         }
         break;
 
-      case 'transfer.funds':
+      case 'transfer.funds': {
+        // Step 1: Always check for authentication first.
         if (!isAuthenticated(contexts)) {
           response = {
-            fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
+            fulfillmentText: 'For your security, I need to verify your identity before we transfer funds. Please authenticate.',
             fulfillmentMessages: [{
               platform: 'PLATFORM_UNSPECIFIED',
               payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to transfer funds' }
             }]
           };
+          break;
+        }
+
+        // Step 2: Handle slot filling for an authenticated user.
+        const amountParam = parameters.amount as { amount?: number } | number | undefined;
+        const amount = typeof amountParam === 'object' ? amountParam?.amount : amountParam;
+        let fromAccount = parameters.fromAccount as string;
+        let toAccount = parameters.toAccount as string;
+        
+        // Step 3: Apply smart assumption logic
+        if (fromAccount && !toAccount) {
+          toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
+        }
+
+        // Step 4: Check for missing parameters and ask specific questions.
+        if (!amount) {
+          response.fulfillmentText = 'How much would you like to transfer?';
+        } else if (!fromAccount) {
+          response.fulfillmentText = 'Which account are you transferring from, checking or savings?';
+        } else if (!toAccount) {
+          response.fulfillmentText = `And where are we transferring the ${formatCurrency(amount)} to?`;
         } else {
-          const amountParam = parameters.amount as { amount?: number } | number | undefined;
-          const amount = typeof amountParam === 'object' ? amountParam?.amount : amountParam;
-          let fromAccount = parameters.fromAccount as string;
-          let toAccount = parameters.toAccount as string;
+          // Step 5: All parameters are present, so execute the transfer.
+          const apiResponse = await fetch(`${BASE_URL}/api/banking/transfer`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fromAccount: fromAccount as 'checking' | 'savings',
+              toAccount: toAccount as 'checking' | 'savings',
+              amount: amount
+            })
+          });
+          const result = await apiResponse.json();
 
-          if (fromAccount && !toAccount) toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
-          else if (!fromAccount && toAccount) fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
-
-          if (!amount || !fromAccount || !toAccount) {
-            const missingParams: string[] = [];
-            if (!amount) missingParams.push('amount');
-            if (!fromAccount) missingParams.push('source account');
-            if (!toAccount) missingParams.push('destination account');
-            const promptText = `I need some more information. Please provide the ${missingParams.join(' and ')}.`;
+          if (apiResponse.ok && result.success) {
+            const successText = `Transfer confirmed! I've moved ${formatCurrency(amount)} from your ${fromAccount} to ${toAccount} account.`;
             response = {
-              fulfillmentText: promptText,
-              fulfillmentMessages: [{ text: { text: [promptText] } }, { quickReplies: { quickReplies: ['Cancel'] } }],
-              outputContexts: refreshAuthContext(authContext)
+              fulfillmentText: `${successText}\n\nNew balances:\n${fromAccount}: ${formatCurrency(result.data?.newFromBalance || 0)}\n${toAccount}: ${formatCurrency(result.data?.newToBalance || 0)}`,
+              fulfillmentMessages: [
+                { text: { text: [successText] } },
+                { quickReplies: { quickReplies: ['Check Balance', 'Another Transfer', 'Done'] } }
+              ]
             };
           } else {
-            const apiResponse = await fetch(`${BASE_URL}/api/banking/transfer`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                fromAccount: fromAccount as 'checking' | 'savings',
-                toAccount: toAccount as 'checking' | 'savings',
-                amount: amount
-              })
-            });
-            const result = await apiResponse.json();
-
-            if (apiResponse.ok && result.success) {
-              const successText = `Transfer confirmed! I've moved ${formatCurrency(amount)} from your ${fromAccount} to ${toAccount} account.`;
-              response = {
-                fulfillmentText: `${successText}\n\nNew balances:\n${fromAccount}: ${formatCurrency(result.data?.newFromBalance || 0)}\n${toAccount}: ${formatCurrency(result.data?.newToBalance || 0)}`,
-                fulfillmentMessages: [
-                  { text: { text: [successText] } },
-                  { quickReplies: { quickReplies: ['Check Balance', 'Another Transfer', 'Done'] } }
-                ],
-                outputContexts: refreshAuthContext(authContext)
-              };
-            } else {
-              const errorMsg = result.message || 'Transfer failed. Please try again.';
-              response = {
-                fulfillmentText: `Transfer failed: ${errorMsg}`,
-                fulfillmentMessages: [
-                  { text: { text: [`Transfer failed: ${errorMsg}. Please try again.`]}},
-                  { quickReplies: { quickReplies: ['Try Again', 'Check Balance', 'Talk to Agent']}}
-                ],
-                outputContexts: refreshAuthContext(authContext)
-              };
-            }
+            const errorMsg = result.message || 'Transfer failed. Please try again.';
+            response = {
+              fulfillmentText: `Transfer failed: ${errorMsg}`,
+              fulfillmentMessages: [
+                { text: { text: [`Transfer failed: ${errorMsg}. Please try again.`]}},
+                { quickReplies: { quickReplies: ['Try Again', 'Check Balance', 'Talk to Agent']}}
+              ]
+            };
           }
         }
+        
+        response.outputContexts = refreshAuthContext(authContext);
         break;
+      }
 
       case 'transaction.history':
         if (!isAuthenticated(contexts)) {
