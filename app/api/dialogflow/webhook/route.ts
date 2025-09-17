@@ -1,6 +1,6 @@
 // app/api/dialogflow/webhook/route.ts
-import { Account, Transaction } from '@/lib/mock-data';
 import { NextRequest, NextResponse } from 'next/server';
+import { Account, Transaction, mockAccounts, mockTransactions, processTransfer } from '@/lib/mock-data';
 
 interface DialogflowParameter {
   [key: string]: unknown;
@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
     const parameters = queryResult.parameters;
     const contexts = queryResult.outputContexts || [];
     const BASE_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+    const API_TOKEN = process.env.MOCK_API_TOKEN || 'demo-token';
     
     console.log('Dialogflow webhook received:', intentName, parameters);
 
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
           };
         } else {
           const apiResponse = await fetch(`${BASE_URL}/api/banking/accounts`, {
-            headers: { 'Authorization': 'Bearer demo-token' }
+            headers: { 'Authorization': `Bearer ${API_TOKEN}` }
           });
 
           if (!apiResponse.ok) {
@@ -170,10 +171,11 @@ export async function POST(request: NextRequest) {
           let fromAccount = parameters.fromAccount as string;
           let toAccount = parameters.toAccount as string;
 
+          // Smart account assumption logic - always assume the opposite account
           if (fromAccount && !toAccount) {
-            toAccount = 'savings';
+            toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
           } else if (!fromAccount && toAccount) {
-            fromAccount = 'checking';
+            fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
           }
 
           if (!amount || !fromAccount || !toAccount) {
@@ -197,7 +199,7 @@ export async function POST(request: NextRequest) {
             const apiResponse = await fetch(`${BASE_URL}/api/banking/transfer`, {
               method: 'POST',
               headers: {
-                'Authorization': 'Bearer demo-token',
+                'Authorization': `Bearer ${API_TOKEN}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
@@ -239,10 +241,28 @@ export async function POST(request: NextRequest) {
 
       case 'transaction.history':
         if (!isAuthenticated(contexts)) {
-          // ... (auth logic is correct, no changes needed here)
+          response = {
+            fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
+            fulfillmentMessages: [
+              {
+                platform: 'PLATFORM_UNSPECIFIED',
+                payload: {
+                  action: 'REQUIRE_AUTH',
+                  message: 'Please authenticate to view transactions'
+                }
+              }
+            ],
+            outputContexts: [{
+              name: `${session}/contexts/awaiting-auth`,
+              lifespanCount: 5,
+              parameters: {
+                pendingIntent: 'transaction.history'
+              }
+            }]
+          };
         } else {
           const apiResponse = await fetch(`${BASE_URL}/api/banking/transactions?limit=5`, {
-             headers: { 'Authorization': 'Bearer demo-token' }
+             headers: { 'Authorization': `Bearer ${API_TOKEN}` }
           });
           
           if (!apiResponse.ok) {
