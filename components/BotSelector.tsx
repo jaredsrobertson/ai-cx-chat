@@ -11,7 +11,7 @@ export default function BotSelector({ onSelectBot, hasResumeOption = false, onRe
   return (
     <div className="p-6">
       <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your Assistant</h2>
-      <p className="text-sm text-gray-600 mb-6">Select which AI assistant you'd like to chat with today</p>
+      <p className="text-sm text-gray-600 mb-6">Select which AI assistant you would like to chat with today</p>
       
       {hasResumeOption && onResume && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
