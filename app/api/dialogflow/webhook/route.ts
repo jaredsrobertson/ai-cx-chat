@@ -171,11 +171,10 @@ export async function POST(request: NextRequest) {
         } else {
           // Extract parameters with type checking
           const amountParam = parameters.amount as { amount?: number } | number | undefined;
-          let amount = typeof amountParam === 'object' ? amountParam?.amount : amountParam;
+          const amount = typeof amountParam === 'object' ? amountParam?.amount : amountParam;
           let fromAccount = parameters.fromAccount as string;
           let toAccount = parameters.toAccount as string;
 
-          // --- START OF NEW LOGIC ---
           // If only one account is provided, assume the other.
           if (fromAccount && !toAccount) {
             toAccount = 'savings'; // Assume 'savings' if only 'from' is given
