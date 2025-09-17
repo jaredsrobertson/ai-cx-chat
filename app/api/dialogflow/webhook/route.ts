@@ -1,6 +1,6 @@
 // app/api/dialogflow/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { Account, Transaction, mockAccounts, mockTransactions, processTransfer } from '@/lib/mock-data';
+import { Account, Transaction } from '@/lib/mock-data';
 
 interface DialogflowParameter {
   [key: string]: unknown;
@@ -48,10 +48,8 @@ interface DialogflowResponse {
 
 // Helper function to check if user is authenticated
 function isAuthenticated(contexts: DialogflowContext[]): boolean {
-  return contexts.some(ctx => 
-    ctx.name.endsWith('/contexts/authenticated') && 
-    ctx.parameters?.authenticated === true
-  );
+  const authContext = contexts.find(ctx => ctx.name.endsWith('/contexts/authenticated'));
+  return authContext?.parameters?.authenticated === true;
 }
 
 // Helper function to format currency
@@ -69,9 +67,17 @@ export async function POST(request: NextRequest) {
     const intentName = queryResult.intent.displayName;
     const parameters = queryResult.parameters;
     const contexts = queryResult.outputContexts || [];
-    const BASE_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
-    const API_TOKEN = process.env.MOCK_API_TOKEN || 'demo-token';
     
+    // Use the environment variable set in Vercel for the base URL.
+    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
+    const API_TOKEN = process.env.MOCK_API_TOKEN || 'demo-token';
+
+    if (!BASE_URL) {
+        console.error("FATAL: NEXT_PUBLIC_BASE_URL environment variable is not set.");
+        throw new Error("Application is not configured correctly; missing base URL.");
+    }
+    
+    console.log(`Webhook using BASE_URL: ${BASE_URL}`);
     console.log('Dialogflow webhook received:', intentName, parameters);
 
     let response: DialogflowResponse = {
@@ -105,14 +111,7 @@ export async function POST(request: NextRequest) {
                   message: 'Please authenticate to check your balance'
                 }
               }
-            ],
-            outputContexts: [{
-              name: `${session}/contexts/awaiting-auth`,
-              lifespanCount: 5,
-              parameters: {
-                pendingIntent: 'check.balance'
-              }
-            }]
+            ]
           };
         } else {
           const apiResponse = await fetch(`${BASE_URL}/api/banking/accounts`, {
@@ -120,6 +119,7 @@ export async function POST(request: NextRequest) {
           });
 
           if (!apiResponse.ok) {
+            console.error('API Error (accounts):', apiResponse.status, await apiResponse.text());
             response = { fulfillmentText: "I'm sorry, I couldn't connect to the banking system right now." };
           } else {
             const data = await apiResponse.json();
@@ -171,7 +171,6 @@ export async function POST(request: NextRequest) {
           let fromAccount = parameters.fromAccount as string;
           let toAccount = parameters.toAccount as string;
 
-          // Smart account assumption logic - always assume the opposite account
           if (fromAccount && !toAccount) {
             toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
           } else if (!fromAccount && toAccount) {
@@ -187,24 +186,15 @@ export async function POST(request: NextRequest) {
             const promptText = `I need some more information. Please provide the ${missingParams.join(' and ')}.`;
             response = {
               fulfillmentText: promptText,
-              fulfillmentMessages: [
-                { text: { text: [promptText] } },
-                { quickReplies: { quickReplies: ['Cancel'] } }
-              ]
+              fulfillmentMessages: [{ text: { text: [promptText] } }, { quickReplies: { quickReplies: ['Cancel'] } }]
             };
           } else {
-            const validFromAccount = fromAccount as 'checking' | 'savings';
-            const validToAccount = toAccount as 'checking' | 'savings';
-            
             const apiResponse = await fetch(`${BASE_URL}/api/banking/transfer`, {
               method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${API_TOKEN}`,
-                'Content-Type': 'application/json'
-              },
+              headers: { 'Authorization': `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                fromAccount: validFromAccount,
-                toAccount: validToAccount,
+                fromAccount: fromAccount as 'checking' | 'savings',
+                toAccount: toAccount as 'checking' | 'savings',
                 amount: amount
               })
             });
@@ -213,13 +203,8 @@ export async function POST(request: NextRequest) {
 
             if (apiResponse.ok && result.success) {
               const successText = `Transfer confirmed! I've moved ${formatCurrency(amount)} from your ${fromAccount} to ${toAccount} account.`;
-              const fullText = `${successText}\n\n` +
-                `New balances:\n` +
-                `${fromAccount}: ${formatCurrency(result.data?.newFromBalance || 0)}\n` +
-                `${toAccount}: ${formatCurrency(result.data?.newToBalance || 0)}`;
-              
               response = {
-                fulfillmentText: fullText,
+                fulfillmentText: `${successText}\n\nNew balances:\n${fromAccount}: ${formatCurrency(result.data?.newFromBalance || 0)}\n${toAccount}: ${formatCurrency(result.data?.newToBalance || 0)}`,
                 fulfillmentMessages: [
                   { text: { text: [successText] } },
                   { quickReplies: { quickReplies: ['Check Balance', 'Another Transfer', 'Done'] } }
@@ -243,21 +228,9 @@ export async function POST(request: NextRequest) {
         if (!isAuthenticated(contexts)) {
           response = {
             fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
-            fulfillmentMessages: [
-              {
-                platform: 'PLATFORM_UNSPECIFIED',
-                payload: {
-                  action: 'REQUIRE_AUTH',
-                  message: 'Please authenticate to view transactions'
-                }
-              }
-            ],
-            outputContexts: [{
-              name: `${session}/contexts/awaiting-auth`,
-              lifespanCount: 5,
-              parameters: {
-                pendingIntent: 'transaction.history'
-              }
+            fulfillmentMessages: [{
+              platform: 'PLAT_UNSPECIFIED',
+              payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to view transactions' }
             }]
           };
         } else {
@@ -266,22 +239,19 @@ export async function POST(request: NextRequest) {
           });
           
           if (!apiResponse.ok) {
+             console.error('API Error (transactions):', apiResponse.status, await apiResponse.text());
              response = { fulfillmentText: "I'm sorry, I couldn't retrieve your transactions right now." };
           } else {
             const data = await apiResponse.json();
             const recentTxns = data.data.transactions || [];
-            
             let transactionText = 'Here are your recent transactions:\n\n';
-            
             if (recentTxns.length === 0) {
               transactionText = "You have no recent transactions.";
             } else {
               recentTxns.forEach((txn: Transaction, index: number) => {
-                transactionText += `${index + 1}. ${txn.date} - ${txn.description}\n`;
-                transactionText += `   Amount: ${formatCurrency(txn.amount)} ${txn.type === 'credit' ? '(Credit)' : '(Debit)'}\n\n`;
+                transactionText += `${index + 1}. ${txn.date} - ${txn.description}\n   Amount: ${formatCurrency(txn.amount)} ${txn.type === 'credit' ? '(Credit)' : '(Debit)'}\n\n`;
               });
             }
-            
             response = {
               fulfillmentText: transactionText,
               fulfillmentMessages: [
@@ -296,15 +266,10 @@ export async function POST(request: NextRequest) {
       case 'request.agent':
         response = {
           fulfillmentText: 'I understand you\'d like to speak with an agent. Let me transfer you to the next available representative. Please wait...',
-          fulfillmentMessages: [
-            {
-              platform: 'PLATFORM_UNSPECIFIED',
-              payload: {
-                action: 'TRANSFER_AGENT',
-                message: 'Transferring to live agent...'
-              }
-            }
-          ]
+          fulfillmentMessages: [{
+            platform: 'PLATFORM_UNSPECIFIED',
+            payload: { action: 'TRANSFER_AGENT', message: 'Transferring to live agent...' }
+          }]
         };
         break;
 
