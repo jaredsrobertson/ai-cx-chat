@@ -182,20 +182,16 @@ export default function ChatWidget() {
     }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (dialogflowClient) {
       dialogflowClient.setAuthenticated(true);
       setIsAuthenticated(true);
       setShowLoginModal(false);
       
-      setMessages(prev => [...prev, {
-        text: '✅ Successfully authenticated! You can now access your account information.',
-        isUser: false,
-        timestamp: new Date()
-      }]);
+      await sendMessage('I am now authenticated');
       
       if (pendingMessage) {
-        sendMessage(pendingMessage);
+        await sendMessage(pendingMessage);
         setPendingMessage(null);
       }
     }

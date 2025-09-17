@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: () => void;
+  onLogin: () => Promise<void>;
   message?: string;
 }
 
@@ -17,7 +17,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, message }: LoginM
     setIsLoading(true);
     // Simulate authentication delay
     await new Promise(resolve => setTimeout(resolve, 1000));
-    onLogin();
+    await onLogin();
     setIsLoading(false);
   };
 
