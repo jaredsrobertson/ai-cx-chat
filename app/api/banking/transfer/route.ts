@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // Check for auth header
     const authHeader = request.headers.get('authorization');
     
-    if (!authHeader || authHeader !== 'Bearer demo-token') {
+    if (!authHeader || authHeader !== `Bearer ${process.env.MOCK_API_TOKEN}`) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Please authenticate first' },
         { status: 401 }

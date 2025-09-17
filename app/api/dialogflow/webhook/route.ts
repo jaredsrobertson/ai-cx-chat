@@ -1,6 +1,7 @@
 // app/api/dialogflow/webhook/route.ts
+import { Account, Transaction } from '@/lib/mock-data';
 import { NextRequest, NextResponse } from 'next/server';
-import { mockAccounts, mockTransactions, processTransfer } from '@/lib/mock-data';
+
 
 interface DialogflowParameter {
   [key: string]: unknown;
@@ -83,6 +84,9 @@ export async function POST(request: NextRequest) {
     const parameters = queryResult.parameters;
     const contexts = queryResult.outputContexts || [];
     
+    // Define the Base URL to call your own APIs
+    const BASE_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+    
     console.log('Dialogflow webhook received:', intentName, parameters);
 
     let response: DialogflowResponse = {
@@ -125,22 +129,26 @@ export async function POST(request: NextRequest) {
             }]
           };
         } else {
-          const checkingAccount = mockAccounts.find(a => a.type === 'checking');
-          const savingsAccount = mockAccounts.find(a => a.type === 'savings');
-          
-          response = {
-            fulfillmentText: `Here are your account balances:\n\n` +
+          const apiResponse = await fetch(`${BASE_URL}/api/banking/accounts`, {
+            headers: { 'Authorization': `Bearer ${process.env.MOCK_API_TOKEN}` }
+          });
+
+          if (!apiResponse.ok) {
+            response = { fulfillmentText: "I'm sorry, I couldn't connect to the banking system right now." };
+          } else {
+            const data = await apiResponse.json();
+            const checkingAccount = data.data.accounts.find((a: Account) => a.type === 'checking');
+            const savingsAccount = data.data.accounts.find((a: Account) => a.type === 'savings');
+
+            const text = `Here are your account balances:\n\n` +
               `Checking ${checkingAccount?.accountNumber}: ${formatCurrency(checkingAccount?.balance || 0)}\n` +
-              `Savings ${savingsAccount?.accountNumber}: ${formatCurrency(savingsAccount?.balance || 0)}`,
-            fulfillmentMessages: [
-              createQuickReplies(
-                `Here are your account balances:\n\n` +
-                `Checking ${checkingAccount?.accountNumber}: ${formatCurrency(checkingAccount?.balance || 0)}\n` +
-                `Savings ${savingsAccount?.accountNumber}: ${formatCurrency(savingsAccount?.balance || 0)}`,
-                ['Transfer Funds', 'Transaction History', 'Done']
-              )
-            ]
-          };
+              `Savings ${savingsAccount?.accountNumber}: ${formatCurrency(savingsAccount?.balance || 0)}`;
+
+            response = {
+              fulfillmentText: text,
+              fulfillmentMessages: [createQuickReplies(text, ['Transfer Funds', 'Transaction History', 'Done'])]
+            };
+          }
         }
         break;
 
@@ -175,7 +183,6 @@ export async function POST(request: NextRequest) {
           let fromAccount = parameters.fromAccount as string;
           let toAccount = parameters.toAccount as string;
 
-          // If only one account is provided, assume the other.
           if (fromAccount && !toAccount) {
             toAccount = 'savings'; // Assume 'savings' if only 'from' is given
           } else if (!fromAccount && toAccount) {
@@ -199,12 +206,25 @@ export async function POST(request: NextRequest) {
               ]
             };
           } else {
-            // Process the transfer - ensure account types are valid
             const validFromAccount = fromAccount as 'checking' | 'savings';
             const validToAccount = toAccount as 'checking' | 'savings';
-            const result = processTransfer(validFromAccount, validToAccount, amount);
             
-            if (result.success) {
+            const apiResponse = await fetch(`${BASE_URL}/api/banking/transfer`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.MOCK_API_TOKEN}`, // Send the secure token
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fromAccount: validFromAccount,
+                toAccount: validToAccount,
+                amount: amount
+              })
+            });
+
+            const result = await apiResponse.json();
+
+            if (apiResponse.ok && result.success) {
               response = {
                 fulfillmentText: `Transfer confirmed! I've moved ${formatCurrency(amount)} from your ${fromAccount} to ${toAccount} account.\n\n` +
                   `New balances:\n` +
@@ -218,11 +238,12 @@ export async function POST(request: NextRequest) {
                 ]
               };
             } else {
+              const errorMsg = result.message || 'Transfer failed. Please try again.';
               response = {
-                fulfillmentText: `Transfer failed: ${result.error}. Please try again.`,
+                fulfillmentText: `Transfer failed: ${errorMsg}`,
                 fulfillmentMessages: [
                   createQuickReplies(
-                    `Transfer failed: ${result.error}. Please try again.`,
+                    `Transfer failed: ${errorMsg}. Please try again.`,
                     ['Try Again', 'Check Balance', 'Talk to Agent']
                   )
                 ]
@@ -254,23 +275,37 @@ export async function POST(request: NextRequest) {
             }]
           };
         } else {
-          const recentTxns = mockTransactions.slice(0, 5);
-          let transactionText = 'Here are your recent transactions:\n\n';
-          
-          recentTxns.forEach((txn, index) => {
-            transactionText += `${index + 1}. ${txn.date} - ${txn.description}\n`;
-            transactionText += `   Amount: ${formatCurrency(txn.amount)} ${txn.type === 'credit' ? '(Credit)' : '(Debit)'}\n\n`;
+          const apiResponse = await fetch(`${BASE_URL}/api/banking/transactions?limit=5`, {
+             headers: { 'Authorization': `Bearer ${process.env.MOCK_API_TOKEN}` }
           });
           
-          response = {
-            fulfillmentText: transactionText,
-            fulfillmentMessages: [
-              createQuickReplies(
-                transactionText,
-                ['Check Balance', 'Transfer Funds', 'Done']
-              )
-            ]
-          };
+          if (!apiResponse.ok) {
+             response = { fulfillmentText: "I'm sorry, I couldn't retrieve your transactions right now." };
+          } else {
+            const data = await apiResponse.json();
+            const recentTxns = data.data.transactions || [];
+            
+            let transactionText = 'Here are your recent transactions:\n\n';
+            
+            if (recentTxns.length === 0) {
+              transactionText = "You have no recent transactions.";
+            } else {
+              recentTxns.forEach((txn: Transaction, index: number) => {
+                transactionText += `${index + 1}. ${txn.date} - ${txn.description}\n`;
+                transactionText += `   Amount: ${formatCurrency(txn.amount)} ${txn.type === 'credit' ? '(Credit)' : '(Debit)'}\n\n`;
+              });
+            }
+            
+            response = {
+              fulfillmentText: transactionText,
+              fulfillmentMessages: [
+                createQuickReplies(
+                  transactionText,
+                  ['Check Balance', 'Transfer Funds', 'Done']
+                )
+              ]
+            };
+          }
         }
         break;
 
