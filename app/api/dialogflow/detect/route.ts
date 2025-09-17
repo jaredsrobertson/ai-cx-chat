@@ -13,7 +13,7 @@ const sessionClient = new dialogflow.SessionsClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, sessionId, isAuthenticated } = await request.json();
+    const { text, sessionId } = await request.json();
 
     if (!text || !sessionId) {
       return NextResponse.json(
@@ -41,25 +41,7 @@ export async function POST(request: NextRequest) {
           languageCode: 'en-US',
         },
       },
-      queryParams: {},
     };
-
-    if (isAuthenticated && detectRequest.queryParams) {
-      // THIS OBJECT IS THE FIX: Manually creating the parameter structure
-      const authenticatedContext = {
-        name: `${sessionPath}/contexts/authenticated`,
-        lifespanCount: 20,
-        parameters: {
-          fields: {
-            authenticated: {
-              kind: 'boolValue' as const,
-              boolValue: true,
-            },
-          },
-        },
-      };
-      detectRequest.queryParams.contexts = [authenticatedContext];
-    }
     
     const [response] = await sessionClient.detectIntent(detectRequest);
 
