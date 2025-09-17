@@ -64,7 +64,8 @@ function formatCurrency(amount: number): string {
 export async function POST(request: NextRequest) {
   try {
     const body: DialogflowRequest = await request.json();
-    const { queryResult, session } = body;
+    // CORRECTED: Removed unused 'session' variable
+    const { queryResult } = body;
     const intentName = queryResult.intent.displayName;
     const parameters = queryResult.parameters;
     const contexts = queryResult.outputContexts || [];
@@ -137,7 +138,6 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'transfer.funds': {
-        // Step 1: Always check for authentication first.
         if (!isAuthenticated(contexts)) {
           response = {
             fulfillmentText: 'For your security, I need to verify your identity before we transfer funds. Please authenticate.',
@@ -149,18 +149,16 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        // Step 2: Handle slot filling for an authenticated user.
+        // CORRECTED: Use 'const' for variables that are not reassigned.
         const amountParam = parameters.amount as { amount?: number } | number | undefined;
         const amount = typeof amountParam === 'object' ? amountParam?.amount : amountParam;
-        let fromAccount = parameters.fromAccount as string;
-        let toAccount = parameters.toAccount as string;
+        const fromAccount = parameters.fromAccount as string;
+        let toAccount = parameters.toAccount as string; // 'toAccount' must be 'let' because it can be reassigned below.
         
-        // Step 3: Apply smart assumption logic
         if (fromAccount && !toAccount) {
           toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
         }
 
-        // Step 4: Check for missing parameters and ask specific questions.
         if (!amount) {
           response.fulfillmentText = 'How much would you like to transfer?';
         } else if (!fromAccount) {
@@ -168,7 +166,6 @@ export async function POST(request: NextRequest) {
         } else if (!toAccount) {
           response.fulfillmentText = `And where are we transferring the ${formatCurrency(amount)} to?`;
         } else {
-          // Step 5: All parameters are present, so execute the transfer.
           const apiResponse = await fetch(`${BASE_URL}/api/banking/transfer`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' },
