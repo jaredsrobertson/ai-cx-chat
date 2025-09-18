@@ -29,7 +29,6 @@ export default function ChatWidget() {
   const [dialogflowClient, setDialogflowClient] = useState<DialogflowClient | null>(null);
   const [lexClient, setLexClient] = useState<LexClient | null>(null);
   const [lastQuickReplies, setLastQuickReplies] = useState<string[]>([]);
-  const [hasResumeOption, setHasResumeOption] = useState(false);
   const [lastBot, setLastBot] = useState<'dialogflow' | 'lex' | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   
@@ -47,7 +46,6 @@ export default function ChatWidget() {
       const previousMessages = localStorage.getItem(`${previousBot}-messages`);
       
       if (previousBot && previousMessages) {
-        setHasResumeOption(true);
         setLastBot(previousBot);
       }
       
@@ -101,6 +99,8 @@ export default function ChatWidget() {
     setSelectedBot(bot);
     setMessages([]);
     setLastQuickReplies([]);
+    localStorage.removeItem('lastBot');
+    localStorage.removeItem(`${bot}-messages`);
     
     if (bot === 'dialogflow') {
       fetchWelcomeMessage();
@@ -121,8 +121,8 @@ export default function ChatWidget() {
       const savedMessages = localStorage.getItem(`${lastBot}-messages`);
       if (savedMessages) {
         setSelectedBot(lastBot);
-        setMessages(JSON.parse(savedMessages));
         const parsed = JSON.parse(savedMessages);
+        setMessages(parsed);
         const lastMessage = parsed[parsed.length - 1];
         if (lastMessage?.quickReplies) {
           setLastQuickReplies(lastMessage.quickReplies);
@@ -201,6 +201,11 @@ export default function ChatWidget() {
   const clearConversation = () => {
     setMessages([]);
     setLastQuickReplies([]);
+    setLastBot(null);
+    if (selectedBot) {
+      localStorage.removeItem('lastBot');
+      localStorage.removeItem(`${selectedBot}-messages`);
+    }
     if (selectedBot === 'dialogflow' && dialogflowClient) {
       dialogflowClient.clearSession();
       setIsAuthenticated(false);
@@ -235,14 +240,24 @@ export default function ChatWidget() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {selectedBot && (<button onClick={clearConversation} className="text-white hover:bg-white hover:bg-opacity-20 rounded p-1 transition-colors" title="New conversation"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>)}
+              <button onClick={clearConversation} className="text-white hover:bg-white hover:bg-opacity-20 rounded p-1 transition-colors" title="New conversation"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
               <button onClick={() => setIsOpen(false)} className="text-white hover:bg-white hover:bg-opacity-20 rounded p-1 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>
             </div>
           </div>
+          
+          {selectedBot && (
+            <div className="border-b border-slate-200 px-4 py-2 bg-slate-50 text-xs text-slate-600">
+              <div className="flex items-center justify-between">
+                <span>Bot: {selectedBot === 'dialogflow' ? 'Dialogflow' : 'Lex'}</span>
+                {isAuthenticated && <span className="text-green-600 font-semibold flex items-center gap-1">● Authenticated</span>}
+                <button className="text-sky-600 hover:text-sky-700 font-semibold" title="Transfer to agent" onClick={() => sendMessage('talk to an agent')}>Agent Transfer</button>
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 overflow-hidden flex flex-col">
             {!selectedBot ? (
-              <div className="flex-1 overflow-y-auto"><BotSelector onSelectBot={handleSelectBot} hasResumeOption={hasResumeOption} onResume={handleResume}/></div>
+              <div className="flex-1 overflow-y-auto"><BotSelector onSelectBot={handleSelectBot} lastBot={lastBot} onResume={handleResume}/></div>
             ) : (
               <>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -251,13 +266,7 @@ export default function ChatWidget() {
                   <div ref={messagesEndRef} />
                 </div>
                 {lastQuickReplies.length > 0 && !isTyping && (<QuickReplies replies={lastQuickReplies} onReplyClick={handleQuickReply} disabled={isTyping}/>)}
-                <div className="border-t border-slate-200 px-4 py-2 bg-slate-50 text-xs text-slate-600">
-                  <div className="flex items-center justify-between">
-                    <span>Bot: {selectedBot === 'dialogflow' ? 'Dialogflow' : 'Lex'}</span>
-                    {isAuthenticated && <span className="text-green-600">● Authenticated</span>}
-                    <button className="text-sky-600 hover:text-sky-700" title="Transfer to agent" onClick={() => sendMessage('talk to an agent')}>Agent Transfer</button>
-                  </div>
-                </div>
+                
                 <div className="border-t border-slate-200 p-4">
                   <div className="flex gap-2">
                     <input 

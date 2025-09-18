@@ -11,13 +11,13 @@ export default function QuickReplies({ replies, onReplyClick, disabled = false }
   if (!replies || replies.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 px-2 pb-3">
+    <div className="flex flex-col gap-2 px-4 pb-3">
       {replies.map((reply, index) => (
         <button
           key={index}
           onClick={() => onReplyClick(reply)}
           disabled={disabled}
-          className="px-4 py-2 bg-white border border-sky-500 text-sky-500 rounded-full text-sm 
+          className="w-full px-4 py-2 bg-white border border-sky-500 text-sky-500 rounded-lg text-sm 
                      hover:bg-sky-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed
                      shadow-sm hover:shadow-md"
         >
