@@ -10,6 +10,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "AI CX Demo",
   description: "AI-Powered Customer Experience Demo",
+  icons: {
+    icon: '/cloud-favicon.png', // Assuming you've placed a generated cloud-favicon.png in your public folder
+  },
 };
 
 export default function RootLayout({

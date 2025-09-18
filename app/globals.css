@@ -1,7 +1,13 @@
 @import "tailwindcss";
 
 body {
-  /* A soft, light bluish-gray background */
+  /* Use the cloud image as a fixed background */
+  background-image: url('/clouds.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed; /* This locks the background in place */
+  
+  /* A soft, light bluish-gray background color for areas not covered by the image */
   background-color: #f0f4f8; 
   color: #1e293b; /* A dark slate for default text, for high contrast */
   font-family: var(--font-inter), sans-serif;

@@ -10,7 +10,7 @@ const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false
 export default function Home() {
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-10 bg-white/30 backdrop-blur-md">
+      <header className="fixed top-0 left-0 right-0 z-20 bg-white/50 backdrop-blur-md"> {/* Increased opacity for better contrast */}
         <div className="container mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <CloudIcon className="w-8 h-8 text-slate-800" />
@@ -19,13 +19,10 @@ export default function Home() {
         </div>
       </header>
 
-      <main>
+      <main className="relative z-10"> {/* Ensure main content layers above background */}
         {/* Hero Section */}
-        <section 
-          className="relative h-[90vh] flex items-center justify-center bg-cover bg-center bg-fixed" 
-          style={{ backgroundImage: "url('/clouds.jpg')" }}
-        >
-          <div className="absolute inset-0 bg-black/20"></div>
+        <section className="h-[90vh] flex items-center justify-center pt-16"> {/* Add padding for header */}
+          <div className="absolute inset-0 bg-black/20"></div> {/* Dark overlay */}
           <div className="relative text-center px-4 max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-extrabold text-white text-shadow-md mb-4">
               Conversational AI Platform
@@ -43,14 +40,14 @@ export default function Home() {
         </section>
 
         {/* Scroll Indicator Section */}
-        <div className="h-[10vh] flex items-center justify-center">
+        <div className="h-[10vh] flex items-center justify-center bg-f0f4f8"> {/* Ensure this has a background color */}
             <svg className="w-8 h-8 text-slate-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
             </svg>
         </div>
 
         {/* Content Section */}
-        <section className="py-20">
+        <section className="py-20 bg-f0f4f8"> {/* Ensure this has a background color */}
           <div className="container mx-auto px-4">
             {/* Features Grid */}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
