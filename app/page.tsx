@@ -56,11 +56,11 @@ export default function Home() {
 
           {/* Technical Stack */}
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-center">Technical Implementation</h2>
+            <h2 className="text-2xl font-bold mb-6 text-center text-sky-800">Technical Implementation</h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h3 className="font-semibold text-lg mb-3">Frontend</h3>
-                <ul className="space-y-2 text-slate-700">
+                <h3 className="font-semibold text-lg mb-3 text-sky-700">Frontend</h3>
+                <ul className="space-y-2 text-slate-800">
                   <li className="flex items-center">
                     <span className="w-2 h-2 bg-sky-500 rounded-full mr-2"></span>
                     Next.js 14 with App Router
@@ -80,22 +80,22 @@ export default function Home() {
                 </ul>
               </div>
               <div>
-                <h3 className="font-semibold text-lg mb-3">Backend & Services</h3>
-                <ul className="space-y-2 text-slate-700">
+                <h3 className="font-semibold text-lg mb-3 text-sky-700">Backend & Services</h3>
+                <ul className="space-y-2 text-slate-800">
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-teal-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-sky-500 rounded-full mr-2"></span>
                     Vercel Edge Functions
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-teal-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-sky-500 rounded-full mr-2"></span>
                     Dialogflow Webhook Fulfillment
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-teal-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-sky-500 rounded-full mr-2"></span>
                     AWS SDK Integration
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-teal-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-sky-500 rounded-full mr-2"></span>
                     AWS Comprehend Sentiment Analysis
                   </li>
                 </ul>
@@ -105,7 +105,7 @@ export default function Home() {
 
           {/* Key Capabilities */}
           <div className="mt-16 text-center">
-            <h2 className="text-2xl font-bold mb-6">Key Capabilities</h2>
+            <h2 className="text-2xl font-bold mb-6 text-sky-800">Key Capabilities</h2>
             <div className="flex flex-wrap justify-center gap-3">
               {[
                 'Intent Recognition', 'Entity Extraction', 'Context Management',
@@ -121,7 +121,7 @@ export default function Home() {
 
           {/* CTA */}
           <div className="mt-16 text-center">
-            <p className="text-slate-700 mb-4">Try the chat interface in the bottom right corner</p>
+            <p className="text-slate-600 mb-4">Try the chat interface in the bottom right corner</p>
             <div className="flex items-center justify-center">
               <svg className="w-6 h-6 text-slate-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -143,12 +143,12 @@ function FeatureCard({ title, description, items }: {
 }) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-      <h3 className="text-xl font-bold mb-3">{title}</h3>
+      <h3 className="text-xl font-bold mb-3 text-sky-900">{title}</h3>
       <p className="text-slate-700 mb-4">{description}</p>
       <ul className="space-y-2">
         {items.map((item, index) => (
           <li key={index} className="flex items-center text-sm text-slate-800">
-            <svg className="w-4 h-4 mr-2 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 mr-2 text-sky-500" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
             {item}

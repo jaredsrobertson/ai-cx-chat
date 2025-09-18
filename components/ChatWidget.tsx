@@ -34,6 +34,7 @@ export default function ChatWidget() {
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -92,6 +93,7 @@ export default function ChatWidget() {
       }]);
     } finally {
       setIsTyping(false);
+      inputRef.current?.focus();
     }
   };
 
@@ -177,6 +179,7 @@ export default function ChatWidget() {
       }]);
     } finally {
       setIsTyping(false);
+      inputRef.current?.focus();
     }
   };
 
@@ -187,8 +190,6 @@ export default function ChatWidget() {
       setShowLoginModal(false);
       
       if (pendingMessage) {
-        // Resend the original message, but this time with the authContext flag
-        // which tells the backend to inject the authenticated context for this one call.
         await sendMessage(pendingMessage, true);
         setPendingMessage(null);
       }
@@ -259,8 +260,19 @@ export default function ChatWidget() {
                 </div>
                 <div className="border-t border-slate-200 p-4">
                   <div className="flex gap-2">
-                    <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => {if (e.key === 'Enter' && !e.shiftKey) {e.preventDefault(); sendMessage(input);}}} placeholder="Type your message..." disabled={isTyping} className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100"/>
-                    <button onClick={() => sendMessage(input)} disabled={isTyping || !input.trim()} className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button>
+                    <input 
+                      ref={inputRef}
+                      type="text" 
+                      value={input} 
+                      onChange={(e) => setInput(e.target.value)} 
+                      onKeyPress={(e) => {if (e.key === 'Enter' && !e.shiftKey) {e.preventDefault(); sendMessage(input);}}} 
+                      placeholder="Type your message..."
+                      disabled={isTyping} 
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 text-slate-800"
+                    />
+                    <button onClick={() => sendMessage(input)} disabled={isTyping || !input.trim()} className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                    </button>
                   </div>
                 </div>
               </>
