@@ -1,26 +1,8 @@
 @import "tailwindcss";
 
-:root {
-  --background: 248 250 252; /* slate-50 */
-  --foreground: 30 41 59; /* slate-800 */
-}
-
-@theme inline {
-  --color-background: rgb(var(--background));
-  --color-foreground: rgb(var(--foreground));
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: 15 23 42; /* slate-900 */
-    --foreground: 226 232 240; /* slate-200 */
-  }
-}
-
 body {
-  background: linear-gradient(to bottom, #0c1a3e 0%, #1a3a6e 100%);
-  color: #f0f4f8;
+  /* A soft, light bluish-gray background */
+  background-color: #f0f4f8; 
+  color: #1e293b; /* A dark slate for default text, for high contrast */
   font-family: Arial, Helvetica, sans-serif;
 }

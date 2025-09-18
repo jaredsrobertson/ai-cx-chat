@@ -8,6 +8,7 @@ import BotSelector from './BotSelector';
 import Message from './Message';
 import QuickReplies from './QuickReplies';
 import LoginModal from './LoginModal';
+import CloudIcon from './CloudIcon';
 
 interface ChatMessage {
   text: string;
@@ -126,7 +127,6 @@ export default function ChatWidget() {
     
     const userMessage: ChatMessage = { text, isUser: true, timestamp: new Date() };
     setMessages(prev => {
-      // Remove quick replies from the previous bot message
       const updatedMessages = [...prev];
       if (updatedMessages.length > 0) {
         const lastMsg = updatedMessages[updatedMessages.length - 1];
@@ -215,10 +215,10 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-sky-600 text-white rounded-full p-4 shadow-lg hover:bg-sky-700 transition-all hover:scale-110"
+          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition-all hover:scale-110"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-          <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+          <CloudIcon className="w-6 h-6" />
+          <span className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
         </button>
       )}
 
@@ -226,34 +226,34 @@ export default function ChatWidget() {
         <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-white shadow-2xl flex flex-col 
                        w-full h-full sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] 
                        rounded-none sm:rounded-lg">
-          <div className="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 
+          <div className="bg-slate-700 text-white p-4 
                          rounded-t-none sm:rounded-t-lg flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-3">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                <CloudIcon className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-semibold">SecureBank Assistant</h3>
+                <h3 className="font-semibold">AI Assistant</h3>
                 <p className="text-xs opacity-90">{selectedBot === 'dialogflow' ? 'Banking Services' : selectedBot === 'lex' ? 'Customer Support' : 'Choose an assistant'}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={clearConversation} className="text-white hover:bg-white hover:bg-opacity-20 rounded p-1 transition-colors" title="New conversation"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
-              <button onClick={() => setIsOpen(false)} className="text-white hover:bg-white hover:bg-opacity-20 rounded p-1 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>
+              <button onClick={clearConversation} className="text-white hover:bg-white/20 rounded p-1 transition-colors" title="New conversation"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
+              <button onClick={() => setIsOpen(false)} className="text-white hover:bg-white/20 rounded p-1 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>
             </div>
           </div>
           
           {selectedBot && (
-            <div className="border-b border-slate-200 px-4 py-2 bg-slate-50 text-xs text-slate-600">
+            <div className="border-b border-slate-200 px-4 py-2 bg-slate-50 text-xs text-slate-500">
               <div className="flex items-center justify-between">
                 <span>Bot: {selectedBot === 'dialogflow' ? 'Dialogflow' : 'Lex'}</span>
                 {isAuthenticated && <span className="text-green-600 font-semibold flex items-center gap-1">● Authenticated</span>}
-                <button className="text-sky-600 hover:text-sky-700 font-semibold" title="Transfer to agent" onClick={() => sendMessage('talk to an agent')}>Agent Transfer</button>
+                <button className="text-blue-600 hover:text-blue-700 font-semibold" title="Transfer to agent" onClick={() => sendMessage('talk to an agent')}>Agent Transfer</button>
               </div>
             </div>
           )}
 
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col bg-slate-50">
             {!selectedBot ? (
               <div className="flex-1 overflow-y-auto"><BotSelector onSelectBot={handleSelectBot} lastBot={lastBot} onResume={handleResume}/></div>
             ) : (
@@ -266,7 +266,6 @@ export default function ChatWidget() {
                         isUser={message.isUser}
                         timestamp={message.timestamp}
                       />
-                      {/* Render QuickReplies for the last bot message */}
                       {index === messages.length - 1 && !isTyping && !message.isUser && message.quickReplies && message.quickReplies.length > 0 && (
                         <QuickReplies
                           replies={message.quickReplies}
@@ -280,7 +279,7 @@ export default function ChatWidget() {
                   <div ref={messagesEndRef} />
                 </div>
                 
-                <div className="border-t border-slate-200 p-4">
+                <div className="border-t border-slate-200 p-4 bg-white">
                   <div className="flex gap-2">
                     <input 
                       ref={inputRef}
@@ -290,9 +289,9 @@ export default function ChatWidget() {
                       onKeyPress={(e) => {if (e.key === 'Enter' && !e.shiftKey) {e.preventDefault(); sendMessage(input);}}} 
                       placeholder="Type your message..."
                       disabled={isTyping} 
-                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 text-slate-800"
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 text-slate-800"
                     />
-                    <button onClick={() => sendMessage(input)} disabled={isTyping || !input.trim()} className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    <button onClick={() => sendMessage(input)} disabled={isTyping || !input.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                     </button>
                   </div>
