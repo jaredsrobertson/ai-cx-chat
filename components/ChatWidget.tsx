@@ -28,7 +28,6 @@ export default function ChatWidget() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [dialogflowClient, setDialogflowClient] = useState<DialogflowClient | null>(null);
   const [lexClient, setLexClient] = useState<LexClient | null>(null);
-  const [lastQuickReplies, setLastQuickReplies] = useState<string[]>([]);
   const [lastBot, setLastBot] = useState<'dialogflow' | 'lex' | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   
@@ -79,9 +78,6 @@ export default function ChatWidget() {
         quickReplies
       };
       setMessages([welcomeMessage]);
-      if (quickReplies.length > 0) {
-        setLastQuickReplies(quickReplies);
-      }
     } catch (error) {
       console.error('Error fetching welcome message:', error);
       setMessages([{
@@ -98,7 +94,6 @@ export default function ChatWidget() {
   const handleSelectBot = (bot: 'dialogflow' | 'lex') => {
     setSelectedBot(bot);
     setMessages([]);
-    setLastQuickReplies([]);
     localStorage.removeItem('lastBot');
     localStorage.removeItem(`${bot}-messages`);
     
@@ -112,7 +107,6 @@ export default function ChatWidget() {
         quickReplies: ['Account Help', 'Security Questions', 'Banking Hours', 'Talk to Agent']
       };
       setMessages([welcomeMessage]);
-      setLastQuickReplies(welcomeMessage.quickReplies || []);
     }
   };
 
@@ -123,21 +117,27 @@ export default function ChatWidget() {
         setSelectedBot(lastBot);
         const parsed = JSON.parse(savedMessages);
         setMessages(parsed);
-        const lastMessage = parsed[parsed.length - 1];
-        if (lastMessage?.quickReplies) {
-          setLastQuickReplies(lastMessage.quickReplies);
-        }
       }
     }
   };
 
   const sendMessage = async (text: string, authContext = false) => {
     if (!selectedBot || !text.trim()) return;
-
+    
     const userMessage: ChatMessage = { text, isUser: true, timestamp: new Date() };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => {
+      // Remove quick replies from the previous bot message
+      const updatedMessages = [...prev];
+      if (updatedMessages.length > 0) {
+        const lastMsg = updatedMessages[updatedMessages.length - 1];
+        if (!lastMsg.isUser && lastMsg.quickReplies) {
+          delete lastMsg.quickReplies;
+        }
+      }
+      return [...updatedMessages, userMessage];
+    });
+
     setInput('');
-    setLastQuickReplies([]);
     setIsTyping(true);
 
     try {
@@ -151,10 +151,6 @@ export default function ChatWidget() {
           text: botText, isUser: false, timestamp: new Date(), quickReplies, payload
         };
         setMessages(prev => [...prev, botMessage]);
-        
-        if (quickReplies.length > 0) {
-          setLastQuickReplies(quickReplies);
-        }
 
         if (payload?.action === 'REQUIRE_AUTH' && !isAuthenticated) {
           setPendingMessage(text);
@@ -200,7 +196,6 @@ export default function ChatWidget() {
 
   const clearConversation = () => {
     setMessages([]);
-    setLastQuickReplies([]);
     setLastBot(null);
     if (selectedBot) {
       localStorage.removeItem('lastBot');
@@ -228,8 +223,11 @@ export default function ChatWidget() {
       )}
 
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-40 bg-white shadow-2xl flex flex-col w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-lg">
-          <div className="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 rounded-t-lg flex items-center justify-between">
+        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-white shadow-2xl flex flex-col 
+                       w-full h-full sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] 
+                       rounded-none sm:rounded-lg">
+          <div className="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 
+                         rounded-t-none sm:rounded-t-lg flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-3">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
@@ -260,12 +258,27 @@ export default function ChatWidget() {
               <div className="flex-1 overflow-y-auto"><BotSelector onSelectBot={handleSelectBot} lastBot={lastBot} onResume={handleResume}/></div>
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {messages.map((message, index) => (<Message key={index} text={message.text} isUser={message.isUser} timestamp={message.timestamp}/>))}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {messages.map((message, index) => (
+                    <div key={index}>
+                      <Message
+                        text={message.text}
+                        isUser={message.isUser}
+                        timestamp={message.timestamp}
+                      />
+                      {/* Render QuickReplies for the last bot message */}
+                      {index === messages.length - 1 && !isTyping && !message.isUser && message.quickReplies && message.quickReplies.length > 0 && (
+                        <QuickReplies
+                          replies={message.quickReplies}
+                          onReplyClick={handleQuickReply}
+                          disabled={isTyping}
+                        />
+                      )}
+                    </div>
+                  ))}
                   {isTyping && (<Message text="" isUser={false} isTyping={true}/>)}
                   <div ref={messagesEndRef} />
                 </div>
-                {lastQuickReplies.length > 0 && !isTyping && (<QuickReplies replies={lastQuickReplies} onReplyClick={handleQuickReply} disabled={isTyping}/>)}
                 
                 <div className="border-t border-slate-200 p-4">
                   <div className="flex gap-2">
