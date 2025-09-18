@@ -21,7 +21,7 @@ export default function Home() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative min-h-screen flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: "url('/clouds.jpg')" }}>
+        <section className="relative h-[90vh] flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: "url('/clouds.jpg')" }}>
           <div className="absolute inset-0 bg-black/20"></div>
           <div className="relative text-center px-4">
             <h1 className="text-4xl md:text-6xl font-extrabold text-white text-shadow-md mb-4">
@@ -30,13 +30,15 @@ export default function Home() {
             <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto">
               A demonstration of intelligent, conversational interfaces using Google Dialogflow, Amazon Lex, and a custom-built API with webhook fulfillment.
             </p>
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2">
-              <svg className="w-8 h-8 text-white animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            </div>
           </div>
         </section>
+
+        {/* Scroll Indicator Section */}
+        <div className="h-[10vh] flex items-center justify-center">
+            <svg className="w-8 h-8 text-slate-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+        </div>
 
         {/* Content Section */}
         <section className="py-20">
