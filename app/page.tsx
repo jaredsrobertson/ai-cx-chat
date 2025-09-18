@@ -21,15 +21,24 @@ export default function Home() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative h-[90vh] flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: "url('/clouds.jpg')" }}>
+        <section 
+          className="relative h-[90vh] flex items-center justify-center bg-cover bg-center bg-fixed" 
+          style={{ backgroundImage: "url('/clouds.jpg')" }}
+        >
           <div className="absolute inset-0 bg-black/20"></div>
-          <div className="relative text-center px-4">
+          <div className="relative text-center px-4 max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-extrabold text-white text-shadow-md mb-4">
-              AI-Powered Customer Experience
+              Conversational AI Platform
             </h1>
-            <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto">
-              A demonstration of intelligent, conversational interfaces using Google Dialogflow, Amazon Lex, and a custom-built API with webhook fulfillment.
+            <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto mb-8">
+              An intelligent, responsive chat application demonstrating a modern customer experience powered by leading AI platforms and a custom backend.
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-white/90 text-sm">
+              <span className="flex items-center gap-2"><CheckIcon/> Google Dialogflow</span>
+              <span className="flex items-center gap-2"><CheckIcon/> Amazon Lex</span>
+              <span className="flex items-center gap-2"><CheckIcon/> Webhook Fulfillment</span>
+              <span className="flex items-center gap-2"><CheckIcon/> Custom REST API</span>
+            </div>
           </div>
         </section>
 
@@ -115,3 +124,9 @@ function FeatureCard({ title, description, items }: { title: string; description
 }
 
 const Pill = () => <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>;
+
+const CheckIcon = () => (
+  <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+  </svg>
+);

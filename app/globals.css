@@ -5,4 +5,5 @@ body {
   background-color: #f0f4f8; 
   color: #1e293b; /* A dark slate for default text, for high contrast */
   font-family: var(--font-inter), sans-serif;
+  overscroll-behavior-y: none; /* Prevents the bounce/pull-down scroll effect */
 }

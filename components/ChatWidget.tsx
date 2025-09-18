@@ -215,7 +215,7 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition-all hover:scale-110"
+          className="fixed bottom-6 right-6 z-40 bg-slate-800 text-white rounded-full p-4 shadow-lg hover:bg-slate-900 transition-all hover:scale-110"
         >
           <CloudIcon className="w-6 h-6" />
           <span className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
