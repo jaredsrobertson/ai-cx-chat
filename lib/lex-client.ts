@@ -1,12 +1,32 @@
 // lib/lex-client.ts
 import { v4 as uuidv4 } from 'uuid';
 
+// --- Start of Changes ---
+
+// Defines the structure of a button within an ImageResponseCard
+interface Button {
+  text: string;
+  value: string;
+}
+
+// Defines the structure of the ImageResponseCard object
+interface ImageResponseCard {
+  title: string;
+  subtitle?: string;
+  imageUrl?: string;
+  buttons?: Button[];
+}
+
 // Interface for a single message from Lex
 interface LexSDKMessage {
   content: string;
   contentType: 'PlainText' | 'ImageResponseCard' | 'CustomPayload';
-  imageResponseCard?: any; 
+  // Use the specific type instead of 'any'
+  imageResponseCard?: ImageResponseCard;
 }
+
+// --- End of Changes ---
+
 
 // Updated interface to match the actual Lex V2 SDK response
 export interface LexResponse {
@@ -54,7 +74,6 @@ class LexClient {
     }
   }
 
-  // Helper to get the primary text message from the response
   public parseText(response: LexResponse): string {
     if (!response.messages || response.messages.length === 0) {
       return "Sorry, I didn't understand. Can you rephrase?";
@@ -63,7 +82,6 @@ class LexClient {
     return plainTextMessage?.content || "I received a response I can't display.";
   }
 
-  // Helper to extract quick replies (image response cards)
   public parseQuickReplies(response: LexResponse): string[] {
     if (!response.messages) return [];
     
