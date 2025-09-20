@@ -2,7 +2,7 @@
 
 body {
   /* Use the cloud image as a fixed background */
-  background-image: url('/clouds.jpg');
+  background-image: url('/clouds.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed; /* This locks the background in place */

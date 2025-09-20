@@ -1,25 +1,49 @@
 // app/api/lex/process/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { 
+  LexRuntimeV2Client, 
+  RecognizeTextCommand 
+} from '@aws-sdk/client-lex-runtime-v2';
 
-// Placeholder for Lex integration - to be implemented in Phase 3
+// Initialize the Lex Runtime V2 client
+const lexClient = new LexRuntimeV2Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    
-    // For now, return a placeholder response
-    // This will be replaced with actual Lex integration
-    return NextResponse.json({
-      message: 'Lex integration coming soon',
-      input: body.text || '',
-      sessionId: body.sessionId || '',
-      response: 'This is a placeholder response from the Lex bot. Full implementation coming in Phase 3.'
+    const { text, sessionId } = await request.json();
+
+    if (!text || !sessionId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: text and sessionId' },
+        { status: 400 }
+      );
+    }
+
+    const command = new RecognizeTextCommand({
+      botId: process.env.NEXT_PUBLIC_LEX_BOT_ID,
+      botAliasId: process.env.NEXT_PUBLIC_LEX_BOT_ALIAS_ID,
+      localeId: process.env.NEXT_PUBLIC_LEX_LOCALE_ID,
+      sessionId: sessionId,
+      text: text,
     });
     
+    // Send the text to Lex and wait for the response
+    const lexResponse = await lexClient.send(command);
+
+    return NextResponse.json(lexResponse);
+
   } catch (error) {
     console.error('Lex process error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Lex bot not yet configured' },
-      { status: 501 } // Not Implemented
+      { error: 'Failed to process message with Lex', details: errorMessage },
+      { status: 500 }
     );
   }
 }

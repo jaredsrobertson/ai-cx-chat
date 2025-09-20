@@ -158,11 +158,15 @@ export default function ChatWidget() {
           setTimeout(() => setShowLoginModal(true), 500);
         }
       } else if (selectedBot === 'lex' && lexClient) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const response = await lexClient.sendMessage(text);
+        const botText = lexClient.parseText(response);
+        const quickReplies = lexClient.parseQuickReplies(response);
+
         const lexMessage: ChatMessage = {
-          text: 'I understand you\'re asking about: "' + text + '". This feature is coming soon.',
+          text: botText,
           isUser: false,
-          timestamp: new Date()
+          timestamp: new Date(),
+          quickReplies
         };
         setMessages(prev => [...prev, lexMessage]);
       }
