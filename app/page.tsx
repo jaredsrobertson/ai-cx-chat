@@ -21,30 +21,34 @@ export default function Home() {
 
       <main className="relative z-10"> {/* Ensure main content layers above background */}
         {/* Hero Section */}
-        <section className="h-screen flex items-center justify-center pt-16 px-4"> {/* Add padding for header and sides */}
+        <section className="h-screen flex flex-col pt-16 px-4">
           <div className="absolute inset-0 bg-black/20"></div> {/* Dark overlay */}
-          <div className="relative text-center p-8 max-w-4xl mx-auto bg-white/60 backdrop-blur-lg rounded-xl shadow-lg border border-white/30">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-slate-800 mb-4">
-              AI-Powered Customer Experience Demo
-            </h1>
-            <p className="text-lg md:text-xl text-slate-700 max-w-3xl mx-auto mb-8">
-              This project demonstrates a modern, AI-powered customer experience solution. It features a conversational chat application that integrates with multiple leading AI platforms and a custom backend. The application is built with Next.js and showcases how to handle real-world scenarios like authentication, API integration, and dynamic response generation.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-slate-600 text-sm">
-              <span className="flex items-center gap-2"><CheckIcon/> Google Dialogflow</span>
-              <span className="flex items-center gap-2"><CheckIcon/> Amazon Lex</span>
-              <span className="flex items-center gap-2"><CheckIcon/> Webhook Fulfillment</span>
-              <span className="flex items-center gap-2"><CheckIcon/> Custom REST API</span>
+          
+          {/* Hero Content Wrapper */}
+          <div className="relative flex-1 flex items-center justify-center">
+            <div className="text-center p-8 max-w-4xl mx-auto bg-white/60 backdrop-blur-lg rounded-xl shadow-lg border border-white/30">
+              <h1 className="text-4xl md:text-6xl font-extrabold text-slate-800 mb-4">
+                AI-Powered Customer Experience Demo
+              </h1>
+              <p className="text-lg md:text-xl text-slate-700 max-w-3xl mx-auto mb-8">
+                This project demonstrates a modern, AI-powered customer experience solution. It features a conversational chat application that integrates with multiple leading AI platforms and a custom backend. The application is built with Next.js and showcases how to handle real-world scenarios like authentication, API integration, and dynamic response generation.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-slate-600 text-sm">
+                <span className="flex items-center gap-2"><CheckIcon/> Google Dialogflow</span>
+                <span className="flex items-center gap-2"><CheckIcon/> Amazon Lex</span>
+                <span className="flex items-center gap-2"><CheckIcon/> Webhook Fulfillment</span>
+                <span className="flex items-center gap-2"><CheckIcon/> Custom REST API</span>
+              </div>
             </div>
           </div>
-        </section>
 
-        {/* Scroll Indicator Section */}
-        <div className="h-[10vh] flex items-center justify-center bg-blue-200"> {/* Ensure this has a background color */}
-            <svg className="w-8 h-8 text-slate-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-        </div>
+          {/* Scroll Indicator Section */}
+          <div className="relative h-[10vh] flex items-center justify-center">
+              <svg className="w-8 h-8 text-white animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+          </div>
+        </section>
 
         {/* Content Section */}
         <section className="py-20 bg-blue-200"> {/* Ensure this has a background color */}
