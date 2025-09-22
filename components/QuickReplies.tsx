@@ -1,9 +1,12 @@
 // components/QuickReplies.tsx
 import React from 'react';
 
+// A QuickReply can be a simple string or an object with display and payload
+type QuickReply = string | { display: string; payload: string };
+
 interface QuickRepliesProps {
-  replies: string[];
-  onReplyClick: (reply: string) => void;
+  replies: QuickReply[];
+  onReplyClick: (payload: string) => void;
   disabled?: boolean;
 }
 
@@ -12,17 +15,22 @@ export default function QuickReplies({ replies, onReplyClick, disabled = false }
 
   return (
     <div className="flex flex-wrap gap-2 mt-2 ml-10">
-      {replies.map((reply, index) => (
-        <button
-          key={index}
-          onClick={() => onReplyClick(reply)}
-          disabled={disabled}
-          className="px-3 py-1 bg-white border border-sky-500 text-sky-500 rounded-full text-sm 
-                     hover:bg-sky-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {reply}
-        </button>
-      ))}
+      {replies.map((reply, index) => {
+        const display = typeof reply === 'string' ? reply : reply.display;
+        const payload = typeof reply === 'string' ? reply : reply.payload;
+
+        return (
+          <button
+            key={index}
+            onClick={() => onReplyClick(payload)}
+            disabled={disabled}
+            className="px-3 py-1 bg-white border border-sky-500 text-sky-500 rounded-full text-sm 
+                       hover:bg-sky-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {display}
+          </button>
+        );
+      })}
     </div>
   );
 }

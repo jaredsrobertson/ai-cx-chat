@@ -10,12 +10,16 @@ import QuickReplies from './QuickReplies';
 import LoginModal from './LoginModal';
 import CloudIcon from './CloudIcon';
 
+type QuickReply = string | { display: string; payload: string };
+
 interface ChatMessage {
   text: string;
   isUser: boolean;
   timestamp: Date;
-  quickReplies?: string[];
+  quickReplies?: QuickReply[];
   payload?: Record<string, unknown> | null;
+  intent?: string; 
+  nluConfidence?: number;
 }
 
 export default function ChatWidget() {
@@ -105,7 +109,12 @@ export default function ChatWidget() {
         text: 'Welcome to SecureBank Support! I can help you with account questions, security concerns, and general banking FAQs. What would you like to know?',
         isUser: false,
         timestamp: new Date(),
-        quickReplies: ['Account Help', 'Security Questions', 'Banking Hours', 'Talk to Agent']
+        quickReplies: [
+            { display: 'Account info', payload: 'Tell me about your accounts' },
+            { display: 'Lost/stolen debit card', payload: 'How do I report a lost or stolen card?' },
+            { display: 'Fees', payload: 'What are your account fees?' },
+            { display: 'Hours', payload: 'What are your hours?' }
+          ]
       };
       setMessages([welcomeMessage]);
     }
@@ -148,7 +157,8 @@ export default function ChatWidget() {
         const payload = dialogflowClient.parsePayload(response.queryResult.fulfillmentMessages);
         
         const botMessage: ChatMessage = {
-          text: botText, isUser: false, timestamp: new Date(), quickReplies, payload
+          text: botText, isUser: false, timestamp: new Date(), quickReplies, payload,
+          intent: response.queryResult.intent?.displayName,
         };
         setMessages(prev => [...prev, botMessage]);
 
@@ -161,12 +171,17 @@ export default function ChatWidget() {
         const response = await lexClient.sendMessage(text);
         const botText = lexClient.parseText(response);
         const quickReplies = lexClient.parseQuickReplies(response);
+        const intentName = response.sessionState?.intent?.name;
+        const nluConfidence = response.interpretations?.[0]?.nluConfidence?.score;
+
 
         const lexMessage: ChatMessage = {
           text: botText,
           isUser: false,
           timestamp: new Date(),
-          quickReplies
+          quickReplies,
+          intent: intentName,
+          nluConfidence: nluConfidence,
         };
         setMessages(prev => [...prev, lexMessage]);
       }
@@ -230,7 +245,7 @@ export default function ChatWidget() {
         <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-white shadow-2xl flex flex-col 
                        w-full h-full sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] 
                        rounded-none sm:rounded-lg">
-          <div className="bg-blue-500 text-white p-4 // Adjusted blue
+          <div className="bg-blue-500 text-white p-4 
                          rounded-t-none sm:rounded-t-lg flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
@@ -248,16 +263,33 @@ export default function ChatWidget() {
           </div>
           
           {selectedBot && (
-            <div className="border-b border-blue-200 px-4 py-2 bg-blue-100 text-xs text-blue-800"> {/* Adjusted blues */}
+            <div className="border-b border-blue-200 px-4 py-2 bg-blue-100 text-xs text-blue-800">
               <div className="flex items-center justify-between">
                 <span>Bot: {selectedBot === 'dialogflow' ? 'Dialogflow' : 'Lex'}</span>
                 {isAuthenticated && <span className="text-green-600 font-semibold flex items-center gap-1">● Authenticated</span>}
+
+                {(() => {
+                  const lastMessage = messages[messages.length - 1];
+                  if (!lastMessage || lastMessage.isUser) return null;
+
+                  if (selectedBot === 'dialogflow' && lastMessage.intent) {
+                    return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
+                  }
+
+                  if (selectedBot === 'lex' && lastMessage.intent && lastMessage.nluConfidence !== undefined) {
+                    const confidencePercent = (lastMessage.nluConfidence * 100).toFixed(0);
+                    return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent} ({confidencePercent}%)</span>;
+                  }
+                  
+                  return null;
+                })()}
+
                 <button className="text-blue-600 hover:text-blue-700 font-semibold" title="Transfer to agent" onClick={() => sendMessage('talk to an agent')}>Agent Transfer</button>
               </div>
             </div>
           )}
 
-          <div className="flex-1 overflow-hidden flex flex-col bg-blue-50"> {/* Adjusted blue */}
+          <div className="flex-1 overflow-hidden flex flex-col bg-blue-50">
             {!selectedBot ? (
               <div className="flex-1 overflow-y-auto"><BotSelector onSelectBot={handleSelectBot} lastBot={lastBot} onResume={handleResume}/></div>
             ) : (
@@ -283,7 +315,7 @@ export default function ChatWidget() {
                   <div ref={messagesEndRef} />
                 </div>
                 
-                <div className="border-t border-blue-200 p-4 bg-white"> {/* Adjusted blue */}
+                <div className="border-t border-blue-200 p-4 bg-white">
                   <div className="flex gap-2">
                     <input 
                       ref={inputRef}
@@ -293,9 +325,9 @@ export default function ChatWidget() {
                       onKeyPress={(e) => {if (e.key === 'Enter' && !e.shiftKey) {e.preventDefault(); sendMessage(input);}}} 
                       placeholder="Type your message..."
                       disabled={isTyping} 
-                      className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-50 text-slate-800" // Adjusted blue
+                      className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-50 text-slate-800"
                     />
-                    <button onClick={() => sendMessage(input)} disabled={isTyping || !input.trim()} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"> {/* Adjusted blue */}
+                    <button onClick={() => sendMessage(input)} disabled={isTyping || !input.trim()} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                     </button>
                   </div>

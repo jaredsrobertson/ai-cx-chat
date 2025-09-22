@@ -1,15 +1,11 @@
 // lib/lex-client.ts
 import { v4 as uuidv4 } from 'uuid';
 
-// --- Start of Changes ---
-
-// Defines the structure of a button within an ImageResponseCard
 interface Button {
   text: string;
   value: string;
 }
 
-// Defines the structure of the ImageResponseCard object
 interface ImageResponseCard {
   title: string;
   subtitle?: string;
@@ -17,18 +13,12 @@ interface ImageResponseCard {
   buttons?: Button[];
 }
 
-// Interface for a single message from Lex
 interface LexSDKMessage {
   content: string;
   contentType: 'PlainText' | 'ImageResponseCard' | 'CustomPayload';
-  // Use the specific type instead of 'any'
   imageResponseCard?: ImageResponseCard;
 }
 
-// --- End of Changes ---
-
-
-// Updated interface to match the actual Lex V2 SDK response
 export interface LexResponse {
   messages?: LexSDKMessage[];
   sessionState?: {
@@ -41,6 +31,14 @@ export interface LexResponse {
       slotToElicit?: string;
     }
   };
+  interpretations?: {
+    intent?: {
+      name: string;
+    };
+    nluConfidence?: {
+      score: number;
+    };
+  }[];
   sessionId?: string;
 }
 
@@ -48,9 +46,9 @@ class LexClient {
   private sessionId: string;
 
   constructor() {
-    const stored = localStorage.getItem('lex-session');
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('lex-session') : null;
     this.sessionId = stored || uuidv4();
-    if (!stored) {
+    if (typeof window !== 'undefined' && !stored) {
       localStorage.setItem('lex-session', this.sessionId);
     }
   }
@@ -94,7 +92,9 @@ class LexClient {
 
   public clearSession() {
     this.sessionId = uuidv4();
-    localStorage.setItem('lex-session', this.sessionId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lex-session', this.sessionId);
+    }
   }
 
   public getSessionId(): string {
