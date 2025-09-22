@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
             const text = `Here are your account balances:\n\nChecking ${checkingAccount?.accountNumber}: ${formatCurrency(checkingAccount?.balance || 0)}\nSavings ${savingsAccount?.accountNumber}: ${formatCurrency(savingsAccount?.balance || 0)}`;
             response = {
               fulfillmentText: text,
-              fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: ['Transfer Funds', 'Transaction History', 'Done'] } }],
+              fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
               outputContexts: refreshAuthContext(authContext)
             };
           }
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
                     fulfillmentText: transactionText,
                     fulfillmentMessages: [
                         { text: { text: [transactionText] } },
-                        { quickReplies: { quickReplies: ['Check Balance', 'Transfer Funds', 'Done'] } }
+                        { quickReplies: { quickReplies: standardQuickReplies } }
                     ],
                     outputContexts: refreshAuthContext(authContext)
                 };

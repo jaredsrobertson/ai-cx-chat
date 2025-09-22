@@ -21,7 +21,7 @@ export default function Home() {
 
       <main className="relative z-10"> {/* Ensure main content layers above background */}
         {/* Hero Section */}
-        <section className="h-[90vh] flex items-center justify-center pt-16 px-4"> {/* Add padding for header and sides */}
+        <section className="h-screen flex items-center justify-center pt-16 px-4"> {/* Add padding for header and sides */}
           <div className="absolute inset-0 bg-black/20"></div> {/* Dark overlay */}
           <div className="relative text-center p-8 max-w-4xl mx-auto bg-white/60 backdrop-blur-lg rounded-xl shadow-lg border border-white/30">
             <h1 className="text-4xl md:text-6xl font-extrabold text-slate-800 mb-4">
