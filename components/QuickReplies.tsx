@@ -24,7 +24,7 @@ export default function QuickReplies({ replies, onReplyClick, disabled = false }
             key={index}
             onClick={() => onReplyClick(payload)}
             disabled={disabled}
-            className="px-3 py-1 bg-white border border-custom-blue text-custom-blue rounded-full text-sm 
+            className="px-3 py-1 bg-white border border-3a8bc2 text-3a8bc2 rounded-full text-sm 
                        hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {display}

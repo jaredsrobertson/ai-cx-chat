@@ -40,14 +40,14 @@ export default function Home() {
         </section>
 
         {/* Scroll Indicator Section */}
-        <div className="h-[10vh] flex items-center justify-center bg-[#f0f4f8]"> {/* Ensure this has a background color */}
+        <div className="h-[10vh] flex items-center justify-center bg-f0f4f8"> {/* Ensure this has a background color */}
             <svg className="w-8 h-8 text-slate-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
             </svg>
         </div>
 
         {/* Content Section */}
-        <section className="py-20 bg-[#f0f4f8]"> {/* Ensure this has a background color */}
+        <section className="py-20 bg-f0f4f8"> {/* Ensure this has a background color */}
           <div className="container mx-auto px-4">
             {/* Features Grid */}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
@@ -109,7 +109,7 @@ function FeatureCard({ title, description, items }: { title: string; description
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item} className="flex items-center text-sm text-slate-700">
-            <svg className="w-4 h-4 mr-2 text-custom-blue" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 mr-2 text-3a8bc2" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
             {item}
@@ -120,7 +120,7 @@ function FeatureCard({ title, description, items }: { title: string; description
   );
 }
 
-const Pill = () => <span className="w-2 h-2 bg-custom-blue rounded-full mr-3"></span>;
+const Pill = () => <span className="w-2 h-2 bg-3a8bc2 rounded-full mr-3"></span>;
 
 const CheckIcon = () => (
   <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
