@@ -109,7 +109,7 @@ function FeatureCard({ title, description, items }: { title: string; description
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item} className="flex items-center text-sm text-slate-700">
-            <svg className="w-4 h-4 mr-2 text-custom-blue" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 mr-2 text-[#3a8bc2]" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
             {item}
@@ -120,7 +120,7 @@ function FeatureCard({ title, description, items }: { title: string; description
   );
 }
 
-const Pill = () => <span className="w-2 h-2 bg-custom-blue rounded-full mr-3"></span>;
+const Pill = () => <span className="w-2 h-2 bg-[#3a8bc2] rounded-full mr-3"></span>;
 
 const CheckIcon = () => (
   <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
