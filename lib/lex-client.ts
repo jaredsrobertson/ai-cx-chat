@@ -14,12 +14,12 @@ interface ImageResponseCard {
 }
 
 interface LexSDKMessage {
-  content: string;
-  contentType: 'PlainText' | 'ImageResponseCard' | 'CustomPayload';
+  contentType: 'PlainText' | 'SSML' | 'CustomPayload' | 'ImageResponseCard';
+  content?: string;
   imageResponseCard?: ImageResponseCard;
 }
 
-export interface LexResponse {
+interface LexResponse {
   messages?: LexSDKMessage[];
   sessionState?: {
     intent?: {
@@ -38,7 +38,6 @@ export interface LexResponse {
     nluConfidence?: {
       score: number;
     };
-    kendraConfidence?: string;
   }[];
   sessionId?: string;
 }
@@ -86,9 +85,13 @@ class LexClient {
     
     const card = response.messages.find(m => m.contentType === 'ImageResponseCard');
     if (card && card.imageResponseCard?.buttons) {
-      return card.imageResponseCard.buttons.map((button: { text: string }) => button.text);
+      return card.imageResponseCard.buttons.map((button: { text: string; value: string }) => button.text);
     }
     return [];
+  }
+
+  public getNLUConfidence(response: LexResponse): number | undefined {
+    return response.interpretations?.[0]?.nluConfidence?.score;
   }
 
   public clearSession() {

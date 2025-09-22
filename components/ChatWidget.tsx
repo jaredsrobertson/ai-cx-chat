@@ -20,7 +20,6 @@ interface ChatMessage {
   payload?: Record<string, unknown> | null;
   intent?: string; 
   nluConfidence?: number;
-  kendraConfidence?: string;
 }
 
 export default function ChatWidget() {
@@ -173,10 +172,9 @@ export default function ChatWidget() {
         const botText = lexClient.parseText(response);
         const quickReplies = lexClient.parseQuickReplies(response);
         
-        const firstInterpretation = response.interpretations?.[0];
         const intentName = response.sessionState?.intent?.name;
-        const nluConfidence = firstInterpretation?.nluConfidence?.score;
-        const kendraConfidence = firstInterpretation?.kendraConfidence;
+        // Lex NLU confidence (0..1)
+        const nluConfidence = (lexClient.getNLUConfidence && lexClient.getNLUConfidence(response)) ?? (response as any)?.interpretations?.[0]?.nluConfidence?.score;
 
         const lexMessage: ChatMessage = {
           text: botText,
@@ -185,7 +183,6 @@ export default function ChatWidget() {
           quickReplies,
           intent: intentName,
           nluConfidence: nluConfidence,
-          kendraConfidence: kendraConfidence,
         };
         setMessages(prev => [...prev, lexMessage]);
       }
@@ -281,15 +278,13 @@ export default function ChatWidget() {
                   }
 
                   if (selectedBot === 'lex' && lastMessage.intent) {
-                    // Prioritize showing Kendra confidence if it exists
-                    if (lastMessage.kendraConfidence) {
-                      return <span className="text-gray-600 font-semibold">Kendra: {lastMessage.kendraConfidence}</span>;
-                    }
-                    // Fallback to NLU confidence for regular intents
+                    // Show NLU confidence for Lex intents (if available)
                     if (lastMessage.nluConfidence !== undefined) {
                       const confidencePercent = (lastMessage.nluConfidence * 100).toFixed(0);
                       return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent} ({confidencePercent}%)</span>;
                     }
+                    // If no confidence, still show intent
+                    return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
                   }
                   
                   return null;
