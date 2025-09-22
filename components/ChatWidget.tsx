@@ -59,7 +59,10 @@ export default function ChatWidget() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (isOpen && selectedBot && !isTyping) {
+      inputRef.current?.focus();
+    }
+  }, [messages, isOpen, selectedBot, isTyping]);
 
   useEffect(() => {
     if (selectedBot && messages.length > 0) {
@@ -92,7 +95,6 @@ export default function ChatWidget() {
       }]);
     } finally {
       setIsTyping(false);
-      inputRef.current?.focus();
     }
   };
 
@@ -195,7 +197,6 @@ export default function ChatWidget() {
       }]);
     } finally {
       setIsTyping(false);
-      inputRef.current?.focus();
     }
   };
 
@@ -254,7 +255,7 @@ export default function ChatWidget() {
               </div>
               <div>
                 <h3 className="font-semibold">AI Assistant</h3>
-                <p className="text-xs opacity-90">{selectedBot === 'dialogflow' ? 'Banking Services' : selectedBot === 'lex' ? 'Customer Support' : 'Choose an assistant'}</p>
+                <p className="text-xs opacity-90">{selectedBot === 'dialogflow' ? 'Dialogflow' : selectedBot === 'lex' ? 'Lex' : 'Choose an assistant'}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -265,31 +266,30 @@ export default function ChatWidget() {
           
           {selectedBot && (
             <div className="border-b border-blue-200 px-4 py-2 bg-blue-100 text-xs text-blue-800">
-              <div className="flex items-center justify-between">
-                <span>Bot: {selectedBot === 'dialogflow' ? 'Dialogflow' : 'Lex'}</span>
-                {isAuthenticated && <span className="text-green-600 font-semibold flex items-center gap-1">● Authenticated</span>}
+              <div className="flex items-center justify-between min-h-[16px]">
+                <div>
+                  {(() => {
+                    const lastMessage = messages[messages.length - 1];
+                    if (!lastMessage || lastMessage.isUser) return null;
 
-                {(() => {
-                  const lastMessage = messages[messages.length - 1];
-                  if (!lastMessage || lastMessage.isUser) return null;
-
-                  if (selectedBot === 'dialogflow' && lastMessage.intent) {
-                    return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
-                  }
-
-                  if (selectedBot === 'lex' && lastMessage.intent) {
-                    // Show NLU confidence for Lex intents (if available)
-                    if (lastMessage.nluConfidence !== undefined) {
-                      const confidencePercent = (lastMessage.nluConfidence * 100).toFixed(0);
-                      return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent} ({confidencePercent}%)</span>;
+                    if (selectedBot === 'dialogflow' && lastMessage.intent) {
+                      return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
                     }
-                    // If no confidence, still show intent
-                    return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
-                  }
-                  
-                  return null;
-                })()}
 
+                    if (selectedBot === 'lex' && lastMessage.intent) {
+                      if (lastMessage.nluConfidence !== undefined) {
+                        const confidencePercent = (lastMessage.nluConfidence * 100).toFixed(0);
+                        return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent} ({confidencePercent}%)</span>;
+                      }
+                      return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
+                    }
+                    
+                    return null;
+                  })()}
+                </div>
+                <div>
+                  {isAuthenticated && <span className="text-green-600 font-semibold flex items-center gap-1">● Authenticated</span>}
+                </div>
               </div>
             </div>
           )}
