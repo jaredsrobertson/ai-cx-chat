@@ -15,7 +15,7 @@ export default function Message({ text, isUser, timestamp, isTyping }: MessagePr
         {/* Avatar */}
         <div className={`flex-shrink-0 ${isUser ? 'ml-2' : 'mr-2'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            isUser ? 'bg-blue-900' : 'bg-gray-400'
+            isUser ? 'bg-blue-950' : 'bg-gray-400'
           }`}>
             {isUser ? (
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -33,7 +33,7 @@ export default function Message({ text, isUser, timestamp, isTyping }: MessagePr
         <div>
           <div className={`px-4 py-2 rounded-lg ${
             isUser 
-              ? 'bg-blue-900 text-white rounded-br-none' 
+              ? 'bg-blue-950 text-white rounded-br-none' 
               : 'bg-gray-200 text-gray-800 rounded-bl-none'
           }`}>
             {isTyping ? (
