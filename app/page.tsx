@@ -25,10 +25,10 @@ export default function Home() {
           <div className="absolute inset-0 bg-black/20"></div> {/* Dark overlay */}
           <div className="relative text-center px-4 max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-extrabold text-white text-shadow-md mb-4">
-              Conversational AI Platform
+              AI-Powered Customer Experience Demo
             </h1>
             <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto mb-8">
-              An intelligent, responsive chat application demonstrating a modern customer experience powered by leading AI platforms and a custom backend.
+              This project demonstrates a modern, AI-powered customer experience solution. It features a conversational chat application that integrates with multiple leading AI platforms and a custom backend. The application is built with Next.js and showcases how to handle real-world scenarios like authentication, API integration, and dynamic response generation.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-white/90 text-sm">
               <span className="flex items-center gap-2"><CheckIcon/> Google Dialogflow</span>
@@ -53,17 +53,17 @@ export default function Home() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
               <FeatureCard 
                 title="Google Dialogflow"
-                description="Banking assistant with intent recognition, entity extraction, and webhook fulfillment."
+                description="The Dialogflow bot functions as a banking assistant. It can handle intents like checking balances, transferring funds, and viewing transaction history. When a user makes a request that requires account information, the bot uses webhook fulfillment to make a secure call to our custom banking API. This allows the bot to provide real-time, dynamic information to the user."
                 items={['Balance Inquiry', 'Fund Transfers', 'Transaction History', 'Contextual Auth']}
               />
               <FeatureCard 
                 title="Amazon Lex V2"
-                description="FAQ bot demonstrating AWS integration and natural language understanding."
+                description="The Amazon Lex bot is designed to function as a FAQ and customer support bot. It can answer common questions about account support, security, and other banking topics. The bot is integrated with the application through a custom API route that communicates with the Lex V2 runtime. This demonstrates how to integrate AWS services into a Next.js application."
                 items={['Account Support', 'Security Help', 'Quick Replies', 'Agent Handoff']}
               />
               <FeatureCard 
                 title="Custom Banking API"
-                description="RESTful API demonstrating backend architecture and data management."
+                description="The custom banking API is built with Next.js API routes and provides a secure interface for accessing mock banking data. It has endpoints for fetching account balances, retrieving transaction history, and processing fund transfers. The API uses a token-based authentication system to protect user data and is designed to be called by the Dialogflow webhook."
                 items={['Account Management', 'Transfer Processing', 'Transaction Queries', 'Mock Authentication']}
               />
             </div>

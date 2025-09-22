@@ -290,7 +290,6 @@ export default function ChatWidget() {
                   return null;
                 })()}
 
-                <button className="text-blue-600 hover:text-blue-700 font-semibold" title="Transfer to agent" onClick={() => sendMessage('talk to an agent')}>Agent Transfer</button>
               </div>
             </div>
           )}
