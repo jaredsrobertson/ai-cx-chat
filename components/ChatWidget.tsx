@@ -174,7 +174,7 @@ export default function ChatWidget() {
         
         const intentName = response.sessionState?.intent?.name;
         // Lex NLU confidence (0..1)
-        const nluConfidence = (lexClient.getNLUConfidence && lexClient.getNLUConfidence(response)) ?? (response as any)?.interpretations?.[0]?.nluConfidence?.score;
+        const nluConfidence = lexClient.getNLUConfidence(response);
 
         const lexMessage: ChatMessage = {
           text: botText,
