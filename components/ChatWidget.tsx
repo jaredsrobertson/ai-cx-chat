@@ -112,8 +112,8 @@ export default function ChatWidget() {
         quickReplies: [
             { display: 'Account info', payload: 'Tell me about your accounts' },
             { display: 'Lost/stolen debit card', payload: 'How do I report a lost or stolen card?' },
-            { display: 'Fees', payload: 'What are your account fees?' },
-            { display: 'Hours', payload: 'What are your hours?' }
+            { display: 'Fees', payload: 'Any fees?' },
+            { display: 'Hours', payload: 'What are branch hours?' }
           ]
       };
       setMessages([welcomeMessage]);
