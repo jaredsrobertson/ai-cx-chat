@@ -257,7 +257,7 @@ export default function ChatWidget() {
       )}
 
       {isOpen && (
-        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-white shadow-2xl flex flex-col overscroll-behavior-contain
+        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-blue-200 shadow-2xl flex flex-col overscroll-behavior-contain
                        w-screen h-screen sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] 
                        rounded-none sm:rounded-lg">
           <div className="bg-blue-950 text-white p-4 
