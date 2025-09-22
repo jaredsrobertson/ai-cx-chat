@@ -51,7 +51,7 @@ export default function Home() {
         </section>
 
         {/* Content Section */}
-        <section className="py-20 bg-blue-200"> {/* Ensure this has a background color */}
+        <section className="py-20 bg-blue-100"> {/* Ensure this has a background color */}
           <div className="container mx-auto px-4">
             {/* Features Grid */}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">

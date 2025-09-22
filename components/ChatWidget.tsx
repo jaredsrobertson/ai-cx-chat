@@ -59,11 +59,11 @@ export default function ChatWidget() {
 
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
-    if (isOpen) {
+    // Prevents scrolling of the background page on mobile when the widget is open
+    if (isOpen && window.innerWidth < 640) {
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = originalStyle;
     }
+    // Cleanup function to restore original style
     return () => {
       document.body.style.overflow = originalStyle;
     };
@@ -258,7 +258,7 @@ export default function ChatWidget() {
 
       {isOpen && (
         <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-white shadow-2xl flex flex-col overscroll-behavior-contain
-                       w-full h-full sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] 
+                       w-screen h-screen sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] 
                        rounded-none sm:rounded-lg">
           <div className="bg-blue-950 text-white p-4 
                          rounded-t-none sm:rounded-t-lg flex items-center justify-between">
