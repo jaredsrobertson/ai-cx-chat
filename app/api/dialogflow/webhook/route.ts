@@ -64,7 +64,6 @@ function formatCurrency(amount: number): string {
 export async function POST(request: NextRequest) {
   try {
     const body: DialogflowRequest = await request.json();
-    // CORRECTED: Removed unused 'session' variable
     const { queryResult } = body;
     const intentName = queryResult.intent.displayName;
     const parameters = queryResult.parameters;
@@ -90,6 +89,8 @@ export async function POST(request: NextRequest) {
             parameters: existingContext.parameters || {}
         }] : [];
     }
+    
+    const standardQuickReplies = ['Check Balance', 'Transfer Funds', 'Transaction History', 'Talk to Agent'];
 
     switch (intentName) {
       case 'Default Welcome Intent':
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
             fulfillmentText: welcomeText,
             fulfillmentMessages: [
               { text: { text: [welcomeText] } },
-              { quickReplies: { quickReplies: ['Check Balance', 'Transfer Funds', 'Transaction History', 'Talk to Agent'] } }
+              { quickReplies: { quickReplies: standardQuickReplies } }
             ]
           };
         }
@@ -149,11 +150,10 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        // CORRECTED: Use 'const' for variables that are not reassigned.
         const amountParam = parameters.amount as { amount?: number } | number | undefined;
         const amount = typeof amountParam === 'object' ? amountParam?.amount : amountParam;
         const fromAccount = parameters.fromAccount as string;
-        let toAccount = parameters.toAccount as string; // 'toAccount' must be 'let' because it can be reassigned below.
+        let toAccount = parameters.toAccount as string; 
         
         if (fromAccount && !toAccount) {
           toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
               fulfillmentText: `${successText}\n\nNew balances:\n${fromAccount}: ${formatCurrency(result.data?.newFromBalance || 0)}\n${toAccount}: ${formatCurrency(result.data?.newToBalance || 0)}`,
               fulfillmentMessages: [
                 { text: { text: [successText] } },
-                { quickReplies: { quickReplies: ['Check Balance', 'Another Transfer', 'Done'] } }
+                { quickReplies: { quickReplies: standardQuickReplies } }
               ]
             };
           } else {
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
             fulfillmentText: defaultText,
             fulfillmentMessages: [
               { text: { text: [defaultText] } },
-              { quickReplies: { quickReplies: ['Check Balance', 'Transfer Funds', 'Transaction History', 'Talk to Agent'] } }
+              { quickReplies: { quickReplies: standardQuickReplies } }
             ]
           };
         }
