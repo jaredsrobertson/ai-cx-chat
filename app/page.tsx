@@ -2,12 +2,30 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useEffect } from 'react';
 import CloudIcon from '@/components/CloudIcon';
 
 // Dynamically import ChatWidget to avoid SSR issues
 const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
 
 export default function Home() {
+  // Intersection observer for scroll animations
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-fade-in-up');
+        }
+      });
+    }, { threshold: 0.1 });
+    
+    document.querySelectorAll('.scroll-animate').forEach(el => {
+      observer.observe(el);
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
       {/* Header */}
@@ -17,9 +35,18 @@ export default function Home() {
             <CloudIcon className="w-8 h-8 text-blue-600" />
             <span className="font-bold text-lg text-slate-800">AI CX Demo</span>
           </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-slate-600 hover:text-blue-600 transition-colors">Features</a>
-            <a href="#tech-stack" className="text-slate-600 hover:text-blue-600 transition-colors">Tech Stack</a>
+          <nav className="flex items-center gap-6">
+            <a href="#features" className="hidden md:inline text-slate-600 hover:text-blue-600 transition-colors">Features</a>
+            <a href="#tech-stack" className="hidden md:inline text-slate-600 hover:text-blue-600 transition-colors">Tech Stack</a>
+            <button 
+              onClick={() => {
+                const chatButton = document.querySelector('[class*="fixed bottom-6 right-6"]') as HTMLButtonElement;
+                chatButton?.click();
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm"
+            >
+              Try Chat Demo
+            </button>
           </nav>
         </div>
       </header>
@@ -28,10 +55,10 @@ export default function Home() {
         {/* Hero Section */}
         <section className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-slate-50 to-white">
           <div className="max-w-5xl mx-auto text-center py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6 scroll-animate">
               AI-Powered Customer Experience Demo
             </h1>
-            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed">
+            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed scroll-animate">
               This project demonstrates a modern, AI-powered customer experience solution. 
               It features a conversational chat application that integrates with multiple leading AI platforms 
               and a custom backend. Built with Next.js, showcasing real-world scenarios like authentication, 
@@ -39,7 +66,7 @@ export default function Home() {
             </p>
             
             {/* Key Features */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700">
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700 scroll-animate">
               <span className="flex items-center gap-2">
                 <CheckIcon /> Google Dialogflow
               </span>
@@ -59,13 +86,13 @@ export default function Home() {
         {/* Features Section */}
         <section id="features" className="py-20 bg-slate-50">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-12 scroll-animate">
               Key Features
             </h2>
             
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Dialogflow Card */}
-              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -86,7 +113,7 @@ export default function Home() {
               </div>
 
               {/* Lex Card */}
-              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -107,7 +134,7 @@ export default function Home() {
               </div>
 
               {/* API Card */}
-              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
+              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -133,11 +160,11 @@ export default function Home() {
         {/* Tech Stack Section */}
         <section id="tech-stack" className="py-20 bg-white">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-12 scroll-animate">
               Technical Stack
             </h2>
             
-            <div className="max-w-4xl mx-auto bg-slate-50 rounded-lg p-8">
+            <div className="max-w-4xl mx-auto bg-slate-50 rounded-lg p-8 scroll-animate">
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
                   <h3 className="font-semibold text-lg mb-4 text-slate-800">Frontend</h3>
@@ -199,36 +226,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Call to Action */}
-        <section className="py-20 bg-gradient-to-b from-blue-600 to-blue-700">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Ready to Try the Demo?
-            </h2>
-            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Experience the conversational AI platform in action. Click the chat widget 
-              in the bottom right to get started.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button 
-                onClick={() => {
-                  const chatButton = document.querySelector('[class*="fixed bottom-6 right-6"]') as HTMLButtonElement;
-                  chatButton?.click();
-                }}
-                className="px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
-              >
-                Launch Chat Demo
-              </button>
-              <a 
-                href="/api-test"
-                className="px-8 py-3 bg-blue-800 text-white rounded-lg font-semibold hover:bg-blue-900 transition-colors"
-              >
-                Test API Endpoints
-              </a>
-            </div>
-          </div>
-        </section>
-
         {/* Footer */}
         <footer className="py-8 bg-slate-900">
           <div className="container mx-auto px-4 text-center">
@@ -240,6 +237,27 @@ export default function Home() {
       </main>
 
       <ChatWidget />
+      
+      <style jsx global>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fade-in-up {
+          animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .scroll-animate {
+          opacity: 0;
+        }
+      `}</style>
     </>
   );
 }
