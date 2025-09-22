@@ -38,6 +38,7 @@ export interface LexResponse {
     nluConfidence?: {
       score: number;
     };
+    kendraConfidence?: string;
   }[];
   sessionId?: string;
 }

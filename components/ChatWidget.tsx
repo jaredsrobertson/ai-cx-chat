@@ -20,6 +20,7 @@ interface ChatMessage {
   payload?: Record<string, unknown> | null;
   intent?: string; 
   nluConfidence?: number;
+  kendraConfidence?: string;
 }
 
 export default function ChatWidget() {
@@ -171,9 +172,11 @@ export default function ChatWidget() {
         const response = await lexClient.sendMessage(text);
         const botText = lexClient.parseText(response);
         const quickReplies = lexClient.parseQuickReplies(response);
+        
+        const firstInterpretation = response.interpretations?.[0];
         const intentName = response.sessionState?.intent?.name;
-        const nluConfidence = response.interpretations?.[0]?.nluConfidence?.score;
-
+        const nluConfidence = firstInterpretation?.nluConfidence?.score;
+        const kendraConfidence = firstInterpretation?.kendraConfidence;
 
         const lexMessage: ChatMessage = {
           text: botText,
@@ -182,6 +185,7 @@ export default function ChatWidget() {
           quickReplies,
           intent: intentName,
           nluConfidence: nluConfidence,
+          kendraConfidence: kendraConfidence,
         };
         setMessages(prev => [...prev, lexMessage]);
       }
@@ -276,9 +280,16 @@ export default function ChatWidget() {
                     return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
                   }
 
-                  if (selectedBot === 'lex' && lastMessage.intent && lastMessage.nluConfidence !== undefined) {
-                    const confidencePercent = (lastMessage.nluConfidence * 100).toFixed(0);
-                    return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent} ({confidencePercent}%)</span>;
+                  if (selectedBot === 'lex' && lastMessage.intent) {
+                    // Prioritize showing Kendra confidence if it exists
+                    if (lastMessage.kendraConfidence) {
+                      return <span className="text-gray-600 font-semibold">Kendra: {lastMessage.kendraConfidence}</span>;
+                    }
+                    // Fallback to NLU confidence for regular intents
+                    if (lastMessage.nluConfidence !== undefined) {
+                      const confidencePercent = (lastMessage.nluConfidence * 100).toFixed(0);
+                      return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent} ({confidencePercent}%)</span>;
+                    }
                   }
                   
                   return null;
