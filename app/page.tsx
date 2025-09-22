@@ -17,14 +17,25 @@ export default function Home() {
           entry.target.classList.add('animate-fade-in-up');
         }
       });
-    }, { threshold: 0.1 });
-    
-    document.querySelectorAll('.scroll-animate').forEach(el => {
-      observer.observe(el);
+    }, { 
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
     });
     
-    return () => observer.disconnect();
+    const elements = document.querySelectorAll('.scroll-animate');
+    elements.forEach(el => observer.observe(el));
+    
+    return () => {
+      elements.forEach(el => observer.unobserve(el));
+    };
   }, []);
+
+  const openChatWidget = () => {
+    const chatButton = document.querySelector('[class*="fixed bottom-6 right-6"]') as HTMLButtonElement;
+    if (chatButton) {
+      chatButton.click();
+    }
+  };
 
   return (
     <>
@@ -39,10 +50,7 @@ export default function Home() {
             <a href="#features" className="hidden md:inline text-slate-600 hover:text-blue-600 transition-colors">Features</a>
             <a href="#tech-stack" className="hidden md:inline text-slate-600 hover:text-blue-600 transition-colors">Tech Stack</a>
             <button 
-              onClick={() => {
-                const chatButton = document.querySelector('[class*="fixed bottom-6 right-6"]') as HTMLButtonElement;
-                chatButton?.click();
-              }}
+              onClick={openChatWidget}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm"
             >
               Try Chat Demo
@@ -58,7 +66,7 @@ export default function Home() {
             <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6 scroll-animate">
               AI-Powered Customer Experience Demo
             </h1>
-            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed scroll-animate">
+            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed scroll-animate" style={{animationDelay: '0.1s'}}>
               This project demonstrates a modern, AI-powered customer experience solution. 
               It features a conversational chat application that integrates with multiple leading AI platforms 
               and a custom backend. Built with Next.js, showcasing real-world scenarios like authentication, 
@@ -66,7 +74,7 @@ export default function Home() {
             </p>
             
             {/* Key Features */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700 scroll-animate">
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700 mb-8 scroll-animate" style={{animationDelay: '0.2s'}}>
               <span className="flex items-center gap-2">
                 <CheckIcon /> Google Dialogflow
               </span>
@@ -80,6 +88,15 @@ export default function Home() {
                 <CheckIcon /> Custom REST API
               </span>
             </div>
+
+            {/* Hero CTA Button */}
+            <button 
+              onClick={openChatWidget}
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg scroll-animate"
+              style={{animationDelay: '0.3s'}}
+            >
+              Launch Chat Demo
+            </button>
           </div>
         </section>
 
@@ -113,7 +130,7 @@ export default function Home() {
               </div>
 
               {/* Lex Card */}
-              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate">
+              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate" style={{animationDelay: '0.1s'}}>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -134,7 +151,7 @@ export default function Home() {
               </div>
 
               {/* API Card */}
-              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate">
+              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate" style={{animationDelay: '0.2s'}}>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -237,27 +254,6 @@ export default function Home() {
       </main>
 
       <ChatWidget />
-      
-      <style jsx global>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-in-up {
-          animation: fadeInUp 0.6s ease-out forwards;
-        }
-        
-        .scroll-animate {
-          opacity: 0;
-        }
-      `}</style>
     </>
   );
 }
