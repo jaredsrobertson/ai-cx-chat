@@ -110,8 +110,8 @@ export default function Home() {
             
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Dialogflow Card */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate text-center md:text-left">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto md:mx-0">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                           d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -131,8 +131,8 @@ export default function Home() {
               </div>
 
               {/* Lex Card */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate" style={{animationDelay: '0.1s'}}>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate text-center md:text-left" style={{animationDelay: '0.1s'}}>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto md:mx-0">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                           d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -152,8 +152,8 @@ export default function Home() {
               </div>
 
               {/* API Card */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate" style={{animationDelay: '0.2s'}}>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate text-center md:text-left" style={{animationDelay: '0.2s'}}>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto md:mx-0">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                           d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
@@ -182,24 +182,24 @@ export default function Home() {
               Technical Stack
             </h2>
             
-            <div className="max-w-4xl mx-auto bg-white/80 backdrop-blur-sm rounded-lg p-8 scroll-animate">
+            <div className="max-w-4xl mx-auto bg-white/80 backdrop-blur-sm rounded-lg p-8 scroll-animate text-center md:text-left">
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
                   <h3 className="font-semibold text-lg mb-4 text-slate-800">Frontend</h3>
                   <ul className="space-y-3 text-slate-600">
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                       Next.js 14 with App Router
                     </li>
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                       TypeScript for type safety
                     </li>
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                       Tailwind CSS for styling
                     </li>
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                       Real-time chat interface
                     </li>
@@ -209,19 +209,19 @@ export default function Home() {
                 <div>
                   <h3 className="font-semibold text-lg mb-4 text-slate-800">Backend & Services</h3>
                   <ul className="space-y-3 text-slate-600">
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                       Vercel Edge Functions
                     </li>
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                       Dialogflow Webhook Fulfillment
                     </li>
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                       AWS SDK Integration
                     </li>
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                       Token-based Authentication
                     </li>
@@ -232,7 +232,7 @@ export default function Home() {
               {/* Implementation Highlights */}
               <div className="mt-8 pt-6 border-t border-slate-200">
                 <h4 className="font-semibold text-sm text-slate-700 mb-3">Implementation Highlights</h4>
-                <div className="flex flex-wrap gap-3 text-sm">
+                <div className="flex flex-wrap gap-3 text-sm justify-center md:justify-start">
                   <span className="px-3 py-1 bg-white rounded-full text-slate-700">Webhook Fulfillment</span>
                   <span className="px-3 py-1 bg-white rounded-full text-slate-700">Context Management</span>
                   <span className="px-3 py-1 bg-white rounded-full text-slate-700">Session Persistence</span>

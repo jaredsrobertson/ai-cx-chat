@@ -97,11 +97,16 @@ class DialogflowClient {
         const formattedPayload: Record<string, unknown> = {};
         for (const key in message.payload.fields) {
           const field: DialogflowPayloadField = message.payload.fields[key];
-          const valueKey = field.kind as keyof typeof field;
-          if (valueKey && field[valueKey]) {
-            formattedPayload[key] = field[valueKey];
+          // Fix: Check for the correct property names based on the field kind
+          if (field.stringValue !== undefined) {
+            formattedPayload[key] = field.stringValue;
+          } else if (field.numberValue !== undefined) {
+            formattedPayload[key] = field.numberValue;
+          } else if (field.boolValue !== undefined) {
+            formattedPayload[key] = field.boolValue;
           }
         }
+        console.log('Parsed payload:', formattedPayload);
         return formattedPayload;
       }
     }
