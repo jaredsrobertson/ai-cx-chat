@@ -170,6 +170,8 @@ export default function ChatWidget() {
         const quickReplies = dialogflowClient.parseQuickReplies(response.queryResult.fulfillmentMessages);
         const payload = dialogflowClient.parsePayload(response.queryResult.fulfillmentMessages);
         
+        console.log('Dialogflow payload received:', payload);
+        
         const botMessage: ChatMessage = {
           text: botText,
           isUser: false,
@@ -181,9 +183,23 @@ export default function ChatWidget() {
         setMessages(prev => [...prev, botMessage]);
 
         if (payload?.action === 'REQUIRE_AUTH' && !isAuthenticated) {
+          console.log('Auth required detected, showing modal');
+          console.log('Current isAuthenticated:', isAuthenticated);
+          console.log('Payload action:', payload.action);
           setPendingMessage(text);
           setLoginMessage(payload.message as string || 'Please authenticate to continue');
-          setTimeout(() => setShowLoginModal(true), 500);
+          console.log('About to set showLoginModal to true');
+          setTimeout(() => {
+            console.log('Setting showLoginModal to true');
+            setShowLoginModal(true);
+          }, 500);
+        } else {
+          console.log('Modal condition not met:', {
+            payloadAction: payload?.action,
+            isAuthenticated,
+            condition1: payload?.action === 'REQUIRE_AUTH',
+            condition2: !isAuthenticated
+          });
         }
       } else if (selectedBot === 'lex' && lexClient) {
         const response = await lexClient.sendMessage(text);
