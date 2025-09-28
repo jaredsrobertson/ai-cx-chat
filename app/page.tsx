@@ -39,12 +39,15 @@ export default function Home() {
 
   return (
     <>
+      {/* Fixed Background */}
+      <div className="fixed inset-0 bg-gradient-to-b from-slate-200 to-blue-200 z-0" />
+      
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md border-b border-slate-200">
+      <header className="fixed top-0 left-0 right-0 z-20 bg-white/10 backdrop-blur-md border-b border-slate-200/50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <CloudIcon className="w-8 h-8 text-blue-600" />
-            <span className="font-bold text-lg text-slate-800">AI CX Demo</span>
+            <span className="font-bold text-lg text-slate-600">AI CX Demo</span>
           </div>
           <nav className="flex items-center gap-6">
             <a href="#features" className="hidden md:inline text-slate-600 hover:text-blue-600 transition-colors">Features</a>
@@ -59,14 +62,14 @@ export default function Home() {
         </div>
       </header>
 
-      <main>
+      <main className="relative z-10">
         {/* Hero Section */}
-        <section className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-slate-50 to-white">
+        <section className="min-h-screen flex items-center justify-center px-4">
           <div className="max-w-5xl mx-auto text-center py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 mb-6 scroll-animate">
+            <h1 className="text-4xl md:text-6xl font-bold text-slate-700 mb-6 scroll-animate">
               AI-Powered Customer Experience Demo
             </h1>
-            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed scroll-animate" style={{animationDelay: '0.1s'}}>
+            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed scroll-animate">
               This project demonstrates a modern, AI-powered customer experience solution. 
               It features a conversational chat application that integrates with multiple leading AI platforms 
               and a custom backend. Built with Next.js, showcasing real-world scenarios like authentication, 
@@ -74,7 +77,7 @@ export default function Home() {
             </p>
             
             {/* Key Features */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700 mb-8 scroll-animate" style={{animationDelay: '0.2s'}}>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700 mb-8 scroll-animate">
               <span className="flex items-center gap-2">
                 <CheckIcon /> Google Dialogflow
               </span>
@@ -92,24 +95,22 @@ export default function Home() {
             {/* Hero CTA Button */}
             <button 
               onClick={openChatWidget}
-              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg scroll-animate"
-              style={{animationDelay: '0.3s'}}
-            >
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg scroll-animate">
               Launch Chat Demo
             </button>
           </div>
         </section>
 
         {/* Features Section */}
-        <section id="features" className="py-20 bg-slate-50">
+        <section id="features" className="py-20">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-12 scroll-animate">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-700 mb-12 scroll-animate">
               Key Features
             </h2>
             
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Dialogflow Card */}
-              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate">
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -130,7 +131,7 @@ export default function Home() {
               </div>
 
               {/* Lex Card */}
-              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate" style={{animationDelay: '0.1s'}}>
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate" style={{animationDelay: '0.1s'}}>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -151,7 +152,7 @@ export default function Home() {
               </div>
 
               {/* API Card */}
-              <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate" style={{animationDelay: '0.2s'}}>
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate" style={{animationDelay: '0.2s'}}>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -175,13 +176,13 @@ export default function Home() {
         </section>
 
         {/* Tech Stack Section */}
-        <section id="tech-stack" className="py-20 bg-white">
+        <section id="tech-stack" className="py-20">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-12 scroll-animate">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-700 mb-12 scroll-animate">
               Technical Stack
             </h2>
             
-            <div className="max-w-4xl mx-auto bg-slate-50 rounded-lg p-8 scroll-animate">
+            <div className="max-w-4xl mx-auto bg-white/80 backdrop-blur-sm rounded-lg p-8 scroll-animate">
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
                   <h3 className="font-semibold text-lg mb-4 text-slate-800">Frontend</h3>
@@ -244,9 +245,9 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="py-8 bg-slate-900">
+        <footer className="py-8 bg-white/10 backdrop-blur-md border-b border-slate-200/50">
           <div className="container mx-auto px-4 text-center">
-            <p className="text-slate-400">
+            <p className="text-slate-600">
               © 2025 AI CX Demo • Built with Next.js, Dialogflow, and Amazon Lex
             </p>
           </div>

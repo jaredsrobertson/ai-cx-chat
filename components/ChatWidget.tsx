@@ -249,10 +249,10 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-blue-950 text-white rounded-full p-5 shadow-lg hover:bg-opacity-90 transition-all hover:scale-110"
+          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-lg hover:bg-blue-700 bg-opacity-90 transition-all hover:scale-110 animate-bounce-pause"
         >
           <CloudIcon className="w-8 h-8" />
-          <span className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
+          <span className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full animate-pulse duration-1000"></span>
         </button>
       )}
 

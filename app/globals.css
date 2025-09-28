@@ -6,7 +6,6 @@ html {
 }
 
 body {
-  background: linear-gradient(to bottom, #f8fafc, #ffffff);
   color: #1e293b;
   font-family: var(--font-inter), sans-serif;
   overscroll-behavior-y: none;
@@ -16,7 +15,7 @@ body {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -26,11 +25,11 @@ body {
 
 .scroll-animate {
   opacity: 0;
-  transform: translateY(30px);
+  transform: translateY(10px);
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out forwards;
+  animation: fadeInUp 0.25s ease-out forwards;
 }
 
 /* Better focus styles */
@@ -43,4 +42,21 @@ body {
 ::selection {
   background: #3b82f6;
   color: white;
+}
+
+/* Slow bounce animation for chat button */
+@keyframes bounce-pause {
+  0%, 20%, 50%, 80%, 100% { 
+    transform: translateY(0);
+  }
+  40% { 
+    transform: translateY(-10px);
+  }
+  60% { 
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-pause {
+  animation: bounce-pause 3s ease-in-out infinite;
 }
