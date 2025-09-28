@@ -103,7 +103,7 @@ class LexClient {
     
     if (!response.messages) {
       console.log('No messages in response');
-      return [];
+      return this.getDefaultQuickReplies();
     }
     
     const card = response.messages.find(m => m.contentType === 'ImageResponseCard');
@@ -115,8 +115,19 @@ class LexClient {
       return buttons;
     }
     
-    console.log('No quick replies found');
-    return [];
+    console.log('No quick replies found, returning default ones');
+    return this.getDefaultQuickReplies();
+  }
+
+  private getDefaultQuickReplies(): string[] {
+    // Return default quick replies for Lex when none are configured
+    return [
+      'Account info',
+      'Lost/stolen debit card', 
+      'Fees',
+      'Hours',
+      'Talk to an Agent'
+    ];
   }
 
   public getNLUConfidence(response: LexResponse): number | undefined {
