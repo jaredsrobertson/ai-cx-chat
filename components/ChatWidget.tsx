@@ -193,6 +193,11 @@ export default function ChatWidget() {
         // Lex NLU confidence (0..1)
         const nluConfidence = lexClient.getNLUConfidence(response);
 
+        console.log('=== LEX MESSAGE CREATION ===');
+        console.log('Bot text:', botText);
+        console.log('Quick replies from Lex:', quickReplies);
+        console.log('Intent:', intentName);
+
         const lexMessage: ChatMessage = {
           text: botText,
           isUser: false,
@@ -201,6 +206,8 @@ export default function ChatWidget() {
           intent: intentName,
           nluConfidence: nluConfidence,
         };
+        
+        console.log('Final Lex message object:', lexMessage);
         setMessages(prev => [...prev, lexMessage]);
       }
     } catch (error) {
@@ -257,7 +264,19 @@ export default function ChatWidget() {
   };
 
   const lastBotMessage = getLastBotMessage();
-  const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
+  const shouldShowQuickReplies = Boolean(
+    !isTyping && 
+    lastBotMessage && 
+    lastBotMessage.quickReplies && 
+    Array.isArray(lastBotMessage.quickReplies) && 
+    lastBotMessage.quickReplies.length > 0
+  );
+
+  console.log('=== QUICK REPLIES DEBUG ===');
+  console.log('Last bot message:', lastBotMessage);
+  console.log('Should show quick replies:', shouldShowQuickReplies);
+  console.log('Is typing:', isTyping);
+  console.log('Quick replies array:', lastBotMessage?.quickReplies);
 
   return (
     <>
@@ -339,12 +358,26 @@ export default function ChatWidget() {
                   {isTyping && (<Message text="" isUser={false} isTyping={true}/>)}
                   
                   {/* Show quick replies after the last bot message */}
-                  {shouldShowQuickReplies && (
-                    <QuickReplies
-                      replies={lastBotMessage.quickReplies!}
-                      onReplyClick={handleQuickReply}
-                      disabled={isTyping}
-                    />
+                  {shouldShowQuickReplies && lastBotMessage && lastBotMessage.quickReplies && (
+                    <div className="mt-4">
+                      <QuickReplies
+                        replies={lastBotMessage.quickReplies}
+                        onReplyClick={handleQuickReply}
+                        disabled={isTyping}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Debug info - visible in development */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="text-xs text-red-500 mt-2 p-2 bg-red-50 rounded">
+                      <div>Debug Info:</div>
+                      <div>shouldShowQuickReplies: {shouldShowQuickReplies.toString()}</div>
+                      <div>isTyping: {isTyping.toString()}</div>
+                      <div>hasQuickReplies: {lastBotMessage?.quickReplies?.length ?? 0}</div>
+                      <div>selectedBot: {selectedBot ?? 'none'}</div>
+                      <div>lastBotMessage exists: {lastBotMessage ? 'yes' : 'no'}</div>
+                    </div>
                   )}
                   
                   <div ref={messagesEndRef} />

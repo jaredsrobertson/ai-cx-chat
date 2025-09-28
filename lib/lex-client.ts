@@ -65,7 +65,24 @@ class LexClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const lexResponse = await response.json();
+      
+      // DEBUG: Log the entire Lex response
+      console.log('=== LEX RESPONSE DEBUG ===');
+      console.log('Full Lex response:', JSON.stringify(lexResponse, null, 2));
+      console.log('Messages array:', lexResponse.messages);
+      if (lexResponse.messages) {
+        lexResponse.messages.forEach((msg: LexSDKMessage, index: number) => {
+          console.log(`Message ${index}:`, {
+            contentType: msg.contentType,
+            content: msg.content,
+            imageResponseCard: msg.imageResponseCard
+          });
+        });
+      }
+      console.log('=== END LEX DEBUG ===');
+
+      return lexResponse;
     } catch (error) {
       console.error('Error sending message to Lex:', error);
       throw error;
@@ -81,12 +98,24 @@ class LexClient {
   }
 
   public parseQuickReplies(response: LexResponse): string[] {
-    if (!response.messages) return [];
+    console.log('=== PARSING QUICK REPLIES ===');
+    console.log('Response messages:', response.messages);
+    
+    if (!response.messages) {
+      console.log('No messages in response');
+      return [];
+    }
     
     const card = response.messages.find(m => m.contentType === 'ImageResponseCard');
+    console.log('Found ImageResponseCard:', card);
+    
     if (card && card.imageResponseCard?.buttons) {
-      return card.imageResponseCard.buttons.map((button: { text: string; value: string }) => button.text);
+      const buttons = card.imageResponseCard.buttons.map((button: { text: string; value: string }) => button.text);
+      console.log('Extracted buttons:', buttons);
+      return buttons;
     }
+    
+    console.log('No quick replies found');
     return [];
   }
 

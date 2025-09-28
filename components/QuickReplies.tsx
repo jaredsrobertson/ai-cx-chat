@@ -11,7 +11,12 @@ interface QuickRepliesProps {
 }
 
 export default function QuickReplies({ replies, onReplyClick, disabled = false }: QuickRepliesProps) {
-  if (!replies || replies.length === 0) return null;
+  console.log('QuickReplies rendering with:', { replies, disabled });
+  
+  if (!replies || replies.length === 0) {
+    console.log('No replies to show');
+    return null;
+  }
 
   return (
     <div className="flex flex-wrap gap-2 mt-2 ml-10">
@@ -22,7 +27,10 @@ export default function QuickReplies({ replies, onReplyClick, disabled = false }
         return (
           <button
             key={index}
-            onClick={() => onReplyClick(payload)}
+            onClick={() => {
+              console.log('Quick reply clicked:', payload);
+              onReplyClick(payload);
+            }}
             disabled={disabled}
             className="px-3 py-1 bg-white border border-blue-950 text-blue-950 rounded-full text-sm 
                        hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
