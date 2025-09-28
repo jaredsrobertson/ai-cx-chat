@@ -65,24 +65,7 @@ class LexClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const lexResponse = await response.json();
-      
-      // DEBUG: Log the entire Lex response
-      console.log('=== LEX RESPONSE DEBUG ===');
-      console.log('Full Lex response:', JSON.stringify(lexResponse, null, 2));
-      console.log('Messages array:', lexResponse.messages);
-      if (lexResponse.messages) {
-        lexResponse.messages.forEach((msg: LexSDKMessage, index: number) => {
-          console.log(`Message ${index}:`, {
-            contentType: msg.contentType,
-            content: msg.content,
-            imageResponseCard: msg.imageResponseCard
-          });
-        });
-      }
-      console.log('=== END LEX DEBUG ===');
-
-      return lexResponse;
+      return await response.json();
     } catch (error) {
       console.error('Error sending message to Lex:', error);
       throw error;
@@ -98,29 +81,20 @@ class LexClient {
   }
 
   public parseQuickReplies(response: LexResponse): string[] {
-    console.log('=== PARSING QUICK REPLIES ===');
-    console.log('Response messages:', response.messages);
-    
     if (!response.messages) {
-      console.log('No messages in response');
       return this.getDefaultQuickReplies();
     }
     
     const card = response.messages.find(m => m.contentType === 'ImageResponseCard');
-    console.log('Found ImageResponseCard:', card);
     
     if (card && card.imageResponseCard?.buttons) {
-      const buttons = card.imageResponseCard.buttons.map((button: { text: string; value: string }) => button.text);
-      console.log('Extracted buttons:', buttons);
-      return buttons;
+      return card.imageResponseCard.buttons.map((button: Button) => button.text);
     }
     
-    console.log('No quick replies found, returning default ones');
     return this.getDefaultQuickReplies();
   }
 
   private getDefaultQuickReplies(): string[] {
-    // Return default quick replies for Lex when none are configured
     return [
       'Account info',
       'Lost/stolen debit card', 
@@ -134,7 +108,7 @@ class LexClient {
     return response.interpretations?.[0]?.nluConfidence?.score;
   }
 
-  public clearSession() {
+  public clearSession(): void {
     this.sessionId = uuidv4();
     if (typeof window !== 'undefined') {
       localStorage.setItem('lex-session', this.sessionId);

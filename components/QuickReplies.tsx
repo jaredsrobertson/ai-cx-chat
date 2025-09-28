@@ -1,7 +1,6 @@
 // components/QuickReplies.tsx
 import React from 'react';
 
-// A QuickReply can be a simple string or an object with display and payload
 type QuickReply = string | { display: string; payload: string };
 
 interface QuickRepliesProps {
@@ -11,10 +10,7 @@ interface QuickRepliesProps {
 }
 
 export default function QuickReplies({ replies, onReplyClick, disabled = false }: QuickRepliesProps) {
-  console.log('QuickReplies rendering with:', { replies, disabled });
-  
   if (!replies || replies.length === 0) {
-    console.log('No replies to show');
     return null;
   }
 
@@ -27,10 +23,7 @@ export default function QuickReplies({ replies, onReplyClick, disabled = false }
         return (
           <button
             key={index}
-            onClick={() => {
-              console.log('Quick reply clicked:', payload);
-              onReplyClick(payload);
-            }}
+            onClick={() => onReplyClick(payload)}
             disabled={disabled}
             className="px-3 py-1 bg-white border border-blue-950 text-blue-950 rounded-full text-sm 
                        hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

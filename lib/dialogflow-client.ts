@@ -1,14 +1,6 @@
 // lib/dialogflow-client.ts
 import { v4 as uuidv4 } from 'uuid';
 
-export interface DialogflowMessage {
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-  quickReplies?: string[];
-  payload?: Record<string, unknown>;
-}
-
 interface DialogflowPayloadField {
   kind: string;
   stringValue?: string;
@@ -51,8 +43,6 @@ export interface DialogflowResponse {
 
 class DialogflowClient {
   private sessionId: string;
-  private projectId: string;
-  private accessToken?: string;
 
   constructor() {
     const stored = localStorage.getItem('dialogflow-session');
@@ -60,8 +50,6 @@ class DialogflowClient {
     if (!stored) {
       localStorage.setItem('dialogflow-session', this.sessionId);
     }
-    
-    this.projectId = process.env.NEXT_PUBLIC_DIALOGFLOW_PROJECT_ID || '';
   }
 
   async sendMessage(text: string, isAuthenticated: boolean = false, authContext: boolean = false): Promise<DialogflowResponse> {
@@ -75,7 +63,7 @@ class DialogflowClient {
           text,
           sessionId: this.sessionId,
           isAuthenticated,
-          authContext, // Pass the new flag to the API
+          authContext,
         }),
       });
 
@@ -83,8 +71,7 @@ class DialogflowClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Error sending message to Dialogflow:', error);
       throw error;
@@ -121,7 +108,7 @@ class DialogflowClient {
     return null;
   }
 
-  setAuthenticated(authenticated: boolean) {
+  setAuthenticated(authenticated: boolean): void {
     localStorage.setItem('dialogflow-authenticated', authenticated.toString());
   }
 
@@ -129,7 +116,7 @@ class DialogflowClient {
     return localStorage.getItem('dialogflow-authenticated') === 'true';
   }
 
-  clearSession() {
+  clearSession(): void {
     this.sessionId = uuidv4();
     localStorage.setItem('dialogflow-session', this.sessionId);
     localStorage.removeItem('dialogflow-authenticated');
