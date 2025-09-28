@@ -150,14 +150,16 @@ export default function ChatWidget() {
     if (!selectedBot || !text.trim()) return;
     
     const userMessage: ChatMessage = { text, isUser: true, timestamp: new Date() };
+    
+    // Clear quick replies from previous bot messages when user sends a message
     setMessages(prev => {
-      const updatedMessages = [...prev];
-      if (updatedMessages.length > 0) {
-        const lastMsg = updatedMessages[updatedMessages.length - 1];
-        if (!lastMsg.isUser && lastMsg.quickReplies) {
-          delete lastMsg.quickReplies;
+      const updatedMessages = prev.map(msg => {
+        if (!msg.isUser && msg.quickReplies) {
+          const { quickReplies, ...msgWithoutQuickReplies } = msg;
+          return msgWithoutQuickReplies;
         }
-      }
+        return msg;
+      });
       return [...updatedMessages, userMessage];
     });
 
@@ -244,6 +246,19 @@ export default function ChatWidget() {
     setSelectedBot(null);
   };
 
+  // Find the last bot message to show quick replies
+  const getLastBotMessage = () => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (!messages[i].isUser) {
+        return messages[i];
+      }
+    }
+    return null;
+  };
+
+  const lastBotMessage = getLastBotMessage();
+  const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
+
   return (
     <>
       {!isOpen && (
@@ -314,22 +329,24 @@ export default function ChatWidget() {
               <>
                 <div className="flex-1 overflow-y-auto p-4">
                   {messages.map((message, index) => (
-                    <div key={index}>
-                      <Message
-                        text={message.text}
-                        isUser={message.isUser}
-                        timestamp={message.timestamp}
-                      />
-                      {index === messages.length - 1 && !isTyping && !message.isUser && message.quickReplies && message.quickReplies.length > 0 && (
-                        <QuickReplies
-                          replies={message.quickReplies}
-                          onReplyClick={handleQuickReply}
-                          disabled={isTyping}
-                        />
-                      )}
-                    </div>
+                    <Message
+                      key={index}
+                      text={message.text}
+                      isUser={message.isUser}
+                      timestamp={message.timestamp}
+                    />
                   ))}
                   {isTyping && (<Message text="" isUser={false} isTyping={true}/>)}
+                  
+                  {/* Show quick replies after the last bot message */}
+                  {shouldShowQuickReplies && (
+                    <QuickReplies
+                      replies={lastBotMessage.quickReplies!}
+                      onReplyClick={handleQuickReply}
+                      disabled={isTyping}
+                    />
+                  )}
+                  
                   <div ref={messagesEndRef} />
                 </div>
                 
