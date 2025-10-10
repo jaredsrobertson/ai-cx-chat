@@ -350,7 +350,7 @@ export default function ChatWidget() {
             </div>
           )}
 
-          <div className="flex-1 overflow-hidden flex flex-col bg-gray-50">
+          <div className="flex-1 flex flex-col bg-gray-50 min-h-0">
             {!selectedBot ? (
               <div className="flex-1 overflow-y-auto">
                 <BotSelector onSelectBot={handleSelectBot} lastBot={lastBot} onResume={handleResume}/>
