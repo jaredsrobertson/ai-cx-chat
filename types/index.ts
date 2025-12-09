@@ -41,6 +41,12 @@ export interface TransferResult {
 // --- Chat Domain ---
 export type QuickReply = string | { display: string; payload: string };
 
+export interface Source {
+  title: string;
+  uri: string;
+  excerpt?: string;
+}
+
 export interface ChatMessage {
   text: string;
   isUser: boolean;
@@ -49,6 +55,7 @@ export interface ChatMessage {
   payload?: Record<string, unknown> | null;
   intent?: string;
   nluConfidence?: number;
+  sources?: Source[]; // New field for RAG citations
 }
 
 export type BotType = 'dialogflow' | 'lex';

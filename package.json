@@ -10,14 +10,17 @@
   },
   "dependencies": {
     "@aws-sdk/client-comprehend": "^3.890.0",
+    "@aws-sdk/client-kendra": "^3.948.0",
     "@aws-sdk/client-lex-runtime-v2": "^3.890.0",
     "@google-cloud/dialogflow": "^7.2.0",
     "axios": "^1.12.2",
     "google-protobuf": "^3.21.2",
     "next": "^16.0.8",
+    "next-auth": "^4.24.5",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

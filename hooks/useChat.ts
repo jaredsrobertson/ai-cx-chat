@@ -1,153 +1,93 @@
-import { useState, useEffect, useCallback } from 'react';
-import DialogflowClient from '@/lib/dialogflow-client';
-import LexClient from '@/lib/lex-client';
-import { ChatMessage, BotType } from '@/types';
+import { useChatStore } from '@/store/chatStore';
 
 export const useChat = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [dialogflowClient, setDialogflowClient] = useState<DialogflowClient | null>(null);
-  const [lexClient, setLexClient] = useState<LexClient | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authRequired, setAuthRequired] = useState<{ required: boolean; message: string }>({ required: false, message: '' });
-  
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-        const dfClient = new DialogflowClient();
-        setDialogflowClient(dfClient);
-        setLexClient(new LexClient());
-        setIsAuthenticated(dfClient.isAuthenticated());
-    }
-  }, []);
+  const { 
+    addMessage, 
+    setTyping, 
+    setAuthenticated, 
+    setAuthRequired, 
+    resetConversation,
+    isAuthenticated,
+    sessionId
+  } = useChatStore();
 
-  const addMessage = useCallback((msg: ChatMessage) => {
-    setMessages((prev) => [...prev, msg]);
-  }, []);
+  // Unified Welcome Message
+  const triggerWelcome = async () => {
+    // Check if we already have messages, if so, don't re-trigger welcome
+    if (useChatStore.getState().messages.length > 0) return;
 
-  const clearMessages = useCallback(() => setMessages([]), []);
-
-  const triggerWelcome = async (bot: BotType) => {
-    setIsTyping(true);
-    try {
-      if (bot === 'dialogflow' && dialogflowClient) {
-        const response = await dialogflowClient.sendEvent('WELCOME', isAuthenticated);
-        
-        // --- SAFETY CHECK START ---
-        if (!response || !response.queryResult) {
-            throw new Error('Invalid response from Dialogflow');
-        }
-        // --- SAFETY CHECK END ---
-
-        const result = response.queryResult;
-        
-        addMessage({
-          text: result.fulfillmentText || 'Welcome!',
-          isUser: false,
-          timestamp: new Date(),
-          quickReplies: dialogflowClient.parseQuickReplies(result.fulfillmentMessages),
-          intent: result.intent?.displayName,
-        });
-      } else if (bot === 'lex') {
-        addMessage({
-          text: 'Welcome to SecureBank Support! I can help with account questions, security, and FAQs.',
-          isUser: false,
-          timestamp: new Date(),
-          quickReplies: ['Account info', 'Lost/stolen card', 'Fees', 'Hours']
-        });
-      }
-    } catch (error) {
-      console.error('Welcome Trigger Error:', error);
-      addMessage({ text: "Connection failed. Please try again.", isUser: false, timestamp: new Date() });
-    } finally {
-      setIsTyping(false);
-    }
+    setTyping(true);
+    // Simulate network delay for realism
+    setTimeout(() => {
+      addMessage({
+        text: 'Welcome to SecureBank AI! I can help you with your accounts, transfers, or answer your support questions. How can I help you today?',
+        isUser: false,
+        timestamp: new Date(),
+        quickReplies: ['Check Balance', 'Transfer Money', 'Hours', 'Lost Card']
+      });
+      setTyping(false);
+    }, 800);
   };
 
-  const sendMessage = async (text: string, bot: BotType, isAuthRetry = false) => {
+  const sendMessage = async (text: string, isAuthRetry = false) => {
     if (!text.trim()) return;
 
     if (!isAuthRetry) {
         addMessage({ text, isUser: true, timestamp: new Date() });
     }
     
-    setIsTyping(true);
+    setTyping(true);
 
     try {
-      if (bot === 'dialogflow' && dialogflowClient) {
-        const response = await dialogflowClient.sendMessage(text, isAuthenticated, isAuthRetry);
-        
-        // --- SAFETY CHECK START ---
-        if (!response || !response.queryResult) {
-            console.error("Invalid Dialogflow response:", response);
-            throw new Error('Invalid response format');
-        }
-        // --- SAFETY CHECK END ---
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, sessionId }),
+      });
 
-        const result = response.queryResult;
-        const payload = dialogflowClient.parsePayload(result.fulfillmentMessages);
+      const json = await response.json();
+      
+      if (!response.ok) throw new Error(json.error || 'API Error');
 
-        addMessage({
-          text: result.fulfillmentText || "I didn't get that.",
-          isUser: false,
-          timestamp: new Date(),
-          quickReplies: dialogflowClient.parseQuickReplies(result.fulfillmentMessages),
-          payload,
-          intent: result.intent?.displayName,
+      const data = json.data;
+
+      // Check if the backend is asking for authentication
+      if (data.actionRequired === 'REQUIRE_AUTH' && !isAuthenticated) {
+        setAuthRequired({ 
+          required: true, 
+          message: data.actionMessage || 'Authentication required for this action' 
         });
-
-        if (payload?.action === 'REQUIRE_AUTH' && !isAuthenticated) {
-          setAuthRequired({ required: true, message: payload.message as string || 'Authentication required' });
-        }
-
-      } else if (bot === 'lex' && lexClient) {
-        const response = await lexClient.sendMessage(text);
+        
         addMessage({
-          text: lexClient.parseText(response),
+          text: data.text,
           isUser: false,
           timestamp: new Date(),
-          quickReplies: lexClient.parseQuickReplies(response),
-          intent: response.sessionState?.intent?.name,
-          nluConfidence: lexClient.getNLUConfidence(response),
+          quickReplies: data.quickReplies,
+          intent: data.intent
+        });
+      } else {
+        // Normal response
+        addMessage({
+          text: data.text,
+          isUser: false,
+          timestamp: new Date(),
+          quickReplies: data.quickReplies,
+          intent: data.intent,
+          // We can add a "Source" field here later for Kendra
         });
       }
+
     } catch (error) {
       console.error('SendMessage Error:', error);
-      addMessage({ text: "Error connecting to server.", isUser: false, timestamp: new Date() });
+      addMessage({ text: "I'm having trouble connecting right now. Please try again.", isUser: false, timestamp: new Date() });
     } finally {
-      setIsTyping(false);
+      setTyping(false);
     }
-  };
-
-  const authenticateUser = () => {
-    if (dialogflowClient) {
-      dialogflowClient.setAuthenticated(true);
-      setIsAuthenticated(true);
-      setAuthRequired({ required: false, message: '' });
-    }
-  };
-
-  const resetConversation = (bot: BotType) => {
-      clearMessages();
-      if (bot === 'dialogflow' && dialogflowClient) {
-          dialogflowClient.clearSession();
-          dialogflowClient.setAuthenticated(false);
-          setIsAuthenticated(false);
-      } else if (bot === 'lex' && lexClient) {
-          lexClient.clearSession();
-      }
   };
 
   return {
-    messages,
-    isTyping,
     sendMessage,
     triggerWelcome,
-    addMessage,
-    clearMessages,
-    isAuthenticated,
-    authenticateUser,
-    authRequired,
-    setAuthRequired,
     resetConversation
   };
 };

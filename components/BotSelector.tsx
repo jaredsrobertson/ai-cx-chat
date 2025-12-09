@@ -1,15 +1,15 @@
-// components/BotSelector.tsx
 import React from 'react';
+import { BotType } from '@/types';
 
 interface BotSelectorProps {
-  onSelectBot: (bot: 'dialogflow' | 'lex') => void;
-  lastBot: 'dialogflow' | 'lex' | null;
+  onSelectBot: (bot: BotType) => void;
+  lastBot: BotType | null;
   onResume?: () => void;
 }
 
 export default function BotSelector({ onSelectBot, lastBot, onResume }: BotSelectorProps) {
   const handleResumeClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); // Prevent the parent onClick from firing
+    e.stopPropagation(); 
     if (onResume) {
       onResume();
     }
