@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
       message: 'Transfer successful'
     });
 
-  } catch (error) {
+  } catch (_error) {
+    console.error('Transfer API Error:', _error);
     return errorResponse('Internal Server Error');
   }
 }

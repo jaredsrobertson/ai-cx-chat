@@ -26,13 +26,18 @@ export const useChat = () => {
 
   const clearMessages = useCallback(() => setMessages([]), []);
 
-  // Standardized Welcome Trigger
   const triggerWelcome = async (bot: BotType) => {
     setIsTyping(true);
     try {
       if (bot === 'dialogflow' && dialogflowClient) {
-        // Send WELCOME event instead of "hi" text
         const response = await dialogflowClient.sendEvent('WELCOME', isAuthenticated);
+        
+        // --- SAFETY CHECK START ---
+        if (!response || !response.queryResult) {
+            throw new Error('Invalid response from Dialogflow');
+        }
+        // --- SAFETY CHECK END ---
+
         const result = response.queryResult;
         
         addMessage({
@@ -43,7 +48,6 @@ export const useChat = () => {
           intent: result.intent?.displayName,
         });
       } else if (bot === 'lex') {
-        // Static local welcome for Lex (Common pattern for FAQ bots)
         addMessage({
           text: 'Welcome to SecureBank Support! I can help with account questions, security, and FAQs.',
           isUser: false,
@@ -52,6 +56,7 @@ export const useChat = () => {
         });
       }
     } catch (error) {
+      console.error('Welcome Trigger Error:', error);
       addMessage({ text: "Connection failed. Please try again.", isUser: false, timestamp: new Date() });
     } finally {
       setIsTyping(false);
@@ -70,11 +75,19 @@ export const useChat = () => {
     try {
       if (bot === 'dialogflow' && dialogflowClient) {
         const response = await dialogflowClient.sendMessage(text, isAuthenticated, isAuthRetry);
+        
+        // --- SAFETY CHECK START ---
+        if (!response || !response.queryResult) {
+            console.error("Invalid Dialogflow response:", response);
+            throw new Error('Invalid response format');
+        }
+        // --- SAFETY CHECK END ---
+
         const result = response.queryResult;
         const payload = dialogflowClient.parsePayload(result.fulfillmentMessages);
 
         addMessage({
-          text: result.fulfillmentText,
+          text: result.fulfillmentText || "I didn't get that.",
           isUser: false,
           timestamp: new Date(),
           quickReplies: dialogflowClient.parseQuickReplies(result.fulfillmentMessages),
@@ -98,6 +111,7 @@ export const useChat = () => {
         });
       }
     } catch (error) {
+      console.error('SendMessage Error:', error);
       addMessage({ text: "Error connecting to server.", isUser: false, timestamp: new Date() });
     } finally {
       setIsTyping(false);

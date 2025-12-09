@@ -14,6 +14,7 @@ export function errorResponse(message: string, status: number = 500) {
   return NextResponse.json({ error: message }, { status });
 }
 
-export function successResponse(data: any) {
+// Changed 'any' to generic 'T' for better type safety
+export function successResponse<T>(data: T) {
   return NextResponse.json({ success: true, data });
 }

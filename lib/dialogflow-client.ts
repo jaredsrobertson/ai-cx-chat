@@ -37,8 +37,8 @@ class DialogflowClient {
     }
   }
 
-  // Unified request handler
-  private async sendRequest(payload: any): Promise<DialogflowResponse> {
+  // Changed payload type from 'any' to 'Record<string, unknown>'
+  private async sendRequest(payload: Record<string, unknown>): Promise<DialogflowResponse> {
     try {
       const response = await fetch('/api/dialogflow/detect', {
         method: 'POST',
@@ -62,7 +62,6 @@ class DialogflowClient {
     return this.sendRequest({ text, isAuthenticated, authContext });
   }
 
-  // Proper event trigger (No "Hi" hack)
   async sendEvent(event: string, isAuthenticated: boolean = false): Promise<DialogflowResponse> {
     return this.sendRequest({ event, isAuthenticated });
   }

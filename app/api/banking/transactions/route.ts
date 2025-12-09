@@ -19,13 +19,15 @@ export async function GET(request: NextRequest) {
     return successResponse({
       transactions: paginated,
       pagination: {
-        total: transactions.length, // Note: In a real DB this would be a count() query
+        total: transactions.length,
         limit,
         offset,
         hasMore: offset + limit < transactions.length
       }
     });
-  } catch (error) {
+  } catch (_error) {
+    // Log internal error if needed, otherwise ignore the variable
+    console.error('Transactions API Error:', _error);
     return errorResponse('Failed to fetch transactions');
   }
 }
