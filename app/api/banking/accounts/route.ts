@@ -1,40 +1,29 @@
-// app/api/banking/accounts/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { mockAccounts, mockUser } from '@/lib/mock-data';
+import { NextRequest } from 'next/server';
+import { BankingService } from '@/lib/services/banking-service';
+import { validateAuth, errorResponse, successResponse } from '@/lib/api-utils';
+import { mockUser } from '@/lib/mock-data';
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check for auth header (mock authentication)
-    const authHeader = request.headers.get('authorization');
-    const API_TOKEN = process.env.MOCK_API_TOKEN || 'demo-token';
-    
-    if (!authHeader || authHeader !== `Bearer ${API_TOKEN}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'Please authenticate first' },
-        { status: 401 }
-      );
-    }
+  if (!validateAuth(request)) {
+    return errorResponse('Unauthorized: Please authenticate first', 401);
+  }
 
-    // Return mock accounts
-    return NextResponse.json({
-      success: true,
-      data: {
-        user: {
-          name: mockUser.name,
-          email: mockUser.email
-        },
-        accounts: mockAccounts.map(account => ({
-          type: account.type,
-          balance: account.balance,
-          accountNumber: account.accountNumber
-        }))
-      }
+  try {
+    const accounts = await BankingService.getAccounts();
+    
+    return successResponse({
+      user: {
+        name: mockUser.name,
+        email: mockUser.email
+      },
+      accounts: accounts.map(account => ({
+        type: account.type,
+        balance: account.balance,
+        accountNumber: account.accountNumber
+      }))
     });
   } catch (error) {
-    console.error('Error in /api/banking/accounts:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to fetch accounts' },
-      { status: 500 }
-    );
+    console.error('API Error:', error);
+    return errorResponse('Internal Server Error');
   }
 }

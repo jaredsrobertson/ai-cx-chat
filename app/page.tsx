@@ -2,35 +2,19 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect } from 'react';
 import CloudIcon from '@/components/CloudIcon';
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
 // Dynamically import ChatWidget to avoid SSR issues
 const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
 
 export default function Home() {
-  // Intersection observer for scroll animations
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate-fade-in-up');
-        }
-      });
-    }, { 
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    });
-    
-    const elements = document.querySelectorAll('.scroll-animate');
-    elements.forEach(el => observer.observe(el));
-    
-    return () => {
-      elements.forEach(el => observer.unobserve(el));
-    };
-  }, []);
+  // Use the custom hook to handle scroll animations
+  useScrollAnimation();
 
   const openChatWidget = () => {
+    // In a production app, you might use a context or event bus.
+    // For this demo, selecting the button by class is sufficient.
     const chatButton = document.querySelector('[class*="fixed bottom-6 right-6"]') as HTMLButtonElement;
     if (chatButton) {
       chatButton.click();

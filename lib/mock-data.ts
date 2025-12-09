@@ -1,30 +1,5 @@
-// lib/mock-data.ts
+import { Account, Transaction, User } from '@/types';
 
-export interface Account {
-  id: string;
-  type: 'checking' | 'savings';
-  balance: number;
-  accountNumber: string;
-}
-
-export interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  type: 'debit' | 'credit';
-  category: string;
-  accountId: string;
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  authenticated: boolean;
-}
-
-// Mock user data
 export const mockUser: User = {
   id: 'user-001',
   name: 'John Demo',
@@ -32,7 +7,6 @@ export const mockUser: User = {
   authenticated: false
 };
 
-// Mock accounts
 export const mockAccounts: Account[] = [
   {
     id: 'acc-001',
@@ -48,7 +22,6 @@ export const mockAccounts: Account[] = [
   }
 ];
 
-// Mock recent transactions
 export const mockTransactions: Transaction[] = [
   {
     id: 'txn-001',
@@ -97,51 +70,7 @@ export const mockTransactions: Transaction[] = [
   }
 ];
 
-// Transfer validation
-export const transferLimits = {
-  minAmount: 1,
-  maxAmount: 10000,
-  dailyLimit: 25000
+export const TRANSFER_LIMITS = {
+  MIN_AMOUNT: 1,
+  MAX_AMOUNT: 10000,
 };
-
-// Mock authentication (for demo purposes)
-export const mockCredentials = {
-  username: 'demo@bank.com',
-  password: 'demo123'
-};
-
-// Helper functions
-export function getAccountByType(type: 'checking' | 'savings'): Account | undefined {
-  return mockAccounts.find(acc => acc.type === type);
-}
-
-export function processTransfer(fromType: 'checking' | 'savings', toType: 'checking' | 'savings', amount: number) {
-  const fromAccount = getAccountByType(fromType);
-  const toAccount = getAccountByType(toType);
-  
-  if (!fromAccount || !toAccount) {
-    return { success: false, error: 'Invalid account type' };
-  }
-  
-  if (amount < transferLimits.minAmount || amount > transferLimits.maxAmount) {
-    return { success: false, error: `Amount must be between $${transferLimits.minAmount} and $${transferLimits.maxAmount}` };
-  }
-  
-  if (fromAccount.balance < amount) {
-    return { success: false, error: 'Insufficient funds' };
-  }
-  
-  // In a real app, we'd update the database here
-  // For demo, we'll just return success
-  return {
-    success: true,
-    data: {
-      fromAccount: fromAccount.type,
-      toAccount: toAccount.type,
-      amount: amount,
-      newFromBalance: fromAccount.balance - amount,
-      newToBalance: toAccount.balance + amount,
-      transactionId: `txn-${Date.now()}`
-    }
-  };
-}

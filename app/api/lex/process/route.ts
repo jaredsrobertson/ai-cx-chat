@@ -1,11 +1,7 @@
-// app/api/lex/process/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { 
-  LexRuntimeV2Client, 
-  RecognizeTextCommand 
-} from '@aws-sdk/client-lex-runtime-v2';
+import { NextRequest } from 'next/server';
+import { LexRuntimeV2Client, RecognizeTextCommand } from '@aws-sdk/client-lex-runtime-v2';
+import { errorResponse, successResponse } from '@/lib/api-utils';
 
-// Initialize the Lex Runtime V2 client
 const lexClient = new LexRuntimeV2Client({
   region: process.env.AWS_REGION,
   credentials: {
@@ -19,10 +15,7 @@ export async function POST(request: NextRequest) {
     const { text, sessionId } = await request.json();
 
     if (!text || !sessionId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: text and sessionId' },
-        { status: 400 }
-      );
+      return errorResponse('Missing required fields', 400);
     }
 
     const command = new RecognizeTextCommand({
@@ -33,17 +26,11 @@ export async function POST(request: NextRequest) {
       text: text,
     });
     
-    // Send the text to Lex and wait for the response
     const lexResponse = await lexClient.send(command);
-
-    return NextResponse.json(lexResponse);
+    return successResponse(lexResponse);
 
   } catch (error) {
-    console.error('Lex process error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json(
-      { error: 'Failed to process message with Lex', details: errorMessage },
-      { status: 500 }
-    );
+    console.error('Lex Process Error:', error);
+    return errorResponse('Failed to process message with Lex');
   }
 }

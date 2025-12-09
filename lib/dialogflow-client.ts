@@ -1,4 +1,3 @@
-// lib/dialogflow-client.ts
 import { v4 as uuidv4 } from 'uuid';
 
 interface DialogflowPayloadField {
@@ -10,17 +9,9 @@ interface DialogflowPayloadField {
 
 export interface DialogflowFulfillmentMessage {
   platform?: string;
-  text?: {
-    text: string[];
-  };
-  quickReplies?: {
-    quickReplies: string[];
-  };
-  payload?: {
-    fields?: {
-      [key: string]: DialogflowPayloadField;
-    };
-  };
+  text?: { text: string[] };
+  quickReplies?: { quickReplies: string[] };
+  payload?: { fields?: { [key: string]: DialogflowPayloadField } };
 }
 
 export interface DialogflowResponse {
@@ -29,15 +20,9 @@ export interface DialogflowResponse {
     queryText: string;
     fulfillmentText: string;
     fulfillmentMessages?: DialogflowFulfillmentMessage[];
-    intent?: {
-      name: string;
-      displayName: string;
-    };
+    intent?: { name: string; displayName: string };
     parameters?: Record<string, unknown>;
-    outputContexts?: Array<{
-      name: string;
-      parameters?: Record<string, unknown>;
-    }>;
+    outputContexts?: Array<{ name: string; parameters?: Record<string, unknown> }>;
   };
 }
 
@@ -45,90 +30,83 @@ class DialogflowClient {
   private sessionId: string;
 
   constructor() {
-    const stored = localStorage.getItem('dialogflow-session');
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('dialogflow-session') : null;
     this.sessionId = stored || uuidv4();
-    if (!stored) {
+    if (typeof window !== 'undefined' && !stored) {
       localStorage.setItem('dialogflow-session', this.sessionId);
     }
   }
 
-  async sendMessage(text: string, isAuthenticated: boolean = false, authContext: boolean = false): Promise<DialogflowResponse> {
+  // Unified request handler
+  private async sendRequest(payload: any): Promise<DialogflowResponse> {
     try {
       const response = await fetch('/api/dialogflow/detect', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          sessionId: this.sessionId,
-          isAuthenticated,
-          authContext,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, sessionId: this.sessionId }),
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const res = await response.json();
+      return res.data || res; // Handle wrapped responses
     } catch (error) {
-      console.error('Error sending message to Dialogflow:', error);
+      console.error('Dialogflow Client Error:', error);
       throw error;
     }
   }
 
+  async sendMessage(text: string, isAuthenticated: boolean = false, authContext: boolean = false): Promise<DialogflowResponse> {
+    return this.sendRequest({ text, isAuthenticated, authContext });
+  }
+
+  // Proper event trigger (No "Hi" hack)
+  async sendEvent(event: string, isAuthenticated: boolean = false): Promise<DialogflowResponse> {
+    return this.sendRequest({ event, isAuthenticated });
+  }
+
   parseQuickReplies(fulfillmentMessages?: DialogflowFulfillmentMessage[]): string[] {
     if (!fulfillmentMessages) return [];
-    
     for (const message of fulfillmentMessages) {
-      if (message.quickReplies?.quickReplies) {
-        return message.quickReplies.quickReplies;
-      }
+      if (message.quickReplies?.quickReplies) return message.quickReplies.quickReplies;
     }
     return [];
   }
 
   parsePayload(fulfillmentMessages?: DialogflowFulfillmentMessage[]): Record<string, unknown> | null {
     if (!fulfillmentMessages) return null;
-    
     for (const message of fulfillmentMessages) {
       if (message.payload && message.payload.fields) {
-        const formattedPayload: Record<string, unknown> = {};
+        const formatted: Record<string, unknown> = {};
         for (const key in message.payload.fields) {
-          const field: DialogflowPayloadField = message.payload.fields[key];
-          // Fix: Check for the correct property names based on the field kind
-          if (field.stringValue !== undefined) {
-            formattedPayload[key] = field.stringValue;
-          } else if (field.numberValue !== undefined) {
-            formattedPayload[key] = field.numberValue;
-          } else if (field.boolValue !== undefined) {
-            formattedPayload[key] = field.boolValue;
-          }
+          const field = message.payload.fields[key];
+          if (field.stringValue !== undefined) formatted[key] = field.stringValue;
+          else if (field.numberValue !== undefined) formatted[key] = field.numberValue;
+          else if (field.boolValue !== undefined) formatted[key] = field.boolValue;
         }
-        console.log('Parsed payload:', formattedPayload);
-        return formattedPayload;
+        return formatted;
       }
     }
     return null;
   }
 
-  setAuthenticated(authenticated: boolean): void {
-    localStorage.setItem('dialogflow-authenticated', authenticated.toString());
+  setAuthenticated(auth: boolean) {
+    if (typeof window !== 'undefined') localStorage.setItem('dialogflow-authenticated', auth.toString());
   }
 
   isAuthenticated(): boolean {
-    return localStorage.getItem('dialogflow-authenticated') === 'true';
+    if (typeof window !== 'undefined') return localStorage.getItem('dialogflow-authenticated') === 'true';
+    return false;
   }
 
-  clearSession(): void {
+  clearSession() {
     this.sessionId = uuidv4();
-    localStorage.setItem('dialogflow-session', this.sessionId);
-    localStorage.removeItem('dialogflow-authenticated');
-  }
-
-  getSessionId(): string {
-    return this.sessionId;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dialogflow-session', this.sessionId);
+      localStorage.removeItem('dialogflow-authenticated');
+    }
   }
 }
 

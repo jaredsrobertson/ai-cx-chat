@@ -1,4 +1,3 @@
-// lib/lex-client.ts
 import { v4 as uuidv4 } from 'uuid';
 
 interface Button {
@@ -65,7 +64,9 @@ class LexClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const res = await response.json();
+      // Unwrap the data from the API response envelope
+      return res.data || res;
     } catch (error) {
       console.error('Error sending message to Lex:', error);
       throw error;

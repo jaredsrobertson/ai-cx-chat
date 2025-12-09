@@ -1,8 +1,7 @@
-// app/api/dialogflow/detect/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import * as dialogflow from '@google-cloud/dialogflow';
+import { errorResponse, successResponse } from '@/lib/api-utils';
 
-// Initialize Dialogflow client
 const sessionClient = new dialogflow.SessionsClient({
   projectId: process.env.DIALOGFLOW_PROJECT_ID,
   credentials: {
@@ -13,61 +12,41 @@ const sessionClient = new dialogflow.SessionsClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, sessionId, authContext } = await request.json();
+    const { text, event, sessionId, authContext } = await request.json();
 
-    if (!text || !sessionId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: text and sessionId' },
-        { status: 400 }
-      );
+    if ((!text && !event) || !sessionId) {
+      return errorResponse('Missing required fields', 400);
     }
 
     const projectId = process.env.DIALOGFLOW_PROJECT_ID;
-    if (!projectId) {
-      console.error('DIALOGFLOW_PROJECT_ID not configured');
-      return NextResponse.json(
-        { error: 'Dialogflow not configured properly' },
-        { status: 500 }
-      );
-    }
+    if (!projectId) return errorResponse('Configuration error', 500);
 
     const sessionPath = sessionClient.projectAgentSessionPath(projectId, sessionId);
 
+    // Construct request based on text vs event
+    const queryInput: dialogflow.protos.google.cloud.dialogflow.v2.IQueryInput = event 
+      ? { event: { name: event, languageCode: 'en-US' } }
+      : { text: { text: text, languageCode: 'en-US' } };
+
     const detectRequest: dialogflow.protos.google.cloud.dialogflow.v2.IDetectIntentRequest = {
       session: sessionPath,
-      queryInput: {
-        text: {
-          text: text,
-          languageCode: 'en-US',
-        },
-      },
+      queryInput,
       queryParams: {},
     };
     
-    // If authContext is true, it means the user just logged in.
-    // We add the authenticated context to this specific request.
+    // Inject auth context if needed (e.g. after login)
     if (authContext && detectRequest.queryParams) {
-      detectRequest.queryParams.contexts = [
-        {
-          name: `${sessionPath}/contexts/authenticated`,
-          lifespanCount: 25, // Lives long enough for the webhook to use it
-          parameters: {
-            fields: {
-              // CORRECTED STRUCTURE: The Value object expects the type key directly.
-              authenticated: {
-                boolValue: true,
-              },
-            },
-          },
-        },
-      ];
+      detectRequest.queryParams.contexts = [{
+        name: `${sessionPath}/contexts/authenticated`,
+        lifespanCount: 25,
+        parameters: { fields: { authenticated: { boolValue: true } } },
+      }];
     }
     
     const [response] = await sessionClient.detectIntent(detectRequest);
-
     const queryResult = response.queryResult;
     
-    return NextResponse.json({
+    return successResponse({
       responseId: response.responseId,
       queryResult: {
         queryText: queryResult?.queryText || '',
@@ -83,13 +62,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error detecting intent:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to process message',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    console.error('Dialogflow Detect Error:', error);
+    return errorResponse(error instanceof Error ? error.message : 'Unknown error');
   }
 }

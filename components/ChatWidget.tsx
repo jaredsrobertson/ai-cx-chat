@@ -1,281 +1,89 @@
-// components/ChatWidget.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import DialogflowClient from '@/lib/dialogflow-client';
-import LexClient from '@/lib/lex-client';
+import { useChat } from '@/hooks/useChat';
+import { BotType } from '@/types';
 import BotSelector from './BotSelector';
 import Message from './Message';
 import QuickReplies from './QuickReplies';
 import LoginModal from './LoginModal';
 import CloudIcon from './CloudIcon';
 
-type QuickReply = string | { display: string; payload: string };
-
-interface ChatMessage {
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-  quickReplies?: QuickReply[];
-  payload?: Record<string, unknown> | null;
-  intent?: string; 
-  nluConfidence?: number;
-}
-
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedBot, setSelectedBot] = useState<'dialogflow' | 'lex' | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedBot, setSelectedBot] = useState<BotType | null>(null);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginMessage, setLoginMessage] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [dialogflowClient, setDialogflowClient] = useState<DialogflowClient | null>(null);
-  const [lexClient, setLexClient] = useState<LexClient | null>(null);
-  const [lastBot, setLastBot] = useState<'dialogflow' | 'lex' | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [lastBot, setLastBot] = useState<BotType | null>(null);
+
+  const { 
+    messages, isTyping, sendMessage, triggerWelcome, clearMessages, 
+    isAuthenticated, authenticateUser, authRequired, setAuthRequired, resetConversation
+  } = useChat();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const dfClient = new DialogflowClient();
-      const lxClient = new LexClient();
-      setDialogflowClient(dfClient);
-      setLexClient(lxClient);
-      
-      const previousBot = localStorage.getItem('lastBot') as 'dialogflow' | 'lex' | null;
-      const previousMessages = localStorage.getItem(`${previousBot}-messages`);
-      
-      if (previousBot && previousMessages) {
-        setLastBot(previousBot);
-      }
-      
-      setIsAuthenticated(dfClient.isAuthenticated());
+      const previousBot = localStorage.getItem('lastBot') as BotType | null;
+      if (previousBot) setLastBot(previousBot);
     }
   }, []);
 
   useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    if (isOpen && window.innerWidth < 640) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = originalStyle;
-    };
-  }, [isOpen]);
+    if (selectedBot) localStorage.setItem('lastBot', selectedBot);
+  }, [selectedBot]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    if (isOpen && selectedBot && !isTyping) {
-      inputRef.current?.focus();
-    }
+    if (isOpen && selectedBot && !isTyping) inputRef.current?.focus();
   }, [messages, isOpen, selectedBot, isTyping]);
 
   useEffect(() => {
-    if (selectedBot && messages.length > 0) {
-      localStorage.setItem('lastBot', selectedBot);
-      localStorage.setItem(`${selectedBot}-messages`, JSON.stringify(messages));
-    }
-  }, [selectedBot, messages]);
+    if (authRequired.required) setShowLoginModal(true);
+  }, [authRequired]);
 
-  const fetchWelcomeMessage = async () => {
-    if (!dialogflowClient) return;
-    setIsTyping(true);
-    try {
-      const response = await dialogflowClient.sendMessage('hi');
-      const botText = response.queryResult.fulfillmentText;
-      const quickReplies = dialogflowClient.parseQuickReplies(response.queryResult.fulfillmentMessages);
-      
-      const welcomeMessage: ChatMessage = {
-        text: botText,
-        isUser: false,
-        timestamp: new Date(),
-        quickReplies
-      };
-      setMessages([welcomeMessage]);
-    } catch (error) {
-      console.error('Error fetching welcome message:', error);
-      setMessages([{
-        text: 'Sorry, I couldn\'t connect. Please try again.',
-        isUser: false,
-        timestamp: new Date()
-      }]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleSelectBot = (bot: 'dialogflow' | 'lex') => {
+  const handleSelectBot = (bot: BotType) => {
     setSelectedBot(bot);
-    setMessages([]);
-    localStorage.removeItem('lastBot');
-    localStorage.removeItem(`${bot}-messages`);
-    
-    if (bot === 'dialogflow') {
-      fetchWelcomeMessage();
-    } else {
-      const welcomeMessage: ChatMessage = {
-        text: 'Welcome to SecureBank Support! I can help you with account questions, security concerns, and general banking FAQs. What would you like to know?',
-        isUser: false,
-        timestamp: new Date(),
-        quickReplies: [
-          'Account info',
-          'Lost/stolen debit card',
-          'Fees',
-          'Hours',
-          'Talk to an Agent'
-        ]
-      };
-      setMessages([welcomeMessage]);
-    }
+    clearMessages();
+    resetConversation(bot);
+    // CLEAN TRIGGER: No hidden messages
+    triggerWelcome(bot);
   };
 
-  const handleResume = () => {
-    if (lastBot) {
-      const savedMessages = localStorage.getItem(`${lastBot}-messages`);
-      if (savedMessages) {
-        setSelectedBot(lastBot);
-        const parsed = JSON.parse(savedMessages);
-        setMessages(parsed);
-      }
-    }
-  };
-
-  const clearQuickRepliesFromPreviousMessages = (messages: ChatMessage[]) => {
-    return messages.map(msg => {
-      if (!msg.isUser && msg.quickReplies) {
-        const { quickReplies, ...msgWithoutQuickReplies } = msg;
-        return msgWithoutQuickReplies;
-      }
-      return msg;
-    });
-  };
-
-  const sendMessage = async (text: string, authContext = false) => {
+  const handleSendMessage = async (text: string) => {
     if (!selectedBot || !text.trim()) return;
-    
-    const userMessage: ChatMessage = { text, isUser: true, timestamp: new Date() };
-    
-    setMessages(prev => [...clearQuickRepliesFromPreviousMessages(prev), userMessage]);
     setInput('');
-    setIsTyping(true);
-
-    try {
-      if (selectedBot === 'dialogflow' && dialogflowClient) {
-        const response = await dialogflowClient.sendMessage(text, isAuthenticated, authContext);
-        const botText = response.queryResult.fulfillmentText;
-        const quickReplies = dialogflowClient.parseQuickReplies(response.queryResult.fulfillmentMessages);
-        const payload = dialogflowClient.parsePayload(response.queryResult.fulfillmentMessages);
-        
-        console.log('Dialogflow payload received:', payload);
-        
-        const botMessage: ChatMessage = {
-          text: botText,
-          isUser: false,
-          timestamp: new Date(),
-          quickReplies,
-          payload,
-          intent: response.queryResult.intent?.displayName,
-        };
-        setMessages(prev => [...prev, botMessage]);
-
-        if (payload?.action === 'REQUIRE_AUTH' && !isAuthenticated) {
-          console.log('Auth required detected, showing modal');
-          console.log('Current isAuthenticated:', isAuthenticated);
-          console.log('Payload action:', payload.action);
-          setPendingMessage(text);
-          setLoginMessage(payload.message as string || 'Please authenticate to continue');
-          console.log('About to set showLoginModal to true');
-          setTimeout(() => {
-            console.log('Setting showLoginModal to true');
-            setShowLoginModal(true);
-          }, 500);
-        } else {
-          console.log('Modal condition not met:', {
-            payloadAction: payload?.action,
-            isAuthenticated,
-            condition1: payload?.action === 'REQUIRE_AUTH',
-            condition2: !isAuthenticated
-          });
-        }
-      } else if (selectedBot === 'lex' && lexClient) {
-        const response = await lexClient.sendMessage(text);
-        const botText = lexClient.parseText(response);
-        const quickReplies = lexClient.parseQuickReplies(response);
-        
-        const lexMessage: ChatMessage = {
-          text: botText,
-          isUser: false,
-          timestamp: new Date(),
-          quickReplies,
-          intent: response.sessionState?.intent?.name,
-          nluConfidence: lexClient.getNLUConfidence(response),
-        };
-        
-        setMessages(prev => [...prev, lexMessage]);
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages(prev => [...prev, {
-        text: 'Sorry, I encountered an error. Please try again.',
-        isUser: false,
-        timestamp: new Date()
-      }]);
-    } finally {
-      setIsTyping(false);
-    }
+    setPendingMessage(text);
+    await sendMessage(text, selectedBot);
   };
 
   const handleLogin = async () => {
-    if (dialogflowClient) {
-      dialogflowClient.setAuthenticated(true);
-      setIsAuthenticated(true);
-      setShowLoginModal(false);
-      
-      if (pendingMessage) {
-        await sendMessage(pendingMessage, true);
+    authenticateUser();
+    setShowLoginModal(false);
+    if (pendingMessage && selectedBot) {
+        await sendMessage(pendingMessage, selectedBot, true);
         setPendingMessage(null);
-      }
     }
   };
 
-  const handleQuickReply = (reply: string) => sendMessage(reply);
-
-  const clearConversation = () => {
-    setMessages([]);
-    setLastBot(null);
-    if (selectedBot) {
-      localStorage.removeItem('lastBot');
-      localStorage.removeItem(`${selectedBot}-messages`);
-    }
-    if (selectedBot === 'dialogflow' && dialogflowClient) {
-      dialogflowClient.clearSession();
-      dialogflowClient.setAuthenticated(false); // Ensure auth is cleared
-      setIsAuthenticated(false);
-    } else if (selectedBot === 'lex' && lexClient) {
-      lexClient.clearSession();
-    }
+  const handleClearConversation = () => {
+    if (selectedBot) resetConversation(selectedBot);
     setSelectedBot(null);
+    localStorage.removeItem('lastBot');
   };
 
-  const getLastBotMessage = () => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (!messages[i].isUser) {
-        return messages[i];
-      }
-    }
-    return null;
+  const handleResume = () => {
+      if (lastBot) setSelectedBot(lastBot);
   };
 
-  const lastBotMessage = getLastBotMessage();
+  // Helper to show quick replies only on the latest bot message
+  const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
   const shouldShowQuickReplies = Boolean(
     !isTyping && 
-    lastBotMessage && 
-    lastBotMessage.quickReplies && 
-    Array.isArray(lastBotMessage.quickReplies) && 
+    lastBotMessage?.quickReplies && 
     lastBotMessage.quickReplies.length > 0
   );
 
@@ -292,9 +100,7 @@ export default function ChatWidget() {
       )}
 
       {isOpen && (
-        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-blue-200 shadow-2xl flex flex-col
-                       w-screen h-screen sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] 
-                       rounded-none sm:rounded-lg">
+        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-blue-200 shadow-2xl flex flex-col w-screen h-screen sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] rounded-none sm:rounded-lg">
           <div className="bg-blue-950 text-white p-4 rounded-t-none sm:rounded-t-lg flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
@@ -306,47 +112,25 @@ export default function ChatWidget() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={clearConversation} className="text-white hover:bg-white/20 rounded p-1 transition-colors" title="New conversation">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+              <button onClick={handleClearConversation} className="text-white hover:bg-white/20 rounded p-1 transition-colors" title="Restart">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
               </button>
-              <button onClick={() => setIsOpen(false)} className="text-white hover:bg-white/20 rounded p-1 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+              <button onClick={() => setIsOpen(false)} className="text-white hover:bg-white/20 rounded p-1 transition-colors" title="Close">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
             </div>
           </div>
           
           {selectedBot && (
-            <div className="border-b border-gray-200 px-4 py-2 bg-gray-100 text-xs text-gray-800">
-              <div className="flex items-center justify-between min-h-[16px]">
-                <div>
-                  {(() => {
-                    const lastMessage = messages[messages.length - 1];
-                    if (!lastMessage || lastMessage.isUser) return null;
-
-                    if (selectedBot === 'dialogflow' && lastMessage.intent) {
-                      return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
-                    }
-
-                    if (selectedBot === 'lex' && lastMessage.intent) {
-                      const confidence = lastMessage.nluConfidence;
-                      if (confidence !== undefined) {
-                        const confidencePercent = (confidence * 100).toFixed(0);
-                        return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent} ({confidencePercent}%)</span>;
-                      }
-                      return <span className="text-gray-600 font-semibold">Intent: {lastMessage.intent}</span>;
-                    }
-                    
-                    return null;
-                  })()}
-                </div>
-                <div>
-                  {isAuthenticated && <span className="text-green-600 font-semibold flex items-center gap-1">● Authenticated</span>}
-                </div>
-              </div>
+            <div className="border-b border-gray-200 px-4 py-2 bg-gray-100 text-xs text-gray-800 flex justify-between items-center min-h-[32px]">
+               {messages.length > 0 && !messages[messages.length-1].isUser && messages[messages.length-1].intent && (
+                 <span className="text-gray-600 font-semibold truncate max-w-[70%]">
+                   Intent: {messages[messages.length-1].intent}
+                   {selectedBot === 'lex' && messages[messages.length-1].nluConfidence !== undefined && 
+                     ` (${(messages[messages.length-1].nluConfidence! * 100).toFixed(0)}%)`}
+                 </span>
+               )}
+               {isAuthenticated && <span className="text-green-600 font-semibold flex items-center gap-1">● Authenticated</span>}
             </div>
           )}
 
@@ -359,25 +143,19 @@ export default function ChatWidget() {
               <>
                 <div className="flex-1 overflow-y-auto p-4">
                   {messages.map((message, index) => (
-                    <Message
-                      key={index}
-                      text={message.text}
-                      isUser={message.isUser}
-                      timestamp={message.timestamp}
-                    />
+                    <Message key={index} {...message} />
                   ))}
                   {isTyping && <Message text="" isUser={false} isTyping={true}/>}
                   
-                  {shouldShowQuickReplies && lastBotMessage && lastBotMessage.quickReplies && (
+                  {shouldShowQuickReplies && lastBotMessage?.quickReplies && (
                     <div className="mt-4">
                       <QuickReplies
                         replies={lastBotMessage.quickReplies}
-                        onReplyClick={handleQuickReply}
+                        onReplyClick={handleSendMessage}
                         disabled={isTyping}
                       />
                     </div>
                   )}
-                  
                   <div ref={messagesEndRef} />
                 </div>
                 
@@ -388,15 +166,13 @@ export default function ChatWidget() {
                       type="text" 
                       value={input} 
                       onChange={(e) => setInput(e.target.value)} 
-                      onKeyPress={(e) => {if (e.key === 'Enter' && !e.shiftKey) {e.preventDefault(); sendMessage(input);}}} 
+                      onKeyPress={(e) => {if (e.key === 'Enter' && !e.shiftKey) {e.preventDefault(); handleSendMessage(input);}}} 
                       placeholder="Type your message..."
                       disabled={isTyping} 
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950 disabled:bg-gray-50 text-slate-800"
                     />
-                    <button onClick={() => sendMessage(input)} disabled={isTyping || !input.trim()} className="px-4 py-2 bg-blue-950 text-white rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
+                    <button onClick={() => handleSendMessage(input)} disabled={isTyping || !input.trim()} className="px-4 py-2 bg-blue-950 text-white rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                     </button>
                   </div>
                 </div>
@@ -406,7 +182,15 @@ export default function ChatWidget() {
         </div>
       )}
 
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} message={loginMessage}/>
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => {
+            setShowLoginModal(false);
+            setAuthRequired({ required: false, message: '' }); 
+        }} 
+        onLogin={handleLogin} 
+        message={authRequired.message}
+      />
     </>
   );
 }

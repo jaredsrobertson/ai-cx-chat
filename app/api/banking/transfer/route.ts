@@ -1,6 +1,6 @@
-// app/api/banking/transfer/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { processTransfer } from '@/lib/mock-data';
+import { NextRequest } from 'next/server';
+import { BankingService } from '@/lib/services/banking-service';
+import { validateAuth, errorResponse, successResponse } from '@/lib/api-utils';
 
 interface TransferRequest {
   fromAccount: 'checking' | 'savings';
@@ -9,77 +9,38 @@ interface TransferRequest {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    // Check for auth header
-    const authHeader = request.headers.get('authorization');
-    const API_TOKEN = process.env.MOCK_API_TOKEN || 'demo-token';
-    
-    if (!authHeader || authHeader !== `Bearer ${API_TOKEN}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'Please authenticate first' },
-        { status: 401 }
-      );
-    }
+  if (!validateAuth(request)) {
+    return errorResponse('Unauthorized', 401);
+  }
 
-    // Parse request body
+  try {
     const body: TransferRequest = await request.json();
     
-    // Validate required fields
+    // Basic Validation
     if (!body.fromAccount || !body.toAccount || !body.amount) {
-      return NextResponse.json(
-        { 
-          error: 'Bad Request', 
-          message: 'Missing required fields: fromAccount, toAccount, amount' 
-        },
-        { status: 400 }
-      );
+      return errorResponse('Missing required fields', 400);
     }
-
-    // Validate account types
-    if (!['checking', 'savings'].includes(body.fromAccount) || 
-        !['checking', 'savings'].includes(body.toAccount)) {
-      return NextResponse.json(
-        { 
-          error: 'Bad Request', 
-          message: 'Invalid account type. Must be "checking" or "savings"' 
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate same account transfer
     if (body.fromAccount === body.toAccount) {
-      return NextResponse.json(
-        { 
-          error: 'Bad Request', 
-          message: 'Cannot transfer to the same account' 
-        },
-        { status: 400 }
-      );
+      return errorResponse('Cannot transfer to same account', 400);
     }
 
-    // Process the transfer
-    const result = processTransfer(body.fromAccount, body.toAccount, body.amount);
+    // Use Service Layer
+    const result = await BankingService.processTransfer(
+      body.fromAccount, 
+      body.toAccount, 
+      body.amount
+    );
     
     if (!result.success) {
-      return NextResponse.json(
-        { error: 'Transfer Failed', message: result.error },
-        { status: 400 }
-      );
+      return errorResponse(result.error || 'Transfer failed', 400);
     }
 
-    // Return success response
-    return NextResponse.json({
-      success: true,
-      data: result.data,
-      message: `Successfully transferred $${body.amount} from ${body.fromAccount} to ${body.toAccount}`
+    return successResponse({
+      ...result.data,
+      message: 'Transfer successful'
     });
 
   } catch (error) {
-    console.error('Error in /api/banking/transfer:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: 'Failed to process transfer' },
-      { status: 500 }
-    );
+    return errorResponse('Internal Server Error');
   }
 }
