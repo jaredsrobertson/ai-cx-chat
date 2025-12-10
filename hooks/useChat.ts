@@ -1,19 +1,19 @@
+import { useCallback } from 'react';
 import { useChatStore } from '@/store/chatStore';
 
 export const useChat = () => {
   const { 
     addMessage, 
     setTyping, 
-    setAuthenticated, 
     setAuthRequired, 
-    resetConversation,
+    resetConversation: resetStore,
     isAuthenticated,
     sessionId
   } = useChatStore();
 
-  // Unified Welcome Message
-  const triggerWelcome = async () => {
-    // Check if we already have messages, if so, don't re-trigger welcome
+  // Wrapped in useCallback to prevent infinite loops in useEffects
+  const triggerWelcome = useCallback(async () => {
+    // Check state directly to avoid adding 'messages' to dependency array
     if (useChatStore.getState().messages.length > 0) return;
 
     setTyping(true);
@@ -27,9 +27,10 @@ export const useChat = () => {
       });
       setTyping(false);
     }, 800);
-  };
+  }, [addMessage, setTyping]);
 
-  const sendMessage = async (text: string, isAuthRetry = false) => {
+  // Wrapped in useCallback to ensure stability
+  const sendMessage = useCallback(async (text: string, isAuthRetry = false) => {
     if (!text.trim()) return;
 
     if (!isAuthRetry) {
@@ -51,8 +52,11 @@ export const useChat = () => {
 
       const data = json.data;
 
+      // Access auth state directly to avoid dependency cycle
+      const currentAuth = useChatStore.getState().isAuthenticated;
+
       // Check if the backend is asking for authentication
-      if (data.actionRequired === 'REQUIRE_AUTH' && !isAuthenticated) {
+      if (data.actionRequired === 'REQUIRE_AUTH' && !currentAuth) {
         setAuthRequired({ 
           required: true, 
           message: data.actionMessage || 'Authentication required for this action' 
@@ -73,7 +77,7 @@ export const useChat = () => {
           timestamp: new Date(),
           quickReplies: data.quickReplies,
           intent: data.intent,
-          // We can add a "Source" field here later for Kendra
+          sources: data.sources // RAG citations from Kendra
         });
       }
 
@@ -83,7 +87,11 @@ export const useChat = () => {
     } finally {
       setTyping(false);
     }
-  };
+  }, [addMessage, setTyping, setAuthRequired, sessionId]);
+
+  const resetConversation = useCallback(() => {
+    resetStore();
+  }, [resetStore]);
 
   return {
     sendMessage,

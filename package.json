@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-comprehend": "^3.890.0",
-    "@aws-sdk/client-kendra": "^3.948.0",
+    "@aws-sdk/client-kendra": "^3.xxx.x",
     "@aws-sdk/client-lex-runtime-v2": "^3.890.0",
     "@google-cloud/dialogflow": "^7.2.0",
     "axios": "^1.12.2",
