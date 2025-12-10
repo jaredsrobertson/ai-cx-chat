@@ -1,3 +1,4 @@
+// components/ChatWidget.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -13,7 +14,7 @@ export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  // REMOVED LOCAL PENDING MESSAGE STATE
   
   const { status } = useSession();
 
@@ -23,7 +24,9 @@ export default function ChatWidget() {
     isAuthenticated, 
     authRequired, 
     setAuthRequired, 
-    setAuthenticated 
+    setAuthenticated,
+    pendingMessage, // <--- FROM STORE
+    setPendingMessage // <--- FROM STORE
   } = useChatStore();
 
   const { 
@@ -35,25 +38,26 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync Auth State
+  // Sync Auth State & Retry Pending Message
   useEffect(() => {
     if (status === 'authenticated') {
       setAuthenticated(true);
+      // Check store for pending message
       if (pendingMessage) {
-        sendMessage(pendingMessage, true);
-        setPendingMessage(null);
+        sendMessage(pendingMessage, true); // true = isAuthRetry
+        setPendingMessage(null); // Clear it
       }
     } else {
       setAuthenticated(false);
     }
-  }, [status, setAuthenticated, sendMessage, pendingMessage]);
+  }, [status, setAuthenticated, sendMessage, pendingMessage, setPendingMessage]);
 
   // Initial Welcome
   useEffect(() => {
     if (isOpen) {
       triggerWelcome();
     }
-  }, [isOpen]); // Only trigger when opened
+  }, [isOpen]); 
 
   // Auto-scroll
   useEffect(() => {
@@ -70,17 +74,13 @@ export default function ChatWidget() {
     if (!text.trim()) return;
     setInput('');
     
+    // If we somehow try to send while auth is strictly required (edge case)
     if (authRequired.required && status !== 'authenticated') {
        setPendingMessage(text);
        setShowLoginModal(true);
        return;
     }
     await sendMessage(text);
-  };
-
-  const handleLogin = async () => {
-    // Login is handled by the Modal component calling NextAuth
-    setShowLoginModal(false);
   };
 
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);

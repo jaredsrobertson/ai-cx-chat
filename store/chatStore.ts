@@ -1,3 +1,4 @@
+// store/chatStore.ts
 import { create } from 'zustand';
 import { ChatMessage } from '@/types';
 
@@ -11,13 +12,15 @@ interface ChatState {
   isTyping: boolean;
   isAuthenticated: boolean;
   authRequired: AuthRequirement;
-  sessionId: string; // Add session ID to store
+  sessionId: string;
+  pendingMessage: string | null; // <--- ADD THIS
 
   // Actions
   addMessage: (msg: ChatMessage) => void;
   setTyping: (isTyping: boolean) => void;
   setAuthenticated: (isAuthenticated: boolean) => void;
   setAuthRequired: (auth: AuthRequirement) => void;
+  setPendingMessage: (msg: string | null) => void; // <--- ADD THIS
   resetConversation: () => void;
 }
 
@@ -35,16 +38,17 @@ export const useChatStore = create<ChatState>((set) => ({
   isAuthenticated: false,
   authRequired: { required: false, message: '' },
   sessionId: typeof window !== 'undefined' ? (localStorage.getItem('chat_session_id') || generateUUID()) : 'init',
+  pendingMessage: null, // <--- INITIALIZE THIS
 
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
   setTyping: (isTyping) => set({ isTyping }),
   setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
   setAuthRequired: (authRequired) => set({ authRequired }),
+  setPendingMessage: (pendingMessage) => set({ pendingMessage }), // <--- ACTION IMPLEMENTATION
   
-  resetConversation: () => set({ messages: [], isTyping: false }),
+  resetConversation: () => set({ messages: [], isTyping: false, pendingMessage: null }),
 }));
 
-// Initialize session ID in local storage if not present
 if (typeof window !== 'undefined' && !localStorage.getItem('chat_session_id')) {
   localStorage.setItem('chat_session_id', generateUUID());
 }
