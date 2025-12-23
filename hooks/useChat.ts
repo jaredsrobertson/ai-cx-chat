@@ -91,8 +91,12 @@ export const useChat = () => {
   }, [addMessage, setTyping, setAuthRequired, setPendingMessage, sessionId]); // Added setPendingMessage dependency
 
   const resetConversation = useCallback(() => {
+    // Clear the messages and session state
     resetStore();
-  }, [resetStore]);
+    // Manually trigger the welcome message again
+    // We can call this safely because resetStore() is synchronous and clears the messages array
+    triggerWelcome();
+  }, [resetStore, triggerWelcome]);
 
   return {
     sendMessage,

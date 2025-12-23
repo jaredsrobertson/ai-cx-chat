@@ -69,3 +69,14 @@ To set up direct deposit, you will need to provide your employer with our bank's
 
 Does your mobile app support mobile check deposit?
 Yes, our mobile app allows you to deposit checks directly from your smartphone. Simply endorse the check, open the app, select "Deposit Check," and follow the on-screen instructions to take photos of the front and back.
+
+-- Hours & Locations --
+
+What are your operating hours?
+Our branches are open Monday through Friday from 9:00 AM to 5:00 PM, and Saturdays from 9:00 AM to 1:00 PM. We are closed on Sundays and federal holidays.
+
+Where are you located?
+We have branches located throughout the downtown metro area. You can find the nearest branch using the locator on our main website or mobile app.
+
+What is your contact phone number?
+You can reach our 24/7 support line at 1-800-555-1234.

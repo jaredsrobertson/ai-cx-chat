@@ -1,4 +1,8 @@
-import * as dialogflow from '@google-cloud/dialogflow';
+// lib/services/dialogflow-service.ts
+import { v4 as uuidv4 } from 'uuid';
+
+// 1. CHANGE: Use require to explicitly get v2beta1 (which supports Knowledge Bases)
+const dialogflow = require('@google-cloud/dialogflow').v2beta1;
 
 const sessionClient = new dialogflow.SessionsClient({
   projectId: process.env.DIALOGFLOW_PROJECT_ID,
@@ -16,6 +20,7 @@ export interface DialogflowResult {
   payload: Record<string, any> | null;
   actionRequired?: string;
   actionMessage?: string;
+  sources?: { title: string; uri: string; excerpt: string }[];
 }
 
 export const DialogflowService = {
@@ -29,7 +34,8 @@ export const DialogflowService = {
 
     const sessionPath = sessionClient.projectAgentSessionPath(projectId, sessionId);
 
-    const request: dialogflow.protos.google.cloud.dialogflow.v2.IDetectIntentRequest = {
+    // 2. CHANGE: Remove the strict 'v2' type definition that was causing errors
+    const request = {
       session: sessionPath,
       queryInput: {
         text: {
@@ -37,61 +43,84 @@ export const DialogflowService = {
           languageCode: 'en-US',
         },
       },
-      queryParams: {}
+      queryParams: {
+        // 3. CHANGE: Add your Knowledge Base ID here
+        // Replace with your actual ID, e.g., 'projects/my-project/knowledgeBases/MTIz...'
+        knowledgeBaseNames: ['projects/ai-cx-demo-440221/knowledgeBases/MjEzOTkxODQ2ODg3MjE5MjAwMA'],
+        
+        // Inject Auth Context if user is logged in
+        ...(isAuthenticated && {
+          contexts: [{
+            name: `${sessionPath}/contexts/authenticated`,
+            lifespanCount: 5,
+            parameters: { fields: { authenticated: { boolValue: true } } },
+          }]
+        })
+      }
     };
 
-    // Inject Auth Context if user is logged in
-    if (isAuthenticated && request.queryParams) {
-      request.queryParams.contexts = [{
-        name: `${sessionPath}/contexts/authenticated`,
-        lifespanCount: 5,
-        parameters: { fields: { authenticated: { boolValue: true } } },
-      }];
-    }
-
+    // 4. CHANGE: detectIntent returns an array [response]
     const [response] = await sessionClient.detectIntent(request);
     const result = response.queryResult;
 
     // Parse Quick Replies
     let quickReplies: string[] = [];
-    result?.fulfillmentMessages?.forEach(msg => {
-      if (msg.quickReplies?.quickReplies) {
-        quickReplies = msg.quickReplies.quickReplies;
-      }
-    });
+    if (result.fulfillmentMessages) {
+      result.fulfillmentMessages.forEach((msg: any) => {
+        if (msg.quickReplies?.quickReplies) {
+          quickReplies = msg.quickReplies.quickReplies;
+        }
+      });
+    }
 
-    // Parse Payload (for custom actions like requiring auth)
+    // Parse Payload
     let payload: Record<string, any> | null = null;
     let actionRequired: string | undefined;
     let actionMessage: string | undefined;
 
-    result?.fulfillmentMessages?.forEach(msg => {
-      if (msg.payload && msg.payload.fields) {
-        const fields = msg.payload.fields;
-        payload = {};
-        
-        // Simple unwrap of proto structs
-        Object.keys(fields).forEach(key => {
-          const val = fields[key];
-          if (val.stringValue) payload![key] = val.stringValue;
-          if (val.boolValue !== undefined) payload![key] = val.boolValue;
-        });
+    if (result.fulfillmentMessages) {
+      result.fulfillmentMessages.forEach((msg: any) => {
+        if (msg.payload && msg.payload.fields) {
+          const fields = msg.payload.fields;
+          payload = {};
+          
+          Object.keys(fields).forEach(key => {
+            const val = fields[key];
+            if (val.stringValue) payload![key] = val.stringValue;
+            if (val.boolValue !== undefined) payload![key] = val.boolValue;
+          });
 
-        if (payload.action) {
-          actionRequired = payload.action;
-          actionMessage = payload.message;
+          if (payload.action) {
+            actionRequired = payload.action;
+            actionMessage = payload.message;
+          }
         }
-      }
-    });
+      });
+    }
+
+    // 5. CHANGE: Parse Knowledge Base Answers
+    // We use (result as any) because 'knowledgeAnswers' is missing from some V2 definitions
+    const sources: { title: string; uri: string; excerpt: string }[] = [];
+    
+    if ((result as any).knowledgeAnswers && (result as any).knowledgeAnswers.answers) {
+        (result as any).knowledgeAnswers.answers.forEach((answer: any) => {
+            sources.push({
+                title: 'Knowledge Base',
+                uri: answer.faqQuestion || '#',
+                excerpt: answer.answer || ''
+            });
+        });
+    }
 
     return {
-      text: result?.fulfillmentText || "I didn't catch that.",
-      intent: result?.intent?.displayName || 'Unknown',
-      confidence: result?.intentDetectionConfidence || 0,
+      text: result.fulfillmentText || "I didn't catch that.",
+      intent: result.intent?.displayName || 'Unknown',
+      confidence: result.intentDetectionConfidence || 0,
       quickReplies,
       payload,
       actionRequired,
-      actionMessage
+      actionMessage,
+      sources
     };
   }
 };
