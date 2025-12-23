@@ -46,7 +46,7 @@ export const DialogflowService = {
       queryParams: {
         // 3. CHANGE: Add your Knowledge Base ID here
         // Replace with your actual ID, e.g., 'projects/my-project/knowledgeBases/MTIz...'
-        knowledgeBaseNames: ['projects/ai-cx-demo-440221/knowledgeBases/MjEzOTkxODQ2ODg3MjE5MjAwMA'],
+        knowledgeBaseNames: ['projects/${projectId}/knowledgeBases/MjEzOTkxODQ2ODg3MjE5MjAwMA'],
         
         // Inject Auth Context if user is logged in
         ...(isAuthenticated && {
