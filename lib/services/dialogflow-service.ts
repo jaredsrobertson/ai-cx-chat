@@ -103,13 +103,14 @@ export const DialogflowService = {
     const sources: { title: string; uri: string; excerpt: string }[] = [];
     
     if ((result as any).knowledgeAnswers && (result as any).knowledgeAnswers.answers) {
-        (result as any).knowledgeAnswers.answers.forEach((answer: any) => {
-            sources.push({
-                title: 'Knowledge Base',
-                uri: answer.faqQuestion || '#',
-                excerpt: answer.answer || ''
-            });
-        });
+        const answers = (result as any).knowledgeAnswers.answers;
+        if (answers.length > 0) {
+          sources.push({
+            title: answers[0].source || 'Knowledge Base',
+            uri: answers[0].faqQuestion || '#',
+            excerpt: answers[0].answer || ''
+          });
+        }
     }
 
     return {

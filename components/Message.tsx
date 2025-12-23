@@ -11,6 +11,7 @@ interface MessageProps {
 }
 
 function MessageComponent({ text, isUser, timestamp, isTyping, sources }: MessageProps) {
+  const SHOW_SOURCES = false;
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 animate-fade-in-up`}>
       <div className={`flex flex-col max-w-[85%] sm:max-w-[75%] ${isUser ? 'items-end' : 'items-start'}`}>
@@ -38,7 +39,7 @@ function MessageComponent({ text, isUser, timestamp, isTyping, sources }: Messag
           </div>
         </div>
 
-        {!isUser && sources && sources.length > 0 && (
+        {!isUser && sources && sources.length > 0 && SHOW_SOURCES && (
           <div className="mt-2 ml-12 bg-blue-50 border border-blue-100 rounded-lg p-3 w-full animate-fade-in-up">
             <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center">
               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
