@@ -46,7 +46,13 @@ export const useChatStore = create<ChatState>((set) => ({
   setAuthRequired: (authRequired) => set({ authRequired }),
   setPendingMessage: (pendingMessage) => set({ pendingMessage }), // <--- ACTION IMPLEMENTATION
   
-  resetConversation: () => set({ messages: [], isTyping: false, pendingMessage: null }),
+  resetConversation: () => set({ 
+    messages: [], 
+    isTyping: false, 
+    pendingMessage: null,
+    isAuthenticated: false,
+    authRequired: { required: false, message: '' }
+  }),
 }));
 
 if (typeof window !== 'undefined' && !localStorage.getItem('chat_session_id')) {

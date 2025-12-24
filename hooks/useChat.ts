@@ -1,6 +1,7 @@
 // hooks/useChat.ts
 import { useCallback } from 'react';
 import { useChatStore } from '@/store/chatStore';
+import { signOut } from 'next-auth/react';
 
 export const useChat = () => {
   const { 
@@ -90,11 +91,14 @@ export const useChat = () => {
     }
   }, [addMessage, setTyping, setAuthRequired, setPendingMessage, sessionId]); // Added setPendingMessage dependency
 
-  const resetConversation = useCallback(() => {
-    // Clear the messages and session state
+  const resetConversation = useCallback(async () => {
+    // 1. Sign the user out (redirect: false prevents page reload)
+    await signOut({ redirect: false });
+
+    // 2. Clear the messages and local state
     resetStore();
-    // Manually trigger the welcome message again
-    // We can call this safely because resetStore() is synchronous and clears the messages array
+
+    // 3. Trigger the welcome message again
     triggerWelcome();
   }, [resetStore, triggerWelcome]);
 
