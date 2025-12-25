@@ -23,7 +23,16 @@ export const useChat = () => {
         text: 'Welcome to SecureBank AI! I can help you with your accounts, transfers, or answer your support questions. How can I help you today?',
         isUser: false,
         timestamp: new Date(),
-        quickReplies: ['Check Balance', 'Transfer Money', 'Hours', 'Lost Card']
+        quickReplies: [
+          'Check Balance',
+          'Transfer Funds', 
+          'Transaction History',
+          'Talk to Agent',
+          'Hours', 
+          'Locations',
+          'Routing number',
+          'Contact info'
+        ]
       });
       setTyping(false);
     }, 800);

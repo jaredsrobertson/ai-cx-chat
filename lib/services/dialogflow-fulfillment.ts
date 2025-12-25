@@ -46,7 +46,16 @@ function formatCurrency(amount: number): string {
 
 export const DialogflowFulfillment = {
   handleIntent: async (intentName: string, parameters: Record<string, any>, contexts: DialogflowContext[]) => {
-    const standardQuickReplies = ['Check Balance', 'Transfer Funds', 'Transaction History', 'Talk to Agent'];
+    const standardQuickReplies = [
+      'Check Balance',
+      'Transfer Funds', 
+      'Transaction History',
+      'Talk to Agent',
+      'Hours', 
+      'Locations',
+      'Routing number',
+      'Contact info'
+    ];
     
     // 1. Auth Guard
     const protectedIntents = ['check.balance', 'transfer.funds', 'transaction.history'];
