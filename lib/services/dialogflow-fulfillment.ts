@@ -25,6 +25,21 @@ function getAuthContext(contexts: DialogflowContext[]) {
   return [];
 }
 
+// NEW: Helper to clear "sticky" contexts (like transfer flows) while keeping Auth
+function clearTransferContexts(contexts: DialogflowContext[]) {
+  const authContexts = getAuthContext(contexts);
+  
+  // Find all OTHER contexts and set lifespan to 0 to kill them immediately
+  const contextsToClear = contexts
+    .filter(ctx => !ctx.name.endsWith('/contexts/authenticated'))
+    .map(ctx => ({
+      name: ctx.name,
+      lifespanCount: 0
+    }));
+
+  return [...authContexts, ...contextsToClear];
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
@@ -34,7 +49,6 @@ export const DialogflowFulfillment = {
     const standardQuickReplies = ['Check Balance', 'Transfer Funds', 'Transaction History', 'Talk to Agent'];
     
     // 1. Auth Guard
-    // Intents that require auth
     const protectedIntents = ['check.balance', 'transfer.funds', 'transaction.history'];
     if (protectedIntents.includes(intentName) && !isAuthenticated(contexts)) {
       return {
@@ -77,7 +91,6 @@ export const DialogflowFulfillment = {
         const fromAccount = parameters.fromAccount;
         let toAccount = parameters.toAccount;
         
-        // Smart default: if from Checking, assume to Savings (and vice versa)
         if (fromAccount && !toAccount) {
           toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
         }
@@ -93,7 +106,8 @@ export const DialogflowFulfillment = {
           return {
             fulfillmentText: text,
             fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-            outputContexts: getAuthContext(contexts)
+            // CHANGE: Use the new helper to clear the transfer context
+            outputContexts: clearTransferContexts(contexts) 
           };
         } else {
           return { 
@@ -129,6 +143,13 @@ export const DialogflowFulfillment = {
             payload: { action: 'TRANSFER_AGENT', message: 'Transferring...' }
           }]
         };
+
+      // Recommended: Add the explicit fallback handler here as discussed previously
+      case 'Default Fallback Intent':
+         return {
+            fulfillmentText: 'I missed that. I can help with account balances, transfers, or transaction history.',
+            fulfillmentMessages: [{ quickReplies: { quickReplies: standardQuickReplies } }]
+         };
 
       default:
         return {
