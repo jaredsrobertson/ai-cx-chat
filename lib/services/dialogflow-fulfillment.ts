@@ -91,21 +91,24 @@ export const DialogflowFulfillment = {
         return {
           fulfillmentText: text,
           fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-          // FIX: Clear transfer contexts so we don't get stuck
-          outputContexts: clearTransferContexts(contexts)
+          outputContexts: clearTransferContexts(contexts) // Clear sticky contexts
         };
       }
 
       case 'transfer.funds': {
         const amount = typeof parameters.amount === 'object' ? parameters.amount?.amount : parameters.amount;
+        
+        // Relies on Dialogflow returning canonical 'checking' or 'savings'
         let fromAccount = parameters.fromAccount;
         let toAccount = parameters.toAccount;
         
-        // Smart bidirectional inference
+        // Smart bidirectional inference (The Logic Fix)
         if (fromAccount && !toAccount) {
-          toAccount = fromAccount.toLowerCase() === 'checking' ? 'savings' : 'checking';
+          // If "From Checking" -> To Savings
+          toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
         } else if (!fromAccount && toAccount) {
-          fromAccount = toAccount.toLowerCase() === 'checking' ? 'savings' : 'checking';
+          // If "To Checking" -> From Savings
+          fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
         }
 
         if (!amount || !fromAccount || !toAccount) {
@@ -119,8 +122,7 @@ export const DialogflowFulfillment = {
           return {
             fulfillmentText: text,
             fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-            // FIX: Clear transfer contexts on success
-            outputContexts: clearTransferContexts(contexts) 
+            outputContexts: clearTransferContexts(contexts) // Clear sticky contexts on success
           };
         } else {
           return { 
@@ -131,7 +133,7 @@ export const DialogflowFulfillment = {
       }
 
       case 'transaction.history': {
-        // DEMO: Always return the default list regardless of account type
+        // Simple demo implementation
         const transactions = await BankingService.getTransactions(undefined, 5);
         
         if (transactions.length === 0) {
@@ -149,8 +151,7 @@ export const DialogflowFulfillment = {
         return {
           fulfillmentText: text,
           fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-          // FIX: Clear transfer contexts so we don't get stuck
-          outputContexts: clearTransferContexts(contexts)
+          outputContexts: clearTransferContexts(contexts) // Clear sticky contexts
         };
       }
 
@@ -159,7 +160,6 @@ export const DialogflowFulfillment = {
           fulfillmentText: 'Connecting you to a live agent now...',
           fulfillmentMessages: [{
             platform: 'PLATFORM_UNSPECIFIED',
-            // This payload triggers the modal in the frontend
             payload: { action: 'TRANSFER_AGENT', message: 'Connecting...' }
           }]
         };
