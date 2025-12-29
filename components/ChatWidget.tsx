@@ -8,13 +8,13 @@ import { useChat } from '@/hooks/useChat';
 import Message from './Message';
 import QuickReplies from './QuickReplies';
 import LoginModal from './LoginModal';
+import AgentModal from './AgentModal'; // <--- NEW
 import CloudIcon from './CloudIcon';
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
-  // REMOVED LOCAL PENDING MESSAGE STATE
   
   const { status } = useSession();
 
@@ -25,8 +25,10 @@ export default function ChatWidget() {
     authRequired, 
     setAuthRequired, 
     setAuthenticated,
-    pendingMessage, // <--- FROM STORE
-    setPendingMessage // <--- FROM STORE
+    pendingMessage,
+    setPendingMessage,
+    isAgentModalOpen, // <--- NEW
+    setAgentModalOpen // <--- NEW
   } = useChatStore();
 
   const { 
@@ -42,30 +44,26 @@ export default function ChatWidget() {
   useEffect(() => {
     if (status === 'authenticated') {
       setAuthenticated(true);
-      // Check store for pending message
       if (pendingMessage) {
-        sendMessage(pendingMessage, true); // true = isAuthRetry
-        setPendingMessage(null); // Clear it
+        sendMessage(pendingMessage, true); 
+        setPendingMessage(null);
       }
     } else {
       setAuthenticated(false);
     }
   }, [status, setAuthenticated, sendMessage, pendingMessage, setPendingMessage]);
 
-  // Initial Welcome
   useEffect(() => {
     if (isOpen) {
       triggerWelcome();
     }
   }, [isOpen]); 
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     if (isOpen && !isTyping) inputRef.current?.focus();
   }, [messages, isOpen, isTyping]);
 
-  // Auth Modal Trigger
   useEffect(() => {
     if (authRequired.required) setShowLoginModal(true);
   }, [authRequired]);
@@ -74,7 +72,6 @@ export default function ChatWidget() {
     if (!text.trim()) return;
     setInput('');
     
-    // If we somehow try to send while auth is strictly required (edge case)
     if (authRequired.required && status !== 'authenticated') {
        setPendingMessage(text);
        setShowLoginModal(true);
@@ -186,6 +183,7 @@ export default function ChatWidget() {
         </div>
       )}
 
+      {/* Modals */}
       <LoginModal 
         isOpen={showLoginModal} 
         onClose={() => {
@@ -193,6 +191,11 @@ export default function ChatWidget() {
             setAuthRequired({ required: false, message: '' }); 
         }} 
         message={authRequired.message}
+      />
+
+      <AgentModal 
+        isOpen={isAgentModalOpen} 
+        onClose={() => setAgentModalOpen(false)} 
       />
     </>
   );

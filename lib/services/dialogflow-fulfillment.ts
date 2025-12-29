@@ -25,7 +25,7 @@ function getAuthContext(contexts: DialogflowContext[]) {
   return [];
 }
 
-// NEW: Helper to clear "sticky" contexts (like transfer flows) while keeping Auth
+// Helper to clear "sticky" contexts (like transfer flows) while keeping Auth
 function clearTransferContexts(contexts: DialogflowContext[]) {
   const authContexts = getAuthContext(contexts);
   
@@ -91,17 +91,21 @@ export const DialogflowFulfillment = {
         return {
           fulfillmentText: text,
           fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-          outputContexts: getAuthContext(contexts)
+          // FIX: Clear transfer contexts so we don't get stuck
+          outputContexts: clearTransferContexts(contexts)
         };
       }
 
       case 'transfer.funds': {
         const amount = typeof parameters.amount === 'object' ? parameters.amount?.amount : parameters.amount;
-        const fromAccount = parameters.fromAccount;
+        let fromAccount = parameters.fromAccount;
         let toAccount = parameters.toAccount;
         
+        // Smart bidirectional inference
         if (fromAccount && !toAccount) {
-          toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
+          toAccount = fromAccount.toLowerCase() === 'checking' ? 'savings' : 'checking';
+        } else if (!fromAccount && toAccount) {
+          fromAccount = toAccount.toLowerCase() === 'checking' ? 'savings' : 'checking';
         }
 
         if (!amount || !fromAccount || !toAccount) {
@@ -115,7 +119,7 @@ export const DialogflowFulfillment = {
           return {
             fulfillmentText: text,
             fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-            // CHANGE: Use the new helper to clear the transfer context
+            // FIX: Clear transfer contexts on success
             outputContexts: clearTransferContexts(contexts) 
           };
         } else {
@@ -127,9 +131,14 @@ export const DialogflowFulfillment = {
       }
 
       case 'transaction.history': {
+        // DEMO: Always return the default list regardless of account type
         const transactions = await BankingService.getTransactions(undefined, 5);
+        
         if (transactions.length === 0) {
-          return { fulfillmentText: "No recent transactions found.", outputContexts: getAuthContext(contexts) };
+          return { 
+            fulfillmentText: "No recent transactions found.", 
+            outputContexts: clearTransferContexts(contexts) 
+          };
         }
         
         let text = 'Recent transactions:\n\n';
@@ -140,25 +149,26 @@ export const DialogflowFulfillment = {
         return {
           fulfillmentText: text,
           fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-          outputContexts: getAuthContext(contexts)
+          // FIX: Clear transfer contexts so we don't get stuck
+          outputContexts: clearTransferContexts(contexts)
         };
       }
 
       case 'request.agent':
         return {
-          fulfillmentText: 'Transferring you to a live agent...',
+          fulfillmentText: 'Connecting you to a live agent now...',
           fulfillmentMessages: [{
             platform: 'PLATFORM_UNSPECIFIED',
-            payload: { action: 'TRANSFER_AGENT', message: 'Transferring...' }
+            // This payload triggers the modal in the frontend
+            payload: { action: 'TRANSFER_AGENT', message: 'Connecting...' }
           }]
         };
 
-      // Recommended: Add the explicit fallback handler here as discussed previously
       case 'Default Fallback Intent':
-         return {
-            fulfillmentText: 'I missed that. I can help with account balances, transfers, or transaction history.',
-            fulfillmentMessages: [{ quickReplies: { quickReplies: standardQuickReplies } }]
-         };
+        return {
+          fulfillmentText: 'I missed that. I can help with account balances, transfers, or transaction history.',
+          fulfillmentMessages: [{ quickReplies: { quickReplies: standardQuickReplies } }]
+        };
 
       default:
         return {

@@ -8,7 +8,8 @@ export const useChat = () => {
     addMessage, 
     setTyping, 
     setAuthRequired, 
-    setPendingMessage, // <--- DESTRUCTURE THIS
+    setPendingMessage,
+    setAgentModalOpen, // <--- NEW
     resetConversation: resetStore,
     isAuthenticated,
     sessionId
@@ -23,16 +24,7 @@ export const useChat = () => {
         text: 'Welcome to SecureBank AI! I can help you with your accounts, transfers, or answer your support questions. How can I help you today?',
         isUser: false,
         timestamp: new Date(),
-        quickReplies: [
-          'Check Balance',
-          'Transfer Funds', 
-          'Transaction History',
-          'Talk to Agent',
-          'Hours', 
-          'Locations',
-          'Routing number',
-          'Contact info'
-        ]
+        quickReplies: ['Check Balance', 'Transfer Funds', 'Routing Number', 'Hours', 'Locations']
       });
       setTyping(false);
     }, 800);
@@ -41,7 +33,6 @@ export const useChat = () => {
   const sendMessage = useCallback(async (text: string, isAuthRetry = false) => {
     if (!text.trim()) return;
 
-    // Only add user message to UI if it's NOT a retry (to avoid duplicates)
     if (!isAuthRetry) {
         addMessage({ text, isUser: true, timestamp: new Date() });
     }
@@ -62,13 +53,9 @@ export const useChat = () => {
       const data = json.data;
       const currentAuth = useChatStore.getState().isAuthenticated;
 
-      // Check if the backend is asking for authentication
+      // Handle Auth Requirement
       if (data.actionRequired === 'REQUIRE_AUTH' && !currentAuth) {
-        // --- KEY FIX STARTS HERE ---
-        // Save the intent so we can replay it after login
         setPendingMessage(text); 
-        // --- KEY FIX ENDS HERE ---
-
         setAuthRequired({ 
           required: true, 
           message: data.actionMessage || 'Authentication required for this action' 
@@ -81,6 +68,18 @@ export const useChat = () => {
           quickReplies: data.quickReplies,
           intent: data.intent
         });
+      
+      // Handle Agent Transfer Action
+      } else if (data.actionRequired === 'TRANSFER_AGENT') { // <--- NEW
+        setAgentModalOpen(true);
+        addMessage({
+          text: data.text,
+          isUser: false,
+          timestamp: new Date(),
+          quickReplies: [],
+          intent: data.intent
+        });
+
       } else {
         addMessage({
           text: data.text,
@@ -98,16 +97,11 @@ export const useChat = () => {
     } finally {
       setTyping(false);
     }
-  }, [addMessage, setTyping, setAuthRequired, setPendingMessage, sessionId]); // Added setPendingMessage dependency
+  }, [addMessage, setTyping, setAuthRequired, setPendingMessage, setAgentModalOpen, sessionId]);
 
   const resetConversation = useCallback(async () => {
-    // 1. Sign the user out (redirect: false prevents page reload)
     await signOut({ redirect: false });
-
-    // 2. Clear the messages and local state
     resetStore();
-
-    // 3. Trigger the welcome message again
     triggerWelcome();
   }, [resetStore, triggerWelcome]);
 
