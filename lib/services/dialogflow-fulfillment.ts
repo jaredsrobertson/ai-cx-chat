@@ -25,11 +25,11 @@ function getAuthContext(contexts: DialogflowContext[]) {
   return [];
 }
 
-// Helper to clear "sticky" contexts (like transfer flows) while keeping Auth
-function clearTransferContexts(contexts: DialogflowContext[]) {
+// Helper to clear ALL contexts except auth - CRITICAL for preventing sticky intents
+function clearAllContexts(contexts: DialogflowContext[]) {
   const authContexts = getAuthContext(contexts);
   
-  // Find all OTHER contexts and set lifespan to 0 to kill them immediately
+  // Kill ALL other contexts by setting lifespan to 0
   const contextsToClear = contexts
     .filter(ctx => !ctx.name.endsWith('/contexts/authenticated'))
     .map(ctx => ({
@@ -37,6 +37,8 @@ function clearTransferContexts(contexts: DialogflowContext[]) {
       lifespanCount: 0
     }));
 
+  console.log('Clearing contexts:', contextsToClear.map(c => c.name));
+  
   return [...authContexts, ...contextsToClear];
 }
 
@@ -46,6 +48,10 @@ function formatCurrency(amount: number): string {
 
 export const DialogflowFulfillment = {
   handleIntent: async (intentName: string, parameters: Record<string, any>, contexts: DialogflowContext[]) => {
+    // Log incoming contexts for debugging
+    console.log('Intent received:', intentName);
+    console.log('Active contexts:', contexts.map(c => ({ name: c.name, lifespan: c.lifespanCount })));
+    
     const standardQuickReplies = [
       'Check Balance',
       'Transfer Funds', 
@@ -65,7 +71,9 @@ export const DialogflowFulfillment = {
         fulfillmentMessages: [{
           platform: 'PLATFORM_UNSPECIFIED',
           payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to proceed' }
-        }]
+        }],
+        // Clear all contexts when auth is required
+        outputContexts: clearAllContexts(contexts)
       };
     }
 
@@ -78,7 +86,9 @@ export const DialogflowFulfillment = {
           fulfillmentMessages: [
             { text: { text: ['Welcome to SecureBank! I can help you check balances, transfer funds, or view recent transactions.'] } },
             { quickReplies: { quickReplies: standardQuickReplies } }
-          ]
+          ],
+          // Clear all contexts on welcome to ensure clean slate
+          outputContexts: clearAllContexts(contexts)
         };
 
       case 'check.balance': {
@@ -91,7 +101,7 @@ export const DialogflowFulfillment = {
         return {
           fulfillmentText: text,
           fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-          outputContexts: clearTransferContexts(contexts) // Clear sticky contexts
+          outputContexts: clearAllContexts(contexts) // Clear all contexts after completion
         };
       }
 
@@ -135,7 +145,9 @@ export const DialogflowFulfillment = {
              fulfillmentText: 'I need a bit more info. Please specify the amount and the account.',
              fulfillmentMessages: [{ 
                text: { text: ['I need a bit more info. Please specify the amount and the account.'] }
-             }]
+             }],
+             // CRITICAL: Clear contexts even on missing params to prevent sticky transfer intent
+             outputContexts: clearAllContexts(contexts)
            };
         }
 
@@ -148,14 +160,15 @@ export const DialogflowFulfillment = {
           return {
             fulfillmentText: text,
             fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-            outputContexts: clearTransferContexts(contexts) // Clear sticky contexts on success
+            outputContexts: clearAllContexts(contexts) // Clear all contexts on success
           };
         } else {
           console.log('Transfer failed:', result.error);
           return { 
             fulfillmentText: `Transfer failed: ${result.error}`,
             fulfillmentMessages: [{ text: { text: [`Transfer failed: ${result.error}`] } }],
-            outputContexts: getAuthContext(contexts)
+            // CRITICAL: Clear contexts on failure too to prevent sticky intent
+            outputContexts: clearAllContexts(contexts)
           };
         }
       }
@@ -167,7 +180,7 @@ export const DialogflowFulfillment = {
         if (transactions.length === 0) {
           return { 
             fulfillmentText: "No recent transactions found.", 
-            outputContexts: clearTransferContexts(contexts) 
+            outputContexts: clearAllContexts(contexts)
           };
         }
         
@@ -179,7 +192,7 @@ export const DialogflowFulfillment = {
         return {
           fulfillmentText: text,
           fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-          outputContexts: clearTransferContexts(contexts) // Clear sticky contexts
+          outputContexts: clearAllContexts(contexts) // Clear all contexts after completion
         };
       }
 
@@ -189,27 +202,37 @@ export const DialogflowFulfillment = {
           fulfillmentMessages: [{
             platform: 'PLATFORM_UNSPECIFIED',
             payload: { action: 'TRANSFER_AGENT', message: 'Connecting...' }
-          }]
+          }],
+          // Clear all contexts when transferring to agent
+          outputContexts: clearAllContexts(contexts)
         };
 
       case 'Default Fallback Intent':
+        // CRITICAL: Fallback intent MUST clear all contexts to reset conversation state
+        console.log('Fallback triggered - clearing all contexts');
         return {
           fulfillmentText: 'I missed that. I can help with account balances, transfers, or transaction history.',
           fulfillmentMessages: [{ 
             text: { text: ['I missed that. I can help with account balances, transfers, or transaction history.'] }
           }, { 
             quickReplies: { quickReplies: standardQuickReplies } 
-          }]
+          }],
+          // CRITICAL: Clear ALL contexts to prevent sticky intents
+          outputContexts: clearAllContexts(contexts)
         };
 
       default:
+        // For any unhandled intent, clear contexts to ensure clean slate
+        console.log('Unhandled intent - clearing all contexts');
         return {
           fulfillmentText: 'I can help you check balances, transfer funds, or view recent transactions.',
           fulfillmentMessages: [{ 
             text: { text: ['I can help you check balances, transfer funds, or view recent transactions.'] }
           }, { 
             quickReplies: { quickReplies: standardQuickReplies } 
-          }]
+          }],
+          // Clear all contexts for any unhandled intent
+          outputContexts: clearAllContexts(contexts)
         };
     }
   }
