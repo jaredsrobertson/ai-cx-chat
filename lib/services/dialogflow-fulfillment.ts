@@ -98,35 +98,65 @@ export const DialogflowFulfillment = {
       case 'transfer.funds': {
         const amount = typeof parameters.amount === 'object' ? parameters.amount?.amount : parameters.amount;
         
-        // Relies on Dialogflow returning canonical 'checking' or 'savings'
+        // Extract and normalize account parameters
         let fromAccount = parameters.fromAccount;
         let toAccount = parameters.toAccount;
         
-        // Smart bidirectional inference (The Logic Fix)
-        if (fromAccount && !toAccount) {
-          // If "From Checking" -> To Savings
-          toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
-        } else if (!fromAccount && toAccount) {
-          // If "To Checking" -> From Savings
+        // Convert to lowercase and trim if they exist
+        if (fromAccount && typeof fromAccount === 'string') {
+          fromAccount = fromAccount.toLowerCase().trim();
+        }
+        if (toAccount && typeof toAccount === 'string') {
+          toAccount = toAccount.toLowerCase().trim();
+        }
+        
+        // Debug logging
+        console.log('Transfer parameters received:', { 
+          fromAccount, 
+          toAccount,
+          amount
+        });
+        
+        // Inference logic for single-account mentions
+        if (!fromAccount && toAccount) {
+          // User said "transfer to checking" → infer from the opposite account
           fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
+          console.log('Inferred fromAccount:', fromAccount);
+        } else if (fromAccount && !toAccount) {
+          // User said "transfer from savings" → infer to the opposite account
+          toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
+          console.log('Inferred toAccount:', toAccount);
         }
 
+        // Validate we have all required parameters
         if (!amount || !fromAccount || !toAccount) {
-           return { fulfillmentText: 'I need a bit more info. Please specify the amount and the account.' };
+           console.log('Missing parameters after inference:', { amount, fromAccount, toAccount });
+           return { 
+             fulfillmentText: 'I need a bit more info. Please specify the amount and the account.',
+             fulfillmentMessages: [{ 
+               text: { text: ['I need a bit more info. Please specify the amount and the account.'] },
+             }, { 
+               quickReplies: { quickReplies: ['Transfer $100 to savings', 'Transfer $100 to checking'] } 
+             }]
+           };
         }
 
+        // Process the transfer
         const result = await BankingService.processTransfer(fromAccount, toAccount, Number(amount));
         
         if (result.success) {
           const text = `Transfer complete! Moved ${formatCurrency(Number(amount))} from ${fromAccount} to ${toAccount}.`;
+          console.log('Transfer successful:', { fromAccount, toAccount, amount });
           return {
             fulfillmentText: text,
             fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
             outputContexts: clearTransferContexts(contexts) // Clear sticky contexts on success
           };
         } else {
+          console.log('Transfer failed:', result.error);
           return { 
             fulfillmentText: `Transfer failed: ${result.error}`,
+            fulfillmentMessages: [{ text: { text: [`Transfer failed: ${result.error}`] } }],
             outputContexts: getAuthContext(contexts)
           };
         }
@@ -167,13 +197,21 @@ export const DialogflowFulfillment = {
       case 'Default Fallback Intent':
         return {
           fulfillmentText: 'I missed that. I can help with account balances, transfers, or transaction history.',
-          fulfillmentMessages: [{ quickReplies: { quickReplies: standardQuickReplies } }]
+          fulfillmentMessages: [{ 
+            text: { text: ['I missed that. I can help with account balances, transfers, or transaction history.'] }
+          }, { 
+            quickReplies: { quickReplies: standardQuickReplies } 
+          }]
         };
 
       default:
         return {
           fulfillmentText: 'I can help you check balances, transfer funds, or view recent transactions.',
-          fulfillmentMessages: [{ quickReplies: { quickReplies: standardQuickReplies } }]
+          fulfillmentMessages: [{ 
+            text: { text: ['I can help you check balances, transfer funds, or view recent transactions.'] }
+          }, { 
+            quickReplies: { quickReplies: standardQuickReplies } 
+          }]
         };
     }
   }
