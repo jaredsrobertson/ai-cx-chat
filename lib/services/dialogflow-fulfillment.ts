@@ -134,9 +134,7 @@ export const DialogflowFulfillment = {
            return { 
              fulfillmentText: 'I need a bit more info. Please specify the amount and the account.',
              fulfillmentMessages: [{ 
-               text: { text: ['I need a bit more info. Please specify the amount and the account.'] },
-             }, { 
-               quickReplies: { quickReplies: ['Transfer $100 to savings', 'Transfer $100 to checking'] } 
+               text: { text: ['I need a bit more info. Please specify the amount and the account.'] }
              }]
            };
         }
