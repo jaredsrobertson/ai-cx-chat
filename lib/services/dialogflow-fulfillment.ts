@@ -13,23 +13,23 @@ function isAuthenticated(contexts: DialogflowContext[]): boolean {
 }
 
 // Helper to maintain auth context
-function getAuthContext(contexts: DialogflowContext[]) {
+function getAuthContext(contexts: DialogflowContext[]): DialogflowContext[] {
   const authContext = contexts.find(ctx => ctx.name.endsWith('/contexts/authenticated'));
   if (authContext) {
     return [{
       name: authContext.name,
-      lifespanCount: 5, // Refresh lifespan to keep user logged in during conversation
+      lifespanCount: 5,
       parameters: authContext.parameters || {}
     }];
   }
   return [];
 }
 
-// Helper to clear ALL contexts except auth - CRITICAL for preventing sticky intents
-function clearAllContexts(contexts: DialogflowContext[]) {
+// Helper to clear contexts when a conversation flow completes
+// Only used for: flow completion, fallback (safety net), and flow transitions
+function clearAllContexts(contexts: DialogflowContext[]): DialogflowContext[] {
   const authContexts = getAuthContext(contexts);
   
-  // Kill ALL other contexts by setting lifespan to 0
   const contextsToClear = contexts
     .filter(ctx => !ctx.name.endsWith('/contexts/authenticated'))
     .map(ctx => ({
@@ -48,7 +48,6 @@ function formatCurrency(amount: number): string {
 
 export const DialogflowFulfillment = {
   handleIntent: async (intentName: string, parameters: Record<string, any>, contexts: DialogflowContext[]) => {
-    // Log incoming contexts for debugging
     console.log('Intent received:', intentName);
     console.log('Active contexts:', contexts.map(c => ({ name: c.name, lifespan: c.lifespanCount })));
     
@@ -63,7 +62,7 @@ export const DialogflowFulfillment = {
       'Contact info'
     ];
     
-    // 1. Auth Guard
+    // Auth Guard
     const protectedIntents = ['check.balance', 'transfer.funds', 'transaction.history'];
     if (protectedIntents.includes(intentName) && !isAuthenticated(contexts)) {
       return {
@@ -72,12 +71,12 @@ export const DialogflowFulfillment = {
           platform: 'PLATFORM_UNSPECIFIED',
           payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to proceed' }
         }],
-        // Clear all contexts when auth is required
+        // Clear contexts when redirecting to auth
         outputContexts: clearAllContexts(contexts)
       };
     }
 
-    // 2. Intent Handling
+    // Intent Handling
     switch (intentName) {
       case 'Default Welcome Intent':
       case 'Welcome':
@@ -87,7 +86,7 @@ export const DialogflowFulfillment = {
             { text: { text: ['Welcome to SecureBank! I can help you check balances, transfer funds, or view recent transactions.'] } },
             { quickReplies: { quickReplies: standardQuickReplies } }
           ],
-          // Clear all contexts on welcome to ensure clean slate
+          // Clear contexts on welcome for clean slate
           outputContexts: clearAllContexts(contexts)
         };
 
@@ -100,86 +99,84 @@ export const DialogflowFulfillment = {
         
         return {
           fulfillmentText: text,
-          fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-          outputContexts: clearAllContexts(contexts) // Clear all contexts after completion
+          fulfillmentMessages: [
+            { text: { text: [text] } }, 
+            { quickReplies: { quickReplies: standardQuickReplies } }
+          ],
+          // Clear contexts - balance check is a complete, single-turn interaction
+          outputContexts: clearAllContexts(contexts)
         };
       }
 
       case 'transfer.funds': {
-        const amount = typeof parameters.amount === 'object' ? parameters.amount?.amount : parameters.amount;
+        // PROPER IMPLEMENTATION: Assumes Dialogflow is configured correctly
+        // - @sys.number for amount (returns number directly)
+        // - @account_type entity with canonical values (returns "checking" or "savings")
+        const amount = parameters.amount; // No complex extraction needed
+        let fromAccount = parameters.fromAccount; // Already normalized by Dialogflow
+        let toAccount = parameters.toAccount; // Already normalized by Dialogflow
         
-        // Extract and normalize account parameters
-        let fromAccount = parameters.fromAccount;
-        let toAccount = parameters.toAccount;
+        console.log('Transfer parameters received:', { fromAccount, toAccount, amount });
         
-        // Convert to lowercase and trim if they exist
-        if (fromAccount && typeof fromAccount === 'string') {
-          fromAccount = fromAccount.toLowerCase().trim();
-        }
-        if (toAccount && typeof toAccount === 'string') {
-          toAccount = toAccount.toLowerCase().trim();
-        }
-        
-        // Debug logging
-        console.log('Transfer parameters received:', { 
-          fromAccount, 
-          toAccount,
-          amount
-        });
-        
-        // Inference logic for single-account mentions
+        // Business logic: Infer missing account in two-account system
         if (!fromAccount && toAccount) {
-          // User said "transfer to checking" → infer from the opposite account
           fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
           console.log('Inferred fromAccount:', fromAccount);
         } else if (fromAccount && !toAccount) {
-          // User said "transfer from savings" → infer to the opposite account
           toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
           console.log('Inferred toAccount:', toAccount);
         }
 
-        // Validate we have all required parameters
+        // Check if we have all required parameters
         if (!amount || !fromAccount || !toAccount) {
-           console.log('Missing parameters after inference:', { amount, fromAccount, toAccount });
-           return { 
-             fulfillmentText: 'I need a bit more info. Please specify the amount and the account.',
-             fulfillmentMessages: [{ 
-               text: { text: ['I need a bit more info. Please specify the amount and the account.'] }
-             }],
-             // CRITICAL: Clear contexts even on missing params to prevent sticky transfer intent
-             outputContexts: clearAllContexts(contexts)
-           };
+          console.log('Missing parameters:', { amount, fromAccount, toAccount });
+          
+          // PROPER MULTI-TURN: Don't clear contexts - allow user to provide missing info
+          // User can say "transfer" → "to savings" → "$100" across multiple turns
+          return { 
+            fulfillmentText: 'I need a bit more info. Please specify the amount and the account.',
+            fulfillmentMessages: [{ 
+              text: { text: ['I need a bit more info. Please specify the amount and the account.'] }
+            }]
+            // NO outputContexts - keeps transfer context active for next turn
+          };
         }
 
-        // Process the transfer
+        // All parameters present - process transfer
         const result = await BankingService.processTransfer(fromAccount, toAccount, Number(amount));
         
         if (result.success) {
           const text = `Transfer complete! Moved ${formatCurrency(Number(amount))} from ${fromAccount} to ${toAccount}.`;
           console.log('Transfer successful:', { fromAccount, toAccount, amount });
+          
           return {
             fulfillmentText: text,
-            fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-            outputContexts: clearAllContexts(contexts) // Clear all contexts on success
+            fulfillmentMessages: [
+              { text: { text: [text] } }, 
+              { quickReplies: { quickReplies: standardQuickReplies } }
+            ],
+            // Clear contexts - transfer flow is complete
+            outputContexts: clearAllContexts(contexts)
           };
         } else {
           console.log('Transfer failed:', result.error);
+          
           return { 
             fulfillmentText: `Transfer failed: ${result.error}`,
             fulfillmentMessages: [{ text: { text: [`Transfer failed: ${result.error}`] } }],
-            // CRITICAL: Clear contexts on failure too to prevent sticky intent
+            // Clear contexts - transfer flow ended (even if failed)
             outputContexts: clearAllContexts(contexts)
           };
         }
       }
 
       case 'transaction.history': {
-        // Simple demo implementation
         const transactions = await BankingService.getTransactions(undefined, 5);
         
         if (transactions.length === 0) {
           return { 
-            fulfillmentText: "No recent transactions found.", 
+            fulfillmentText: "No recent transactions found.",
+            // Clear contexts - single-turn interaction complete
             outputContexts: clearAllContexts(contexts)
           };
         }
@@ -191,8 +188,12 @@ export const DialogflowFulfillment = {
         
         return {
           fulfillmentText: text,
-          fulfillmentMessages: [{ text: { text: [text] } }, { quickReplies: { quickReplies: standardQuickReplies } }],
-          outputContexts: clearAllContexts(contexts) // Clear all contexts after completion
+          fulfillmentMessages: [
+            { text: { text: [text] } }, 
+            { quickReplies: { quickReplies: standardQuickReplies } }
+          ],
+          // Clear contexts - single-turn interaction complete
+          outputContexts: clearAllContexts(contexts)
         };
       }
 
@@ -203,36 +204,34 @@ export const DialogflowFulfillment = {
             platform: 'PLATFORM_UNSPECIFIED',
             payload: { action: 'TRANSFER_AGENT', message: 'Connecting...' }
           }],
-          // Clear all contexts when transferring to agent
+          // Clear contexts when handing off to agent
           outputContexts: clearAllContexts(contexts)
         };
 
       case 'Default Fallback Intent':
-        // CRITICAL: Fallback intent MUST clear all contexts to reset conversation state
+        // SAFETY NET: Always clear contexts on fallback to prevent stuck states
         console.log('Fallback triggered - clearing all contexts');
         return {
           fulfillmentText: 'I missed that. I can help with account balances, transfers, or transaction history.',
-          fulfillmentMessages: [{ 
-            text: { text: ['I missed that. I can help with account balances, transfers, or transaction history.'] }
-          }, { 
-            quickReplies: { quickReplies: standardQuickReplies } 
-          }],
-          // CRITICAL: Clear ALL contexts to prevent sticky intents
+          fulfillmentMessages: [
+            { text: { text: ['I missed that. I can help with account balances, transfers, or transaction history.'] } },
+            { quickReplies: { quickReplies: standardQuickReplies } }
+          ],
+          // CRITICAL: Always clear on fallback (safety net for conversation state)
           outputContexts: clearAllContexts(contexts)
         };
 
       default:
-        // For any unhandled intent, clear contexts to ensure clean slate
-        console.log('Unhandled intent - clearing all contexts');
+        // Knowledge Base queries, FAQ intents, etc.
+        // These are stateless - no context management needed
+        console.log('Stateless intent (KB/FAQ):', intentName);
         return {
           fulfillmentText: 'I can help you check balances, transfer funds, or view recent transactions.',
-          fulfillmentMessages: [{ 
-            text: { text: ['I can help you check balances, transfer funds, or view recent transactions.'] }
-          }, { 
-            quickReplies: { quickReplies: standardQuickReplies } 
-          }],
-          // Clear all contexts for any unhandled intent
-          outputContexts: clearAllContexts(contexts)
+          fulfillmentMessages: [
+            { text: { text: ['I can help you check balances, transfer funds, or view recent transactions.'] } },
+            { quickReplies: { quickReplies: standardQuickReplies } }
+          ]
+          // NO outputContexts - stateless intents don't need context management
         };
     }
   }
