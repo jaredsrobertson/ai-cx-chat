@@ -39,6 +39,7 @@ export default function ChatWidget() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const retryAttemptedRef = useRef(false); // Track if retry was attempted
 
   // Sync Auth State & Retry Pending Message
   useEffect(() => {
@@ -46,22 +47,59 @@ export default function ChatWidget() {
       console.log('Session authenticated, updating chat state');
       setAuthenticated(true);
       
-      // If there's a pending message, retry it after a short delay
-      // The delay ensures the session is fully established
-      if (pendingMessage) {
+      // If there's a pending message and we haven't retried yet
+      if (pendingMessage && !retryAttemptedRef.current) {
         console.log('Will retry pending message after auth:', pendingMessage);
+        retryAttemptedRef.current = true; // Mark that we're attempting retry
         
-        // Small delay to ensure session is fully synced
-        setTimeout(() => {
-          console.log('Retrying pending message:', pendingMessage);
-          sendMessage(pendingMessage, true);
-          setPendingMessage(null);
-        }, 300); // 300ms delay to ensure session is ready
+        // Wait for session to fully sync with server
+        const retryTimer = setTimeout(async () => {
+          try {
+            // Verify session is available on server side
+            console.log('Verifying server session before retry...');
+            const sessionResponse = await fetch('/api/auth/session');
+            const sessionData = await sessionResponse.json();
+            
+            if (sessionData?.user) {
+              console.log('Session confirmed on server, retrying message:', pendingMessage);
+              // Close auth modal BEFORE retry so user sees the response
+              setShowLoginModal(false);
+              setAuthRequired({ required: false, message: '' });
+              
+              // Retry the message
+              await sendMessage(pendingMessage, true);
+              setPendingMessage(null);
+              retryAttemptedRef.current = false; // Reset for next time
+            } else {
+              console.warn('Session not yet available on server, will retry once more');
+              // One more attempt with longer delay
+              setTimeout(async () => {
+                console.log('Final retry attempt:', pendingMessage);
+                setShowLoginModal(false);
+                setAuthRequired({ required: false, message: '' });
+                await sendMessage(pendingMessage, true);
+                setPendingMessage(null);
+                retryAttemptedRef.current = false;
+              }, 1000);
+            }
+          } catch (error) {
+            console.error('Error during retry:', error);
+            // Retry anyway, user is authenticated
+            setShowLoginModal(false);
+            setAuthRequired({ required: false, message: '' });
+            await sendMessage(pendingMessage, true);
+            setPendingMessage(null);
+            retryAttemptedRef.current = false;
+          }
+        }, 600); // Increased delay for more reliable session sync
+        
+        return () => clearTimeout(retryTimer);
       }
-    } else {
+    } else if (status === 'unauthenticated') {
       setAuthenticated(false);
+      retryAttemptedRef.current = false; // Reset retry flag on logout
     }
-  }, [status, setAuthenticated, sendMessage, pendingMessage, setPendingMessage]);
+  }, [status, setAuthenticated, sendMessage, pendingMessage, setPendingMessage, setShowLoginModal, setAuthRequired]);
 
   useEffect(() => {
     if (isOpen) {
@@ -75,11 +113,11 @@ export default function ChatWidget() {
   }, [messages, isOpen, isTyping]);
 
   useEffect(() => {
-    if (authRequired.required) {
+    if (authRequired.required && !showLoginModal) {
       console.log('Auth required, showing login modal');
       setShowLoginModal(true);
     }
-  }, [authRequired]);
+  }, [authRequired, showLoginModal]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -91,9 +129,10 @@ export default function ChatWidget() {
   };
 
   const handleCloseLoginModal = () => {
-    console.log('Login modal closed');
+    console.log('Login modal closed manually (cancel)');
     setShowLoginModal(false);
     setAuthRequired({ required: false, message: '' });
+    setPendingMessage(null); // Clear pending message if user cancels
   };
 
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);

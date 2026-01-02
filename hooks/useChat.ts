@@ -49,22 +49,30 @@ export const useChat = () => {
 
       const json = await response.json();
       
-      if (!response.ok) throw new Error(json.error || 'API Error');
+      if (!response.ok) {
+        throw new Error(json.error || 'API Error');
+      }
 
       const data = json.data;
+      
+      // Get FRESH auth state from store (not stale closure)
       const currentAuth = useChatStore.getState().isAuthenticated;
 
       console.log('Response received:', { 
         actionRequired: data.actionRequired, 
         currentAuth,
         isAuthRetry,
-        authenticated: data.authenticated 
+        authenticated: data.authenticated,
+        text: data.text.substring(0, 50) + '...'
       });
 
       // Handle Auth Requirement
+      // IMPORTANT: Only trigger auth flow if user is NOT authenticated
+      // This prevents re-triggering auth after user just logged in
       if (data.actionRequired === 'REQUIRE_AUTH' && !currentAuth) {
-        // Save the original message (including quick replies) for retry after auth
-        console.log('Auth required, saving pending message:', text);
+        console.log('Auth required for action, saving pending message');
+        
+        // Save the original message for retry after auth
         setPendingMessage(text);
         
         setAuthRequired({ 
@@ -72,11 +80,24 @@ export const useChat = () => {
           message: data.actionMessage || 'Authentication required for this action' 
         });
         
-        // DON'T add bot message here - the modal will show the message
-        // This prevents duplicate messages
+        // DON'T add bot message - modal will handle this
         setTyping(false);
-        return; // Exit early
+        return;
       
+      // If we got auth required but user IS authenticated, it means session sync failed
+      // Log error but continue to show the response
+      } else if (data.actionRequired === 'REQUIRE_AUTH' && currentAuth) {
+        console.error('UNEXPECTED: Got auth required even though user is authenticated');
+        console.error('This indicates a session sync issue between client and server');
+        
+        // Show the message anyway - it's better than leaving user hanging
+        addMessage({
+          text: 'There was a synchronization issue. Please try your request again.',
+          isUser: false,
+          timestamp: new Date(),
+          quickReplies: ['Check Balance', 'Transfer Funds', 'Talk to Agent']
+        });
+        
       // Handle Agent Transfer Action
       } else if (data.actionRequired === 'TRANSFER_AGENT') {
         setAgentModalOpen(true);
@@ -90,6 +111,12 @@ export const useChat = () => {
 
       } else {
         // Normal response - add bot message
+        console.log('Adding bot response:', {
+          intent: data.intent,
+          hasQuickReplies: !!data.quickReplies,
+          hasSources: !!data.sources
+        });
+        
         addMessage({
           text: data.text,
           isUser: false,
