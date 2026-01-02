@@ -9,7 +9,7 @@ export const useChat = () => {
     setTyping, 
     setAuthRequired, 
     setPendingMessage,
-    setAgentModalOpen, // <--- NEW
+    setAgentModalOpen,
     resetConversation: resetStore,
     isAuthenticated,
     sessionId
@@ -24,16 +24,7 @@ export const useChat = () => {
         text: 'Welcome to SecureBank AI! I can help you with your accounts, transfers, or answer your support questions. How can I help you today?',
         isUser: false,
         timestamp: new Date(),
-        quickReplies: [
-          'Check Balance',
-          'Transfer Funds', 
-          'Transaction History',
-          'Talk to Agent',
-          'Hours', 
-          'Locations',
-          'Routing number',
-          'Contact info'
-        ]
+        quickReplies: ['Check Balance', 'Transfer Funds', 'Routing Number', 'Hours', 'Locations']
       });
       setTyping(false);
     }, 800);
@@ -42,6 +33,7 @@ export const useChat = () => {
   const sendMessage = useCallback(async (text: string, isAuthRetry = false) => {
     if (!text.trim()) return;
 
+    // Only add user message if not an auth retry
     if (!isAuthRetry) {
         addMessage({ text, isUser: true, timestamp: new Date() });
     }
@@ -62,24 +54,31 @@ export const useChat = () => {
       const data = json.data;
       const currentAuth = useChatStore.getState().isAuthenticated;
 
+      console.log('Response received:', { 
+        actionRequired: data.actionRequired, 
+        currentAuth,
+        isAuthRetry,
+        authenticated: data.authenticated 
+      });
+
       // Handle Auth Requirement
       if (data.actionRequired === 'REQUIRE_AUTH' && !currentAuth) {
-        setPendingMessage(text); 
+        // Save the original message (including quick replies) for retry after auth
+        console.log('Auth required, saving pending message:', text);
+        setPendingMessage(text);
+        
         setAuthRequired({ 
           required: true, 
           message: data.actionMessage || 'Authentication required for this action' 
         });
         
-        addMessage({
-          text: data.text,
-          isUser: false,
-          timestamp: new Date(),
-          quickReplies: data.quickReplies,
-          intent: data.intent
-        });
+        // DON'T add bot message here - the modal will show the message
+        // This prevents duplicate messages
+        setTyping(false);
+        return; // Exit early
       
       // Handle Agent Transfer Action
-      } else if (data.actionRequired === 'TRANSFER_AGENT') { // <--- NEW
+      } else if (data.actionRequired === 'TRANSFER_AGENT') {
         setAgentModalOpen(true);
         addMessage({
           text: data.text,
@@ -90,6 +89,7 @@ export const useChat = () => {
         });
 
       } else {
+        // Normal response - add bot message
         addMessage({
           text: data.text,
           isUser: false,
@@ -102,7 +102,11 @@ export const useChat = () => {
 
     } catch (error) {
       console.error('SendMessage Error:', error);
-      addMessage({ text: "I'm having trouble connecting right now. Please try again.", isUser: false, timestamp: new Date() });
+      addMessage({ 
+        text: "I'm having trouble connecting right now. Please try again.", 
+        isUser: false, 
+        timestamp: new Date() 
+      });
     } finally {
       setTyping(false);
     }

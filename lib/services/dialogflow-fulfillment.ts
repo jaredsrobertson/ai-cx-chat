@@ -65,14 +65,15 @@ export const DialogflowFulfillment = {
     // Auth Guard
     const protectedIntents = ['check.balance', 'transfer.funds', 'transaction.history'];
     if (protectedIntents.includes(intentName) && !isAuthenticated(contexts)) {
+      // IMPORTANT: Don't clear contexts here - preserve them for resume after auth
+      // When user returns authenticated, they should be able to continue where they left off
       return {
         fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
         fulfillmentMessages: [{
           platform: 'PLATFORM_UNSPECIFIED',
           payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to proceed' }
-        }],
-        // Clear contexts when redirecting to auth
-        outputContexts: clearAllContexts(contexts)
+        }]
+        // NO outputContexts - preserve existing contexts for auth resume
       };
     }
 

@@ -8,7 +8,7 @@ import { useChat } from '@/hooks/useChat';
 import Message from './Message';
 import QuickReplies from './QuickReplies';
 import LoginModal from './LoginModal';
-import AgentModal from './AgentModal'; // <--- NEW
+import AgentModal from './AgentModal';
 import CloudIcon from './CloudIcon';
 
 export default function ChatWidget() {
@@ -27,8 +27,8 @@ export default function ChatWidget() {
     setAuthenticated,
     pendingMessage,
     setPendingMessage,
-    isAgentModalOpen, // <--- NEW
-    setAgentModalOpen // <--- NEW
+    isAgentModalOpen,
+    setAgentModalOpen
   } = useChatStore();
 
   const { 
@@ -43,10 +43,20 @@ export default function ChatWidget() {
   // Sync Auth State & Retry Pending Message
   useEffect(() => {
     if (status === 'authenticated') {
+      console.log('Session authenticated, updating chat state');
       setAuthenticated(true);
+      
+      // If there's a pending message, retry it after a short delay
+      // The delay ensures the session is fully established
       if (pendingMessage) {
-        sendMessage(pendingMessage, true); 
-        setPendingMessage(null);
+        console.log('Will retry pending message after auth:', pendingMessage);
+        
+        // Small delay to ensure session is fully synced
+        setTimeout(() => {
+          console.log('Retrying pending message:', pendingMessage);
+          sendMessage(pendingMessage, true);
+          setPendingMessage(null);
+        }, 300); // 300ms delay to ensure session is ready
       }
     } else {
       setAuthenticated(false);
@@ -57,7 +67,7 @@ export default function ChatWidget() {
     if (isOpen) {
       triggerWelcome();
     }
-  }, [isOpen]); 
+  }, [isOpen, triggerWelcome]); 
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -65,19 +75,25 @@ export default function ChatWidget() {
   }, [messages, isOpen, isTyping]);
 
   useEffect(() => {
-    if (authRequired.required) setShowLoginModal(true);
+    if (authRequired.required) {
+      console.log('Auth required, showing login modal');
+      setShowLoginModal(true);
+    }
   }, [authRequired]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
     setInput('');
     
-    if (authRequired.required && status !== 'authenticated') {
-       setPendingMessage(text);
-       setShowLoginModal(true);
-       return;
-    }
+    // Check if this action requires auth
+    // Don't block the send - let the backend decide and handle auth requirement
     await sendMessage(text);
+  };
+
+  const handleCloseLoginModal = () => {
+    console.log('Login modal closed');
+    setShowLoginModal(false);
+    setAuthRequired({ required: false, message: '' });
   };
 
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
@@ -186,10 +202,7 @@ export default function ChatWidget() {
       {/* Modals */}
       <LoginModal 
         isOpen={showLoginModal} 
-        onClose={() => {
-            setShowLoginModal(false);
-            setAuthRequired({ required: false, message: '' }); 
-        }} 
+        onClose={handleCloseLoginModal}
         message={authRequired.message}
       />
 
