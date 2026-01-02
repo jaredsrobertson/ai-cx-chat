@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // We removed onLogin prop because we handle it internally via NextAuth now
   message?: string;
 }
 
 export default function LoginModal({ isOpen, onClose, message }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const { update } = useSession();
 
   if (!isOpen) return null;
 
@@ -21,19 +21,25 @@ export default function LoginModal({ isOpen, onClose, message }: LoginModalProps
     setError('');
 
     try {
+      console.log('Attempting login...');
       const result = await signIn('credentials', {
         email: 'demo@bank.com',
         password: 'demo123',
-        redirect: false, // Prevent page reload/redirect
+        redirect: false,
       });
 
       if (result?.error) {
+        console.error('Login failed:', result.error);
         setError('Invalid credentials');
       } else {
-        onClose(); // Success! Close modal. ChatWidget will detect session change.
+        console.log('✓ Login successful');
+        console.log('Forcing session refresh...');
+        await update();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('✓ Session refreshed, closing modal');
       }
     } catch (error) {
-      console.error('Login failed', error);
+      console.error('Login exception:', error);
       setError('An error occurred');
     } finally {
       setIsLoading(false);
@@ -43,10 +49,7 @@ export default function LoginModal({ isOpen, onClose, message }: LoginModalProps
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in-up">
       <div className="relative bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 transform transition-all">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-        >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -79,11 +82,9 @@ export default function LoginModal({ isOpen, onClose, message }: LoginModalProps
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
 
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-              Cancel
-            </button>
+            <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
             <button onClick={handleLogin} disabled={isLoading} className="flex-1 px-4 py-2 bg-blue-950 text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
-              {isLoading ? 'Authenticating...' : 'Login'}
+              {isLoading ? (<><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Authenticating...</>) : 'Login'}
             </button>
           </div>
         </div>
