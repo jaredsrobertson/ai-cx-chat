@@ -79,9 +79,11 @@ export const DialogflowFulfillment = {
     ];
     
     try {
+      // AUTH CHECK FIRST - Before any parameter handling
       const protectedIntents = ['check.balance', 'transfer.funds', 'transaction.history'];
       if (protectedIntents.includes(intentName) && !isAuthenticated(contexts)) {
-        console.log('Auth required - preserving contexts for resume after auth');
+        console.log('⚠️ AUTH REQUIRED - User must authenticate before proceeding');
+        console.log('Intent:', intentName, '| Preserving contexts for resume after auth');
         return {
           fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
           fulfillmentMessages: [{
@@ -104,6 +106,7 @@ export const DialogflowFulfillment = {
           };
 
         case 'check.balance': {
+          console.log('✓ Auth passed - Processing balance check');
           const accounts = await BankingService.getAccounts();
           const checking = accounts.find(a => a.type === 'checking');
           const savings = accounts.find(a => a.type === 'savings');
@@ -119,6 +122,8 @@ export const DialogflowFulfillment = {
         }
 
         case 'transfer.funds': {
+          console.log('✓ Auth passed - Processing transfer request');
+          
           const amount = extractAmount(parameters.amount);
           let fromAccount = normalizeAccount(parameters.fromAccount);
           let toAccount = normalizeAccount(parameters.toAccount);
@@ -129,6 +134,7 @@ export const DialogflowFulfillment = {
             rawTo: parameters.toAccount, toAccount 
           });
           
+          // Inference logic
           if (!fromAccount && toAccount) {
             fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
             console.log('Inferred fromAccount:', fromAccount);
@@ -137,19 +143,26 @@ export const DialogflowFulfillment = {
             console.log('Inferred toAccount:', toAccount);
           }
 
+          // Check if we have all required info
           if (!amount || !fromAccount || !toAccount) {
-            console.log('Missing parameters after inference:', { amount, fromAccount, toAccount });
+            console.log('Missing parameters - requesting info:', { 
+              needAmount: !amount, 
+              needFromAccount: !fromAccount, 
+              needToAccount: !toAccount 
+            });
+            
             return { 
-              fulfillmentText: 'I need a bit more info. Please specify the amount and the account.',
+              fulfillmentText: 'I need a bit more info. Please specify the amount and the account you want to transfer to.',
               fulfillmentMessages: [
-                { text: { text: ['I need a bit more info. Please specify the amount and the account.'] } },
+                { text: { text: ['I need a bit more info. Please specify the amount and the account you want to transfer to.'] } },
                 { quickReplies: { quickReplies: ['$50', '$100', '$500', 'To Savings', 'To Checking'] } }
               ]
             };
           }
 
+          // Validate same account
           if (fromAccount === toAccount) {
-            console.log('Same account transfer attempted:', fromAccount);
+            console.log('❌ Same account transfer attempted:', fromAccount);
             return {
               fulfillmentText: 'You cannot transfer to the same account. Please specify different accounts.',
               fulfillmentMessages: [
@@ -160,11 +173,13 @@ export const DialogflowFulfillment = {
             };
           }
 
+          // Execute transfer
+          console.log('Executing transfer:', { fromAccount, toAccount, amount });
           const result = await BankingService.processTransfer(fromAccount, toAccount, amount);
           
           if (result.success) {
             const text = `Transfer complete! Moved ${formatCurrency(amount)} from ${fromAccount} to ${toAccount}.`;
-            console.log('Transfer successful:', { fromAccount, toAccount, amount });
+            console.log('✓ Transfer successful');
             return {
               fulfillmentText: text,
               fulfillmentMessages: [
@@ -174,7 +189,7 @@ export const DialogflowFulfillment = {
               outputContexts: clearAllContexts(contexts)
             };
           } else {
-            console.log('Transfer failed:', result.error);
+            console.log('❌ Transfer failed:', result.error);
             return { 
               fulfillmentText: `Transfer failed: ${result.error}`,
               fulfillmentMessages: [
@@ -187,6 +202,7 @@ export const DialogflowFulfillment = {
         }
 
         case 'transaction.history': {
+          console.log('✓ Auth passed - Processing transaction history');
           const transactions = await BankingService.getTransactions(undefined, 5);
           if (transactions.length === 0) {
             return { 
