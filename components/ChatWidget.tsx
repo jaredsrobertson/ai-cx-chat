@@ -28,7 +28,8 @@ export default function ChatWidget() {
     pendingMessage,
     setPendingMessage,
     isAgentModalOpen,
-    setAgentModalOpen
+    setAgentModalOpen,
+    detectedIntent // <--- NEW
   } = useChatStore();
 
   const { 
@@ -129,6 +130,15 @@ export default function ChatWidget() {
   };
 
   const handleCloseLoginModal = () => {
+    // FIX: If we are authenticated, this close might be triggered by success
+    // In that case, DO NOT clear the pending message so the retry logic can run
+    if (status === 'authenticated') {
+      console.log('Login modal closed while authenticated (success path)');
+      setShowLoginModal(false);
+      setAuthRequired({ required: false, message: '' });
+      return;
+    }
+
     console.log('Login modal closed manually (cancel)');
     setShowLoginModal(false);
     setAuthRequired({ required: false, message: '' });
@@ -189,9 +199,10 @@ export default function ChatWidget() {
                  <><span className="text-gray-400">○</span> Guest User</>
                )}
              </span>
-             {messages.length > 0 && !messages[messages.length-1].isUser && messages[messages.length-1].intent && (
+             {/* UPDATED: Use detectedIntent from store */}
+             {detectedIntent && (
                <span className="italic opacity-70 truncate max-w-[120px]">
-                 Active: {messages[messages.length-1].intent}
+                 Active: {detectedIntent}
                </span>
              )}
           </div>

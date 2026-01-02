@@ -10,6 +10,7 @@ export const useChat = () => {
     setAuthRequired, 
     setPendingMessage,
     setAgentModalOpen,
+    setDetectedIntent, // <--- NEW
     resetConversation: resetStore,
     isAuthenticated,
     sessionId
@@ -75,6 +76,11 @@ export const useChat = () => {
         // Save the original message for retry after auth
         setPendingMessage(text);
         
+        // Capture intent even if auth is required
+        if (data.intent) {
+            setDetectedIntent(data.intent);
+        }
+        
         setAuthRequired({ 
           required: true, 
           message: data.actionMessage || 'Authentication required for this action' 
@@ -101,6 +107,7 @@ export const useChat = () => {
       // Handle Agent Transfer Action
       } else if (data.actionRequired === 'TRANSFER_AGENT') {
         setAgentModalOpen(true);
+        if (data.intent) setDetectedIntent(data.intent); // Update intent
         addMessage({
           text: data.text,
           isUser: false,
@@ -116,6 +123,8 @@ export const useChat = () => {
           hasQuickReplies: !!data.quickReplies,
           hasSources: !!data.sources
         });
+
+        if (data.intent) setDetectedIntent(data.intent); // Update intent
         
         addMessage({
           text: data.text,
@@ -137,7 +146,7 @@ export const useChat = () => {
     } finally {
       setTyping(false);
     }
-  }, [addMessage, setTyping, setAuthRequired, setPendingMessage, setAgentModalOpen, sessionId]);
+  }, [addMessage, setTyping, setAuthRequired, setPendingMessage, setAgentModalOpen, setDetectedIntent, sessionId]);
 
   const resetConversation = useCallback(async () => {
     await signOut({ redirect: false });

@@ -14,7 +14,8 @@ interface ChatState {
   authRequired: AuthRequirement;
   sessionId: string;
   pendingMessage: string | null;
-  isAgentModalOpen: boolean; // <--- NEW
+  isAgentModalOpen: boolean;
+  detectedIntent: string | null; // <--- NEW
 
   // Actions
   addMessage: (msg: ChatMessage) => void;
@@ -22,7 +23,8 @@ interface ChatState {
   setAuthenticated: (isAuthenticated: boolean) => void;
   setAuthRequired: (auth: AuthRequirement) => void;
   setPendingMessage: (msg: string | null) => void;
-  setAgentModalOpen: (isOpen: boolean) => void; // <--- NEW
+  setAgentModalOpen: (isOpen: boolean) => void;
+  setDetectedIntent: (intent: string | null) => void; // <--- NEW
   resetConversation: () => void;
 }
 
@@ -44,14 +46,16 @@ export const useChatStore = create<ChatState>((set) => ({
   authRequired: { required: false, message: '' },
   sessionId: typeof window !== 'undefined' ? (localStorage.getItem('chat_session_id') || generateUUID()) : 'init',
   pendingMessage: null,
-  isAgentModalOpen: false, // <--- NEW
+  isAgentModalOpen: false,
+  detectedIntent: null, // <--- NEW
 
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
   setTyping: (isTyping) => set({ isTyping }),
   setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
   setAuthRequired: (authRequired) => set({ authRequired }),
   setPendingMessage: (pendingMessage) => set({ pendingMessage }),
-  setAgentModalOpen: (isAgentModalOpen) => set({ isAgentModalOpen }), // <--- NEW
+  setAgentModalOpen: (isAgentModalOpen) => set({ isAgentModalOpen }),
+  setDetectedIntent: (detectedIntent) => set({ detectedIntent }), // <--- NEW
   
   resetConversation: () => set({ 
     messages: [], 
@@ -59,7 +63,8 @@ export const useChatStore = create<ChatState>((set) => ({
     pendingMessage: null,
     isAuthenticated: false,
     authRequired: { required: false, message: '' },
-    isAgentModalOpen: false
+    isAgentModalOpen: false,
+    detectedIntent: null // <--- NEW
   }),
 }));
 
