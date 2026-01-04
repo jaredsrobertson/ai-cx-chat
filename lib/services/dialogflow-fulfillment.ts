@@ -6,29 +6,16 @@ interface DialogflowContext {
   parameters?: Record<string, any>;
 }
 
-// Standard Quick Replies for all responses (testing mode)
-// Custom format for frontend consumption
-const STANDARD_QRB_CUSTOM = [
-  { display: '🕒 Hours', payload: 'What are your hours?' },
-  { display: '📍 Locations', payload: 'Where are you located?' },
-  { display: '🔢 Routing Number', payload: 'What is your routing number?' },
-  { display: '💬 Contact Support', payload: 'How do I contact support?' },
-  { display: '💰 Check Balance', payload: 'Check my balance' },
-  { display: '💸 Transfer Funds', payload: 'Transfer funds' },
-  { display: '📋 Transaction History', payload: 'Show my transaction history' },
-  { display: '👤 Talk to Agent', payload: 'Talk to agent' }
-];
-
-// Simple string format for Dialogflow webhook responses
+// Standard Quick Replies - no emojis
 const STANDARD_QRB_SIMPLE = [
-  '🕒 Hours',
-  '📍 Locations', 
-  '🔢 Routing Number',
-  '💬 Contact Support',
-  '💰 Check Balance',
-  '💸 Transfer Funds',
-  '📋 Transaction History',
-  '👤 Talk to Agent'
+  'Hours',
+  'Locations', 
+  'Routing Number',
+  'Contact Support',
+  'Check Balance',
+  'Transfer Funds',
+  'Transaction History',
+  'Talk to Agent'
 ];
 
 // KB intents that don't require auth
@@ -135,7 +122,7 @@ export const DialogflowFulfillment = {
           const text = `Your balances:\n\nChecking ${checking?.accountNumber}: ${formatCurrency(checking?.balance || 0)}\nSavings ${savings?.accountNumber}: ${formatCurrency(savings?.balance || 0)}`;
           
           return {
-            fulfillmentText: text,  // Set this to ensure Dialogflow processes response
+            fulfillmentText: text,
             fulfillmentMessages: [
               { text: { text: [text] } },
               { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -255,10 +242,8 @@ export const DialogflowFulfillment = {
           };
 
         // === KNOWLEDGE BASE INTENTS ===
-        // These are handled by Dialogflow KB, just ensure QRBs are added
         default:
           if (KB_INTENTS.includes(intentName)) {
-            // KB response will come from Dialogflow, we just add QRBs
             return {
               fulfillmentMessages: [
                 { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -266,7 +251,6 @@ export const DialogflowFulfillment = {
             };
           }
           
-          // Unknown intent
           return {
             fulfillmentText: 'I can help with hours, locations, balances, transfers, and more.',
             fulfillmentMessages: [

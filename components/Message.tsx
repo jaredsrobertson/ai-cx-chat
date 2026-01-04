@@ -13,14 +13,12 @@ interface MessageProps {
 function MessageComponent({ text, isUser, timestamp, isTyping, sources }: MessageProps) {
   const SHOW_SOURCES = false;
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 animate-fade-in-up`}>
-      <div className={`flex flex-col max-w-[85%] sm:max-w-[75%] ${isUser ? 'items-end' : 'items-start'}`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 animate-fade-in-up ${isUser ? 'pr-3' : 'pl-3'}`}>
+      <div className={`flex flex-col ${isUser ? 'max-w-[80%]' : 'max-w-[88%]'} ${isUser ? 'items-end' : 'items-start'}`}>
         
-        <div className={`flex items-end ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
           
-          <div className={`flex-shrink-0 ${isUser ? 'ml-2' : 'mr-2'}`}>
-            <Avatar isUser={isUser} />
-          </div>
+          <Avatar isUser={isUser} />
 
           <div className={`relative px-4 py-3 shadow-sm ${
               isUser 
@@ -34,13 +32,13 @@ function MessageComponent({ text, isUser, timestamp, isTyping, sources }: Messag
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{text}</div>
+                <div className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed">{text}</div>
               )}
           </div>
         </div>
 
         {!isUser && sources && sources.length > 0 && SHOW_SOURCES && (
-          <div className="mt-2 ml-12 bg-blue-50 border border-blue-100 rounded-lg p-3 w-full animate-fade-in-up">
+          <div className="mt-2 ml-10 bg-blue-50 border border-blue-100 rounded-lg p-3 w-full animate-fade-in-up">
             <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center">
               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               Sources
@@ -57,7 +55,7 @@ function MessageComponent({ text, isUser, timestamp, isTyping, sources }: Messag
         )}
 
         {timestamp && !isTyping && (
-          <div className={`text-[10px] mt-1 opacity-60 ${isUser ? 'mr-1' : 'ml-12'} text-gray-500`}>
+          <div className={`text-[10px] mt-1 opacity-60 ${isUser ? 'mr-1' : 'ml-10'} text-gray-500`}>
             {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}

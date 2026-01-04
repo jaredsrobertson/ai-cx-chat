@@ -99,14 +99,18 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Floating Action Button */}
+      {/* Floating Action Button - Stationary */}
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)} 
-          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-lg hover:bg-blue-700 transition-all hover:scale-110 animate-bounce"
+          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
         >
           <CloudIcon className="w-8 h-8" />
-          <span className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
+          {/* Pulsing Notification Dot */}
+          <span className="absolute top-0 right-0 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+          </span>
         </button>
       )}
 
@@ -169,13 +173,11 @@ export default function ChatWidget() {
               ))}
               {isTyping && <Message text="" isUser={false} isTyping={true} />}
               {shouldShowQuickReplies && lastBotMessage?.quickReplies && (
-                <div className="mt-4">
-                  <QuickReplies 
-                    replies={lastBotMessage.quickReplies} 
-                    onReplyClick={handleSendMessage} 
-                    disabled={isTyping} 
-                  />
-                </div>
+                <QuickReplies 
+                  replies={lastBotMessage.quickReplies} 
+                  onReplyClick={handleSendMessage} 
+                  disabled={isTyping} 
+                />
               )}
               <div ref={messagesEndRef} />
             </div>
