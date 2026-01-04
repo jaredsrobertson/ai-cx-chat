@@ -126,10 +126,6 @@ export default function ChatWidget() {
               </div>
               <div>
                 <h3 className="font-semibold">AI Assistant</h3>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                  <p className="text-xs opacity-90">Online</p>
-                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">

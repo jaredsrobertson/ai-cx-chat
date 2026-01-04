@@ -13,10 +13,10 @@ interface MessageProps {
 function MessageComponent({ text, isUser, timestamp, isTyping, sources }: MessageProps) {
   const SHOW_SOURCES = false;
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 animate-fade-in-up ${isUser ? 'pr-3' : 'pl-3'}`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 animate-fade-in-up px-3`}>
       <div className={`flex flex-col ${isUser ? 'max-w-[80%]' : 'max-w-[88%]'} ${isUser ? 'items-end' : 'items-start'}`}>
         
-        <div className={`flex items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-start gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
           
           <Avatar isUser={isUser} />
 
