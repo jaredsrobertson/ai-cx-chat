@@ -80,6 +80,20 @@ export const DialogflowService = {
       });
     }
 
+    // Extract text from fulfillmentText or first text message
+    let responseText = result.fulfillmentText || '';
+    if (!responseText && result.fulfillmentMessages) {
+      for (const msg of result.fulfillmentMessages) {
+        if (msg.text?.text && msg.text.text.length > 0) {
+          responseText = msg.text.text[0];
+          break;
+        }
+      }
+    }
+    if (!responseText) {
+      responseText = "I didn't catch that.";
+    }
+
     // Parse payload for special actions
     let payload: Record<string, any> | null = null;
     let actionRequired: string | undefined;
@@ -119,7 +133,7 @@ export const DialogflowService = {
     }
 
     return {
-      text: result.fulfillmentText || "I didn't catch that.",
+      text: responseText,
       intent: result.intent?.displayName || 'Unknown',
       confidence: result.intentDetectionConfidence || 0,
       quickReplies,

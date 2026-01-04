@@ -120,7 +120,6 @@ export const DialogflowFulfillment = {
         case 'Default Welcome Intent':
         case 'Welcome':
           return {
-            fulfillmentText: 'Welcome to SecureBank! I can help with hours, locations, account balances, transfers, and more. What can I help you with?',
             fulfillmentMessages: [
               { text: { text: ['Welcome to SecureBank! I can help with hours, locations, account balances, transfers, and more. What can I help you with?'] } },
               { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -135,7 +134,6 @@ export const DialogflowFulfillment = {
           const text = `Your balances:\n\nChecking ${checking?.accountNumber}: ${formatCurrency(checking?.balance || 0)}\nSavings ${savings?.accountNumber}: ${formatCurrency(savings?.balance || 0)}`;
           
           return {
-            fulfillmentText: text,
             fulfillmentMessages: [
               { text: { text: [text] } },
               { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -159,7 +157,6 @@ export const DialogflowFulfillment = {
           // Validate we have all info
           if (!amount || !fromAccount || !toAccount) {
             return {
-              fulfillmentText: 'Please specify the amount and which account to transfer to.',
               fulfillmentMessages: [
                 { text: { text: ['Please specify the amount and which account to transfer to.'] } },
                 { quickReplies: { quickReplies: ['$50', '$100', '$500', 'To Savings', 'To Checking'] } }
@@ -170,7 +167,6 @@ export const DialogflowFulfillment = {
           // Same account check
           if (fromAccount === toAccount) {
             return {
-              fulfillmentText: 'Cannot transfer to the same account. Please try again.',
               fulfillmentMessages: [
                 { text: { text: ['Cannot transfer to the same account. Please try again.'] } },
                 { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -184,7 +180,6 @@ export const DialogflowFulfillment = {
           if (result.success) {
             const text = `✓ Transfer complete! Moved ${formatCurrency(amount)} from ${fromAccount} to ${toAccount}.`;
             return {
-              fulfillmentText: text,
               fulfillmentMessages: [
                 { text: { text: [text] } },
                 { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -192,7 +187,6 @@ export const DialogflowFulfillment = {
             };
           } else {
             return {
-              fulfillmentText: `Transfer failed: ${result.error}`,
               fulfillmentMessages: [
                 { text: { text: [`Transfer failed: ${result.error}`] } },
                 { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -207,7 +201,6 @@ export const DialogflowFulfillment = {
           
           if (transactions.length === 0) {
             return {
-              fulfillmentText: 'No recent transactions found.',
               fulfillmentMessages: [
                 { text: { text: ['No recent transactions found.'] } },
                 { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -221,7 +214,6 @@ export const DialogflowFulfillment = {
           });
           
           return {
-            fulfillmentText: text,
             fulfillmentMessages: [
               { text: { text: [text] } },
               { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -245,7 +237,6 @@ export const DialogflowFulfillment = {
         // === FALLBACK ===
         case 'Default Fallback Intent':
           return {
-            fulfillmentText: 'I can help with:\n• Hours and locations\n• Routing numbers and contact info\n• Account balances and transfers\n• Transaction history\n\nType "Talk to Agent" for live support.',
             fulfillmentMessages: [
               { text: { text: ['I can help with:\n• Hours and locations\n• Routing numbers and contact info\n• Account balances and transfers\n• Transaction history\n\nType "Talk to Agent" for live support.'] } },
               { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -266,7 +257,6 @@ export const DialogflowFulfillment = {
           
           // Unknown intent
           return {
-            fulfillmentText: 'I can help with hours, locations, balances, transfers, and more.',
             fulfillmentMessages: [
               { text: { text: ['I can help with hours, locations, balances, transfers, and more.'] } },
               { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
@@ -277,7 +267,6 @@ export const DialogflowFulfillment = {
     } catch (error) {
       console.error('Fulfillment Error:', error);
       return {
-        fulfillmentText: 'I encountered an error. Please try again or contact support.',
         fulfillmentMessages: [
           { text: { text: ['I encountered an error. Please try again or contact support.'] } },
           { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
