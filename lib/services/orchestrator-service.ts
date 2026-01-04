@@ -1,12 +1,29 @@
 // lib/services/orchestrator-service.ts
 import { DialogflowService } from './dialogflow-service';
 
+// Standard Quick Replies - matches the ones in dialogflow-fulfillment.ts
+const STANDARD_QRB = [
+  { display: '🕒 Hours', payload: 'What are your hours?' },
+  { display: '📍 Locations', payload: 'Where are you located?' },
+  { display: '🔢 Routing Number', payload: 'What is your routing number?' },
+  { display: '💬 Contact Support', payload: 'How do I contact support?' },
+  { display: '💰 Check Balance', payload: 'Check my balance' },
+  { display: '💸 Transfer Funds', payload: 'Transfer funds' },
+  { display: '📋 Transaction History', payload: 'Show my transaction history' },
+  { display: '👤 Talk to Agent', payload: 'Talk to agent' }
+];
+
 export const OrchestratorService = {
   routeRequest: async (text: string, sessionId: string, isAuthenticated: boolean) => {
     
-    // Unified Routing: Send everything to Dialogflow.
-    // Dialogflow will determine if the intent is Banking (Intent) or Support (Knowledge Base).
+    // Send everything to Dialogflow
+    // Dialogflow will determine if it's Banking (Intent) or Support (Knowledge Base)
     const dfResult = await DialogflowService.detectIntent(text, sessionId, isAuthenticated);
+
+    // If response has no quick replies (KB response), add standard QRBs
+    const quickReplies = dfResult.quickReplies && dfResult.quickReplies.length > 0 
+      ? dfResult.quickReplies 
+      : STANDARD_QRB;
 
     // Return a standardized response format for the API
     return {
@@ -15,7 +32,7 @@ export const OrchestratorService = {
       text: dfResult.text,
       intent: dfResult.intent,
       confidence: dfResult.confidence,
-      quickReplies: dfResult.quickReplies,
+      quickReplies: quickReplies,
       payload: dfResult.payload,
       // Pass through authentication triggers if defined in Dialogflow
       actionRequired: dfResult.actionRequired,

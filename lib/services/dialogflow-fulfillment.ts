@@ -7,9 +7,17 @@ interface DialogflowContext {
 }
 
 // Standard Quick Replies for all responses (testing mode)
+// Format: { display: 'Button Text', payload: 'Message to send' }
+// Or just a string if display and payload are the same
 const STANDARD_QRB = [
-  'Hours', 'Locations', 'Routing Number', 'Contact Support',
-  'Check Balance', 'Transfer Funds', 'Transaction History', 'Talk to Agent'
+  { display: '🕒 Hours', payload: 'What are your hours?' },
+  { display: '📍 Locations', payload: 'Where are you located?' },
+  { display: '🔢 Routing Number', payload: 'What is your routing number?' },
+  { display: '💬 Contact Support', payload: 'How do I contact support?' },
+  { display: '💰 Check Balance', payload: 'Check my balance' },
+  { display: '💸 Transfer Funds', payload: 'Transfer funds' },
+  { display: '📋 Transaction History', payload: 'Show my transaction history' },
+  { display: '👤 Talk to Agent', payload: 'Talk to agent' }
 ];
 
 // KB intents that don't require auth
