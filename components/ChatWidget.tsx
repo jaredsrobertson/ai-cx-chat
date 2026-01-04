@@ -34,6 +34,7 @@ export default function ChatWidget() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const retryingRef = useRef(false); // Track if retry is in progress
 
   // Update auth state when session changes
   useEffect(() => {
@@ -46,19 +47,29 @@ export default function ChatWidget() {
 
   // Handle pending message retry after authentication
   useEffect(() => {
-    if (status === 'authenticated' && pendingMessage) {
+    if (status === 'authenticated' && pendingMessage && !retryingRef.current) {
       console.log('User authenticated, retrying pending message');
+      
+      // Mark retry as in progress
+      retryingRef.current = true;
+      
+      // Clear pending message IMMEDIATELY to prevent duplicate retries
+      const messageToRetry = pendingMessage;
+      setPendingMessage(null);
       
       // Simple delay to ensure session is synced, then retry
       const timer = setTimeout(async () => {
         await update(); // Force session refresh
         setShowLoginModal(false);
         setAuthRequired({ required: false, message: '' });
-        await sendMessage(pendingMessage, true);
-        setPendingMessage(null);
+        await sendMessage(messageToRetry, true);
+        retryingRef.current = false; // Reset retry flag
       }, 500);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        retryingRef.current = false;
+      };
     }
   }, [status, pendingMessage, sendMessage, setPendingMessage, setShowLoginModal, setAuthRequired, update]);
 

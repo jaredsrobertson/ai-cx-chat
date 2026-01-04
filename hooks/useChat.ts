@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useChatStore } from '@/store/chatStore';
 import { signOut } from 'next-auth/react';
 
@@ -13,6 +13,9 @@ export const useChat = () => {
     sessionId
   } = useChatStore();
 
+  // Prevent concurrent sends
+  const sendingRef = useRef(false);
+
   const triggerWelcome = useCallback(async () => {
     if (useChatStore.getState().messages.length > 0) return;
 
@@ -25,12 +28,12 @@ export const useChat = () => {
         quickReplies: [
           { display: '🕒 Hours', payload: 'What are your hours?' },
           { display: '📍 Locations', payload: 'Where are you located?' },
-          { display: '🔢 Routing Number', payload: 'What is my routing number?' },
-          { display: '💬 Contact', payload: 'What is your contact number?' },
+          { display: '🔢 Routing Number', payload: 'What is your routing number?' },
+          { display: '💬 Contact Support', payload: 'How do I contact support?' },
           { display: '💰 Check Balance', payload: 'Check my balance' },
           { display: '💸 Transfer Funds', payload: 'Transfer funds' },
           { display: '📋 Transaction History', payload: 'Show my transaction history' },
-          { display: '👤 Chat with Agent', payload: 'Chat with agent' }
+          { display: '👤 Talk to Agent', payload: 'Talk to agent' }
         ]
       });
       setTyping(false);
@@ -39,15 +42,23 @@ export const useChat = () => {
 
   const sendMessage = useCallback(async (text: string, isAuthRetry = false) => {
     if (!text.trim()) return;
-
-    // Add user message only if not retrying after auth
-    if (!isAuthRetry) {
-      addMessage({ text, isUser: true, timestamp: new Date() });
-    }
     
-    setTyping(true);
+    // Prevent concurrent sends
+    if (sendingRef.current) {
+      console.log('Message send already in progress, skipping duplicate');
+      return;
+    }
+
+    sendingRef.current = true;
 
     try {
+      // Add user message only if not retrying after auth
+      if (!isAuthRetry) {
+        addMessage({ text, isUser: true, timestamp: new Date() });
+      }
+      
+      setTyping(true);
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,6 +85,7 @@ export const useChat = () => {
           message: data.actionMessage || 'Authentication required for this action' 
         });
         setTyping(false);
+        sendingRef.current = false;
         return;
       }
 
@@ -87,6 +99,7 @@ export const useChat = () => {
           intent: data.intent
         });
         setTyping(false);
+        sendingRef.current = false;
         return;
       }
 
@@ -109,6 +122,7 @@ export const useChat = () => {
       });
     } finally {
       setTyping(false);
+      sendingRef.current = false;
     }
   }, [addMessage, setTyping, setAuthRequired, setPendingMessage, setAgentModalOpen, sessionId]);
 
