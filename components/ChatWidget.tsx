@@ -34,14 +34,17 @@ export default function ChatWidget() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const retryingRef = useRef(false); // Track if retry is in progress
+  const retryingRef = useRef(false);
+  const sessionSyncedRef = useRef(false);
 
   // Update auth state when session changes
   useEffect(() => {
     if (status === 'authenticated') {
       setAuthenticated(true);
+      sessionSyncedRef.current = true;
     } else if (status === 'unauthenticated') {
       setAuthenticated(false);
+      sessionSyncedRef.current = false;
     }
   }, [status, setAuthenticated]);
 
@@ -61,12 +64,18 @@ export default function ChatWidget() {
       setShowLoginModal(false);
       setAuthRequired({ required: false, message: '' });
       
-      // Delay only the message retry to ensure session is synced
+      // Increased delay to ensure server session is fully synced
       const timer = setTimeout(async () => {
+        console.log('Forcing session refresh before retry...');
         await update(); // Force session refresh
+        
+        // Additional delay for server-side session cookie propagation
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('Session synced, sending message...');
         await sendMessage(messageToRetry, true);
-        retryingRef.current = false; // Reset retry flag
-      }, 500);
+        retryingRef.current = false;
+      }, 800); // Increased from 500ms to 800ms
       
       return () => {
         clearTimeout(timer);

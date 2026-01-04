@@ -40,7 +40,7 @@ export const useChat = () => {
     }, 800);
   }, [addMessage, setTyping]);
 
-  const sendMessage = useCallback(async (text: string, isAuthRetry = false) => {
+  const sendMessage = useCallback(async (text: string, isAuthRetry = false, retryCount = 0) => {
     if (!text || !text.trim()) {
       console.error('sendMessage called with empty text:', { text, isAuthRetry });
       return;
@@ -54,7 +54,7 @@ export const useChat = () => {
 
     sendingRef.current = true;
 
-    console.log('Sending message:', { text: text.substring(0, 50), isAuthRetry });
+    console.log('Sending message:', { text: text.substring(0, 50), isAuthRetry, retryCount });
 
     try {
       // Add user message only if not retrying after auth
@@ -82,12 +82,39 @@ export const useChat = () => {
       const currentAuth = useChatStore.getState().isAuthenticated;
 
       // Handle auth requirement
-      if (data.actionRequired === 'REQUIRE_AUTH' && !currentAuth) {
-        console.log('Auth required, saving pending message');
-        setPendingMessage(text);
-        setAuthRequired({ 
-          required: true, 
-          message: data.actionMessage || 'Authentication required for this action' 
+      if (data.actionRequired === 'REQUIRE_AUTH') {
+        // If client thinks it's authenticated but server doesn't, retry with exponential backoff
+        if (currentAuth && isAuthRetry && retryCount < 3) {
+          console.log(`Server session not ready, retrying (attempt ${retryCount + 1}/3)...`);
+          setTyping(false);
+          sendingRef.current = false;
+          
+          // Exponential backoff: 1s, 2s, 3s
+          const delay = (retryCount + 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          return sendMessage(text, true, retryCount + 1);
+        }
+        
+        // Normal auth requirement (user not authenticated)
+        if (!currentAuth) {
+          console.log('Auth required, saving pending message');
+          setPendingMessage(text);
+          setAuthRequired({ 
+            required: true, 
+            message: data.actionMessage || 'Authentication required for this action' 
+          });
+          setTyping(false);
+          sendingRef.current = false;
+          return;
+        }
+        
+        // Retry limit exceeded
+        console.error('Server session sync failed after retries');
+        addMessage({ 
+          text: "Authentication sync issue. Please try your request again.", 
+          isUser: false, 
+          timestamp: new Date() 
         });
         setTyping(false);
         sendingRef.current = false;
