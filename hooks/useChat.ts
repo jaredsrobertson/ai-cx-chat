@@ -26,7 +26,7 @@ export const useChat = () => {
           { display: '🕒 Hours', payload: 'What are your hours?' },
           { display: '📍 Locations', payload: 'Where are you located?' },
           { display: '🔢 Routing Number', payload: 'What is my routing number?' },
-          { display: '💬 Contact', payload: 'How do I reach you?' },
+          { display: '💬 Contact', payload: 'What is your contact number?' },
           { display: '💰 Check Balance', payload: 'Check my balance' },
           { display: '💸 Transfer Funds', payload: 'Transfer funds' },
           { display: '📋 Transaction History', payload: 'Show my transaction history' },
