@@ -57,11 +57,13 @@ export default function ChatWidget() {
       const messageToRetry = pendingMessage;
       setPendingMessage(null);
       
-      // Simple delay to ensure session is synced, then retry
+      // Close modal IMMEDIATELY when authenticated
+      setShowLoginModal(false);
+      setAuthRequired({ required: false, message: '' });
+      
+      // Delay only the message retry to ensure session is synced
       const timer = setTimeout(async () => {
         await update(); // Force session refresh
-        setShowLoginModal(false);
-        setAuthRequired({ required: false, message: '' });
         await sendMessage(messageToRetry, true);
         retryingRef.current = false; // Reset retry flag
       }, 500);
