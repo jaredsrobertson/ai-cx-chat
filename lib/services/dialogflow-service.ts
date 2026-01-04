@@ -94,6 +94,14 @@ export const DialogflowService = {
       responseText = "I didn't catch that.";
     }
 
+    console.log('Dialogflow response parsing:', {
+      fulfillmentText: result.fulfillmentText?.substring(0, 50),
+      hasFulfillmentMessages: !!result.fulfillmentMessages,
+      messagesCount: result.fulfillmentMessages?.length,
+      extractedText: responseText?.substring(0, 50),
+      intent: result.intent?.displayName
+    });
+
     // Parse payload for special actions
     let payload: Record<string, any> | null = null;
     let actionRequired: string | undefined;

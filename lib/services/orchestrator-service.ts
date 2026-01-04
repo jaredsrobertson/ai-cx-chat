@@ -47,6 +47,14 @@ export const OrchestratorService = {
     // Dialogflow will determine if it's Banking (Intent) or Support (Knowledge Base)
     const dfResult = await DialogflowService.detectIntent(text, sessionId, isAuthenticated);
 
+    console.log('Dialogflow result:', {
+      text: dfResult.text?.substring(0, 100),
+      intent: dfResult.intent,
+      hasText: !!dfResult.text,
+      hasQRBs: !!dfResult.quickReplies,
+      qrbCount: dfResult.quickReplies?.length
+    });
+
     // Convert Dialogflow's simple QRBs to custom format, or use standard if none provided
     let quickReplies;
     if (dfResult.quickReplies && dfResult.quickReplies.length > 0) {

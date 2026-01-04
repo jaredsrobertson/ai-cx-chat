@@ -41,7 +41,10 @@ export const useChat = () => {
   }, [addMessage, setTyping]);
 
   const sendMessage = useCallback(async (text: string, isAuthRetry = false) => {
-    if (!text.trim()) return;
+    if (!text || !text.trim()) {
+      console.error('sendMessage called with empty text:', { text, isAuthRetry });
+      return;
+    }
     
     // Prevent concurrent sends
     if (sendingRef.current) {
@@ -50,6 +53,8 @@ export const useChat = () => {
     }
 
     sendingRef.current = true;
+
+    console.log('Sending message:', { text: text.substring(0, 50), isAuthRetry });
 
     try {
       // Add user message only if not retrying after auth
@@ -104,8 +109,18 @@ export const useChat = () => {
       }
 
       // Normal response
+      console.log('Adding bot response:', {
+        text: data.text?.substring(0, 100),
+        hasText: !!data.text,
+        hasQRBs: !!data.quickReplies,
+        intent: data.intent
+      });
+
+      // Defensive check - ensure we have text
+      const responseText = data.text || "I processed your request but didn't receive a response message.";
+      
       addMessage({
-        text: data.text,
+        text: responseText,
         isUser: false,
         timestamp: new Date(),
         quickReplies: data.quickReplies,
