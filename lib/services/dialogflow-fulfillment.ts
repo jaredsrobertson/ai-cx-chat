@@ -158,11 +158,12 @@ export const DialogflowFulfillment = {
 
           // Validate we have all info
           if (!amount || !fromAccount || !toAccount) {
+            const exampleText = 'Please specify the amount and account. For example: "transfer $100 to checking" or "transfer $20 from savings to checking"';
             return {
-              fulfillmentText: 'Please specify the amount and which account to transfer to.',
+              fulfillmentText: exampleText,
               fulfillmentMessages: [
-                { text: { text: ['Please specify the amount and which account to transfer to.'] } },
-                { quickReplies: { quickReplies: ['$50', '$100', '$500', 'To Savings', 'To Checking'] } }
+                { text: { text: [exampleText] } },
+                { quickReplies: { quickReplies: STANDARD_QRB_SIMPLE } }
               ]
             };
           }
