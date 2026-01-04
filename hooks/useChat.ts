@@ -54,7 +54,11 @@ export const useChat = () => {
 
     sendingRef.current = true;
 
-    console.log('Sending message:', { text: text.substring(0, 50), isAuthRetry, retryCount });
+    console.log('Sending message:', { 
+      text: text.substring(0, 50), 
+      isAuthRetry, 
+      retryCount 
+    });
 
     try {
       // Add user message only if not retrying after auth
@@ -66,7 +70,10 @@ export const useChat = () => {
 
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Explicitly include cookies
         body: JSON.stringify({ text, sessionId }),
       });
 
@@ -78,27 +85,34 @@ export const useChat = () => {
 
       const data = json.data;
       
+      console.log('API Response:', {
+        actionRequired: data.actionRequired,
+        hasText: !!data.text,
+        intent: data.intent,
+        retryCount
+      });
+      
       // Get current auth state
       const currentAuth = useChatStore.getState().isAuthenticated;
 
       // Handle auth requirement
       if (data.actionRequired === 'REQUIRE_AUTH') {
-        // If client thinks it's authenticated but server doesn't, retry with exponential backoff
+        console.log('REQUIRE_AUTH received:', { currentAuth, isAuthRetry, retryCount });
+        
+        // If this is a retry after login but server still doesn't see session, retry with backoff
         if (currentAuth && isAuthRetry && retryCount < 3) {
-          console.log(`Server session not ready, retrying (attempt ${retryCount + 1}/3)...`);
+          const delay = (retryCount + 1) * 1000; // 1s, 2s, 3s
+          console.log(`Server session not ready yet. Retrying in ${delay}ms (attempt ${retryCount + 1}/3)...`);
           setTyping(false);
           sendingRef.current = false;
           
-          // Exponential backoff: 1s, 2s, 3s
-          const delay = (retryCount + 1) * 1000;
           await new Promise(resolve => setTimeout(resolve, delay));
-          
           return sendMessage(text, true, retryCount + 1);
         }
         
-        // Normal auth requirement (user not authenticated)
+        // Normal auth requirement (user not authenticated on client either)
         if (!currentAuth) {
-          console.log('Auth required, saving pending message');
+          console.log('User not authenticated, showing login modal');
           setPendingMessage(text);
           setAuthRequired({ 
             required: true, 
@@ -109,10 +123,10 @@ export const useChat = () => {
           return;
         }
         
-        // Retry limit exceeded
-        console.error('Server session sync failed after retries');
+        // Retry limit exceeded - give up
+        console.error('Retry limit exceeded. Server session failed to sync.');
         addMessage({ 
-          text: "Authentication sync issue. Please try your request again.", 
+          text: "I'm having trouble verifying your authentication. Please try your request again.", 
           isUser: false, 
           timestamp: new Date() 
         });

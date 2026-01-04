@@ -6,10 +6,11 @@ import { signIn, useSession } from 'next-auth/react';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => Promise<void>; // Callback to execute after successful login
   message?: string;
 }
 
-export default function LoginModal({ isOpen, onClose, message }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onSuccess, message }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { update } = useSession();
@@ -31,13 +32,31 @@ export default function LoginModal({ isOpen, onClose, message }: LoginModalProps
       if (result?.error) {
         console.error('Login failed:', result.error);
         setError('Invalid credentials');
-      } else {
-        console.log('✓ Login successful');
-        console.log('Forcing session refresh...');
-        await update();
-        await new Promise(resolve => setTimeout(resolve, 300));
-        console.log('✓ Session refreshed, closing modal');
+        setIsLoading(false);
+        return;
       }
+
+      console.log('✓ Login successful');
+      
+      // Force session refresh
+      console.log('Forcing session refresh...');
+      await update();
+      
+      // Wait for server session to sync (1.5s)
+      console.log('Waiting for server session propagation...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log('✓ Session synced, executing retry...');
+      
+      // Close modal
+      onClose();
+      
+      // Small delay for UI to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Execute the success callback (retry the pending message)
+      await onSuccess();
+      
     } catch (error) {
       console.error('Login exception:', error);
       setError('An error occurred');
@@ -82,7 +101,7 @@ export default function LoginModal({ isOpen, onClose, message }: LoginModalProps
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
 
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+            <button onClick={onClose} disabled={isLoading} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">Cancel</button>
             <button onClick={handleLogin} disabled={isLoading} className="flex-1 px-4 py-2 bg-blue-950 text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
               {isLoading ? (<><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Authenticating...</>) : 'Login'}
             </button>

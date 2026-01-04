@@ -15,7 +15,7 @@ export default function ChatWidget() {
   const [input, setInput] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   
-  const { status, update } = useSession();
+  const { status } = useSession();
 
   const { 
     messages, 
@@ -34,55 +34,15 @@ export default function ChatWidget() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const retryingRef = useRef(false);
-  const sessionSyncedRef = useRef(false);
 
   // Update auth state when session changes
   useEffect(() => {
     if (status === 'authenticated') {
       setAuthenticated(true);
-      sessionSyncedRef.current = true;
     } else if (status === 'unauthenticated') {
       setAuthenticated(false);
-      sessionSyncedRef.current = false;
     }
   }, [status, setAuthenticated]);
-
-  // Handle pending message retry after authentication
-  useEffect(() => {
-    if (status === 'authenticated' && pendingMessage && !retryingRef.current) {
-      console.log('User authenticated, retrying pending message');
-      
-      // Mark retry as in progress
-      retryingRef.current = true;
-      
-      // Clear pending message IMMEDIATELY to prevent duplicate retries
-      const messageToRetry = pendingMessage;
-      setPendingMessage(null);
-      
-      // Close modal IMMEDIATELY when authenticated
-      setShowLoginModal(false);
-      setAuthRequired({ required: false, message: '' });
-      
-      // Increased delay to ensure server session is fully synced
-      const timer = setTimeout(async () => {
-        console.log('Forcing session refresh before retry...');
-        await update(); // Force session refresh
-        
-        // Additional delay for server-side session cookie propagation
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        console.log('Session synced, sending message...');
-        await sendMessage(messageToRetry, true);
-        retryingRef.current = false;
-      }, 800); // Increased from 500ms to 800ms
-      
-      return () => {
-        clearTimeout(timer);
-        retryingRef.current = false;
-      };
-    }
-  }, [status, pendingMessage, sendMessage, setPendingMessage, setShowLoginModal, setAuthRequired, update]);
 
   // Trigger welcome when chat opens
   useEffect(() => {
@@ -112,6 +72,26 @@ export default function ChatWidget() {
     setShowLoginModal(false);
     setAuthRequired({ required: false, message: '' });
     setPendingMessage(null);
+  };
+
+  // Callback executed after successful login
+  const handleLoginSuccess = async () => {
+    console.log('Login success callback triggered');
+    const messageToRetry = pendingMessage;
+    
+    if (!messageToRetry) {
+      console.warn('No pending message to retry');
+      return;
+    }
+    
+    // Clear state
+    setPendingMessage(null);
+    setAuthRequired({ required: false, message: '' });
+    
+    console.log('Retrying message with authenticated session:', messageToRetry.substring(0, 50));
+    
+    // Retry the message (pass true to indicate this is an auth retry)
+    await sendMessage(messageToRetry, true);
   };
 
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
@@ -236,7 +216,8 @@ export default function ChatWidget() {
       {/* Modals */}
       <LoginModal 
         isOpen={showLoginModal} 
-        onClose={handleCloseLoginModal} 
+        onClose={handleCloseLoginModal}
+        onSuccess={handleLoginSuccess}
         message={authRequired.message} 
       />
       <AgentModal 
