@@ -12,12 +12,12 @@ interface DialogflowContext {
 const STANDARD_QRB = [
   { display: '🕒 Hours', payload: 'What are your hours?' },
   { display: '📍 Locations', payload: 'Where are you located?' },
-  { display: '🔢 Routing Number', payload: 'What is your routing number?' },
-  { display: '💬 Contact Support', payload: 'How do I contact support?' },
+  { display: '🔢 Routing Number', payload: 'What is my routing number?' },
+  { display: '💬 Contact', payload: 'How do I reach you?' },
   { display: '💰 Check Balance', payload: 'Check my balance' },
   { display: '💸 Transfer Funds', payload: 'Transfer funds' },
   { display: '📋 Transaction History', payload: 'Show my transaction history' },
-  { display: '👤 Talk to Agent', payload: 'Talk to agent' }
+  { display: '👤 Chat with Agent', payload: 'Chat with agent' }
 ];
 
 // KB intents that don't require auth
