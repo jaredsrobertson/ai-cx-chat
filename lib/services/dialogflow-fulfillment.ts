@@ -6,269 +6,257 @@ interface DialogflowContext {
   parameters?: Record<string, any>;
 }
 
+// Standard Quick Replies for all responses (testing mode)
+const STANDARD_QRB = [
+  'Hours', 'Locations', 'Routing Number', 'Contact Support',
+  'Check Balance', 'Transfer Funds', 'Transaction History', 'Talk to Agent'
+];
+
+// KB intents that don't require auth
+const KB_INTENTS = [
+  'hours.inquiry',
+  'location.inquiry', 
+  'routing.inquiry',
+  'support.contact',
+  'Default Welcome Intent',
+  'Welcome'
+];
+
+// Protected intents requiring auth
+const PROTECTED_INTENTS = [
+  'check.balance',
+  'transfer.funds',
+  'transaction.history',
+  'request.agent'
+];
+
 function isAuthenticated(contexts: DialogflowContext[]): boolean {
   const authContext = contexts.find(ctx => ctx.name.endsWith('/contexts/authenticated'));
   return authContext?.parameters?.authenticated === true;
 }
 
-function getAuthContext(contexts: DialogflowContext[]): DialogflowContext[] {
-  const authContext = contexts.find(ctx => ctx.name.endsWith('/contexts/authenticated'));
-  if (authContext) {
-    return [{
-      name: authContext.name,
-      lifespanCount: 5,
-      parameters: authContext.parameters || {}
-    }];
-  }
-  return [];
-}
-
-function clearAllContexts(contexts: DialogflowContext[]): DialogflowContext[] {
-  const authContexts = getAuthContext(contexts);
-  const contextsToClear = contexts
-    .filter(ctx => !ctx.name.endsWith('/contexts/authenticated'))
-    .map(ctx => ({ name: ctx.name, lifespanCount: 0 }));
-  console.log('Clearing contexts:', contextsToClear.map(c => c.name));
-  return [...authContexts, ...contextsToClear];
-}
-
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  return new Intl.NumberFormat('en-US', { 
+    style: 'currency', 
+    currency: 'USD' 
+  }).format(amount);
 }
 
 function normalizeAccount(account: any): 'checking' | 'savings' | null {
   if (!account) return null;
-  if (typeof account === 'string') {
-    const normalized = account.toLowerCase().trim();
-    if (normalized.includes('check')) return 'checking';
-    if (normalized.includes('sav')) return 'savings';
-  }
-  if (typeof account === 'object' && account.stringValue) {
-    const normalized = account.stringValue.toLowerCase().trim();
-    if (normalized.includes('check')) return 'checking';
-    if (normalized.includes('sav')) return 'savings';
-  }
+  const str = typeof account === 'string' ? account : account.stringValue;
+  if (!str) return null;
+  const normalized = str.toLowerCase().trim();
+  if (normalized.includes('check')) return 'checking';
+  if (normalized.includes('sav')) return 'savings';
   return null;
 }
 
 function extractAmount(amountParam: any): number | null {
   if (!amountParam) return null;
-  if (typeof amountParam === 'number') {
-    return amountParam > 0 ? amountParam : null;
-  }
+  if (typeof amountParam === 'number') return amountParam > 0 ? amountParam : null;
   if (typeof amountParam === 'string') {
     const cleaned = amountParam.replace(/[$,\s]/g, '');
     const parsed = parseFloat(cleaned);
     return (isNaN(parsed) || parsed <= 0) ? null : parsed;
   }
-  if (typeof amountParam === 'object' && amountParam.amount) {
-    return extractAmount(amountParam.amount);
-  }
+  if (amountParam.amount) return extractAmount(amountParam.amount);
   return null;
 }
 
 export const DialogflowFulfillment = {
-  handleIntent: async (intentName: string, parameters: Record<string, any>, contexts: DialogflowContext[]) => {
-    console.log('Intent received:', intentName);
-    console.log('Parameters:', parameters);
-    console.log('Active contexts:', contexts.map(c => ({ name: c.name, lifespan: c.lifespanCount })));
-    
-    const standardQuickReplies = [
-      'Check Balance', 'Transfer Funds', 'Transaction History',
-      'Talk to Agent', 'Hours', 'Locations', 'Routing number', 'Contact info'
-    ];
+  handleIntent: async (
+    intentName: string, 
+    parameters: Record<string, any>, 
+    contexts: DialogflowContext[]
+  ) => {
+    console.log('Processing intent:', intentName);
     
     try {
-      // AUTH CHECK FIRST - Before any parameter handling
-      const protectedIntents = ['check.balance', 'transfer.funds', 'transaction.history'];
-      if (protectedIntents.includes(intentName) && !isAuthenticated(contexts)) {
-        console.log('⚠️ AUTH REQUIRED - User must authenticate before proceeding');
-        console.log('Intent:', intentName, '| Preserving contexts for resume after auth');
+      // AUTH CHECK - Protected intents require authentication
+      if (PROTECTED_INTENTS.includes(intentName) && !isAuthenticated(contexts)) {
+        console.log('Auth required for:', intentName);
         return {
-          fulfillmentText: 'I need to verify your identity first. Please authenticate to continue.',
+          fulfillmentText: 'Please authenticate to continue.',
           fulfillmentMessages: [{
             platform: 'PLATFORM_UNSPECIFIED',
-            payload: { action: 'REQUIRE_AUTH', message: 'Please authenticate to proceed' }
+            payload: { 
+              action: 'REQUIRE_AUTH', 
+              message: 'Authentication required for this action' 
+            }
           }]
         };
       }
 
+      // INTENT ROUTING
       switch (intentName) {
+        
+        // === WELCOME ===
         case 'Default Welcome Intent':
         case 'Welcome':
           return {
-            fulfillmentText: 'Welcome to SecureBank! I can help you check balances, transfer funds, or view recent transactions.',
+            fulfillmentText: 'Welcome to SecureBank! I can help with hours, locations, account balances, transfers, and more. What can I help you with?',
             fulfillmentMessages: [
-              { text: { text: ['Welcome to SecureBank! I can help you check balances, transfer funds, or view recent transactions.'] } },
-              { quickReplies: { quickReplies: standardQuickReplies } }
-            ],
-            outputContexts: clearAllContexts(contexts)
+              { text: { text: ['Welcome to SecureBank! I can help with hours, locations, account balances, transfers, and more. What can I help you with?'] } },
+              { quickReplies: { quickReplies: STANDARD_QRB } }
+            ]
           };
 
+        // === BALANCE CHECK ===
         case 'check.balance': {
-          console.log('✓ Auth passed - Processing balance check');
           const accounts = await BankingService.getAccounts();
           const checking = accounts.find(a => a.type === 'checking');
           const savings = accounts.find(a => a.type === 'savings');
-          const text = `Here are your balances:\n\nChecking ${checking?.accountNumber}: ${formatCurrency(checking?.balance || 0)}\nSavings ${savings?.accountNumber}: ${formatCurrency(savings?.balance || 0)}`;
+          const text = `Your balances:\n\nChecking ${checking?.accountNumber}: ${formatCurrency(checking?.balance || 0)}\nSavings ${savings?.accountNumber}: ${formatCurrency(savings?.balance || 0)}`;
+          
           return {
             fulfillmentText: text,
             fulfillmentMessages: [
-              { text: { text: [text] } }, 
-              { quickReplies: { quickReplies: standardQuickReplies } }
-            ],
-            outputContexts: clearAllContexts(contexts)
+              { text: { text: [text] } },
+              { quickReplies: { quickReplies: STANDARD_QRB } }
+            ]
           };
         }
 
+        // === FUND TRANSFER ===
         case 'transfer.funds': {
-          console.log('✓ Auth passed - Processing transfer request');
-          
           const amount = extractAmount(parameters.amount);
           let fromAccount = normalizeAccount(parameters.fromAccount);
           let toAccount = normalizeAccount(parameters.toAccount);
           
-          console.log('Transfer parameters extracted:', { 
-            rawAmount: parameters.amount, amount, 
-            rawFrom: parameters.fromAccount, fromAccount, 
-            rawTo: parameters.toAccount, toAccount 
-          });
-          
-          // Inference logic
+          // Auto-infer missing account
           if (!fromAccount && toAccount) {
             fromAccount = toAccount === 'checking' ? 'savings' : 'checking';
-            console.log('Inferred fromAccount:', fromAccount);
           } else if (fromAccount && !toAccount) {
             toAccount = fromAccount === 'checking' ? 'savings' : 'checking';
-            console.log('Inferred toAccount:', toAccount);
           }
 
-          // Check if we have all required info
+          // Validate we have all info
           if (!amount || !fromAccount || !toAccount) {
-            console.log('Missing parameters - requesting info:', { 
-              needAmount: !amount, 
-              needFromAccount: !fromAccount, 
-              needToAccount: !toAccount 
-            });
-            
-            return { 
-              fulfillmentText: 'I need a bit more info. Please specify the amount and the account you want to transfer to.',
+            return {
+              fulfillmentText: 'Please specify the amount and which account to transfer to.',
               fulfillmentMessages: [
-                { text: { text: ['I need a bit more info. Please specify the amount and the account you want to transfer to.'] } },
+                { text: { text: ['Please specify the amount and which account to transfer to.'] } },
                 { quickReplies: { quickReplies: ['$50', '$100', '$500', 'To Savings', 'To Checking'] } }
               ]
             };
           }
 
-          // Validate same account
+          // Same account check
           if (fromAccount === toAccount) {
-            console.log('❌ Same account transfer attempted:', fromAccount);
             return {
-              fulfillmentText: 'You cannot transfer to the same account. Please specify different accounts.',
+              fulfillmentText: 'Cannot transfer to the same account. Please try again.',
               fulfillmentMessages: [
-                { text: { text: ['You cannot transfer to the same account. Please specify different accounts.'] } },
-                { quickReplies: { quickReplies: ['To Savings', 'To Checking', 'Check Balance'] } }
-              ],
-              outputContexts: clearAllContexts(contexts)
+                { text: { text: ['Cannot transfer to the same account. Please try again.'] } },
+                { quickReplies: { quickReplies: STANDARD_QRB } }
+              ]
             };
           }
 
           // Execute transfer
-          console.log('Executing transfer:', { fromAccount, toAccount, amount });
           const result = await BankingService.processTransfer(fromAccount, toAccount, amount);
           
           if (result.success) {
-            const text = `Transfer complete! Moved ${formatCurrency(amount)} from ${fromAccount} to ${toAccount}.`;
-            console.log('✓ Transfer successful');
+            const text = `✓ Transfer complete! Moved ${formatCurrency(amount)} from ${fromAccount} to ${toAccount}.`;
             return {
               fulfillmentText: text,
               fulfillmentMessages: [
-                { text: { text: [text] } }, 
-                { quickReplies: { quickReplies: standardQuickReplies } }
-              ],
-              outputContexts: clearAllContexts(contexts)
+                { text: { text: [text] } },
+                { quickReplies: { quickReplies: STANDARD_QRB } }
+              ]
             };
           } else {
-            console.log('❌ Transfer failed:', result.error);
-            return { 
+            return {
               fulfillmentText: `Transfer failed: ${result.error}`,
               fulfillmentMessages: [
                 { text: { text: [`Transfer failed: ${result.error}`] } },
-                { quickReplies: { quickReplies: ['Check Balance', 'Try Again'] } }
-              ],
-              outputContexts: clearAllContexts(contexts)
+                { quickReplies: { quickReplies: STANDARD_QRB } }
+              ]
             };
           }
         }
 
+        // === TRANSACTION HISTORY ===
         case 'transaction.history': {
-          console.log('✓ Auth passed - Processing transaction history');
           const transactions = await BankingService.getTransactions(undefined, 5);
+          
           if (transactions.length === 0) {
-            return { 
-              fulfillmentText: "No recent transactions found.",
+            return {
+              fulfillmentText: 'No recent transactions found.',
               fulfillmentMessages: [
-                { text: { text: ["No recent transactions found."] } },
-                { quickReplies: { quickReplies: standardQuickReplies } }
-              ],
-              outputContexts: clearAllContexts(contexts)
+                { text: { text: ['No recent transactions found.'] } },
+                { quickReplies: { quickReplies: STANDARD_QRB } }
+              ]
             };
           }
+          
           let text = 'Recent transactions:\n\n';
           transactions.forEach((t, i) => {
-            text += `${i+1}. ${t.date} - ${t.description} (${formatCurrency(t.amount)})\n`;
+            text += `${i + 1}. ${t.date} - ${t.description} (${formatCurrency(t.amount)})\n`;
           });
+          
           return {
             fulfillmentText: text,
             fulfillmentMessages: [
-              { text: { text: [text] } }, 
-              { quickReplies: { quickReplies: standardQuickReplies } }
-            ],
-            outputContexts: clearAllContexts(contexts)
+              { text: { text: [text] } },
+              { quickReplies: { quickReplies: STANDARD_QRB } }
+            ]
           };
         }
 
+        // === AGENT TRANSFER ===
         case 'request.agent':
           return {
-            fulfillmentText: 'Connecting you to a live agent now...',
+            fulfillmentText: 'Connecting you to a live agent...',
             fulfillmentMessages: [{
               platform: 'PLATFORM_UNSPECIFIED',
-              payload: { action: 'TRANSFER_AGENT', message: 'Connecting...' }
-            }],
-            outputContexts: clearAllContexts(contexts)
+              payload: { 
+                action: 'TRANSFER_AGENT', 
+                message: 'Connecting to agent...' 
+              }
+            }]
           };
 
+        // === FALLBACK ===
         case 'Default Fallback Intent':
-          console.log('Fallback triggered - clearing all contexts');
           return {
-            fulfillmentText: 'I missed that. I can help with account balances, transfers, or transaction history.',
+            fulfillmentText: 'I can help with:\n• Hours and locations\n• Routing numbers and contact info\n• Account balances and transfers\n• Transaction history\n\nType "Talk to Agent" for live support.',
             fulfillmentMessages: [
-              { text: { text: ['I missed that. I can help with account balances, transfers, or transaction history.'] } },
-              { quickReplies: { quickReplies: standardQuickReplies } }
-            ],
-            outputContexts: clearAllContexts(contexts)
+              { text: { text: ['I can help with:\n• Hours and locations\n• Routing numbers and contact info\n• Account balances and transfers\n• Transaction history\n\nType "Talk to Agent" for live support.'] } },
+              { quickReplies: { quickReplies: STANDARD_QRB } }
+            ]
           };
 
+        // === KNOWLEDGE BASE INTENTS ===
+        // These are handled by Dialogflow KB, just ensure QRBs are added
         default:
-          console.log('Stateless intent (KB/FAQ):', intentName);
+          if (KB_INTENTS.includes(intentName)) {
+            // KB response will come from Dialogflow, we just add QRBs
+            return {
+              fulfillmentMessages: [
+                { quickReplies: { quickReplies: STANDARD_QRB } }
+              ]
+            };
+          }
+          
+          // Unknown intent
           return {
-            fulfillmentText: 'I can help you check balances, transfer funds, or view recent transactions.',
+            fulfillmentText: 'I can help with hours, locations, balances, transfers, and more.',
             fulfillmentMessages: [
-              { text: { text: ['I can help you check balances, transfer funds, or view recent transactions.'] } },
-              { quickReplies: { quickReplies: standardQuickReplies } }
+              { text: { text: ['I can help with hours, locations, balances, transfers, and more.'] } },
+              { quickReplies: { quickReplies: STANDARD_QRB } }
             ]
           };
       }
       
     } catch (error) {
-      console.error('DialogflowFulfillment Error:', error);
+      console.error('Fulfillment Error:', error);
       return {
-        fulfillmentText: 'I apologize, but I encountered an error processing your request. Please try again.',
+        fulfillmentText: 'I encountered an error. Please try again or contact support.',
         fulfillmentMessages: [
-          { text: { text: ['I apologize, but I encountered an error processing your request. Please try again.'] } },
-          { quickReplies: { quickReplies: standardQuickReplies } }
-        ],
-        outputContexts: clearAllContexts(contexts)
+          { text: { text: ['I encountered an error. Please try again or contact support.'] } },
+          { quickReplies: { quickReplies: STANDARD_QRB } }
+        ]
       };
     }
   }
