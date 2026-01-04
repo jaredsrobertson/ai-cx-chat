@@ -1,7 +1,5 @@
-// lib/services/dialogflow-service.ts
 import { v4 as uuidv4 } from 'uuid';
 
-// 1. CHANGE: Use require to explicitly get v2beta1 (which supports Knowledge Bases)
 const dialogflow = require('@google-cloud/dialogflow').v2beta1;
 
 const sessionClient = new dialogflow.SessionsClient({
@@ -34,7 +32,6 @@ export const DialogflowService = {
 
     const sessionPath = sessionClient.projectAgentSessionPath(projectId, sessionId);
 
-    // 2. CHANGE: Remove the strict 'v2' type definition that was causing errors
     const request = {
       session: sessionPath,
       queryInput: {
@@ -44,26 +41,36 @@ export const DialogflowService = {
         },
       },
       queryParams: {
-        // 3. CHANGE: Add your Knowledge Base ID here
-        // Replace with your actual ID, e.g., 'projects/my-project/knowledgeBases/MTIz...'
         knowledgeBaseNames: [`projects/${projectId}/knowledgeBases/MjA1ODA2NTU4OTk5MzIwOTg1Nw`],
         
-        // Inject Auth Context if user is logged in
+        // Pass auth as payload parameter (more reliable than context alone)
+        payload: {
+          fields: {
+            isAuthenticated: { 
+              boolValue: isAuthenticated 
+            }
+          }
+        },
+        
+        // Also inject auth context for backward compatibility
         ...(isAuthenticated && {
           contexts: [{
             name: `${sessionPath}/contexts/authenticated`,
             lifespanCount: 5,
-            parameters: { fields: { authenticated: { boolValue: true } } },
+            parameters: { 
+              fields: { 
+                authenticated: { boolValue: true } 
+              } 
+            },
           }]
         })
       }
     };
 
-    // 4. CHANGE: detectIntent returns an array [response]
     const [response] = await sessionClient.detectIntent(request);
     const result = response.queryResult;
 
-    // Parse Quick Replies
+    // Parse quick replies from fulfillment messages
     let quickReplies: string[] = [];
     if (result.fulfillmentMessages) {
       result.fulfillmentMessages.forEach((msg: any) => {
@@ -73,7 +80,7 @@ export const DialogflowService = {
       });
     }
 
-    // Parse Payload
+    // Parse payload for special actions
     let payload: Record<string, any> | null = null;
     let actionRequired: string | undefined;
     let actionMessage: string | undefined;
@@ -98,19 +105,17 @@ export const DialogflowService = {
       });
     }
 
-    // 5. CHANGE: Parse Knowledge Base Answers
-    // We use (result as any) because 'knowledgeAnswers' is missing from some V2 definitions
+    // Parse Knowledge Base answers (if present)
     const sources: { title: string; uri: string; excerpt: string }[] = [];
-    
-    if ((result as any).knowledgeAnswers && (result as any).knowledgeAnswers.answers) {
-        const answers = (result as any).knowledgeAnswers.answers;
-        if (answers.length > 0) {
-          sources.push({
-            title: answers[0].source || 'Knowledge Base',
-            uri: answers[0].faqQuestion || '#',
-            excerpt: answers[0].answer || ''
-          });
-        }
+    if ((result as any).knowledgeAnswers?.answers) {
+      const answers = (result as any).knowledgeAnswers.answers;
+      if (answers.length > 0) {
+        sources.push({
+          title: answers[0].source || 'Knowledge Base',
+          uri: answers[0].faqQuestion || '#',
+          excerpt: answers[0].answer || ''
+        });
+      }
     }
 
     return {

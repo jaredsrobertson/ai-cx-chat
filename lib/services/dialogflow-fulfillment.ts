@@ -12,12 +12,12 @@ interface DialogflowContext {
 const STANDARD_QRB = [
   { display: '🕒 Hours', payload: 'What are your hours?' },
   { display: '📍 Locations', payload: 'Where are you located?' },
-  { display: '🔢 Routing Number', payload: 'What is my routing number?' },
-  { display: '💬 Contact', payload: 'What is your contact number?' },
+  { display: '🔢 Routing Number', payload: 'What is your routing number?' },
+  { display: '💬 Contact Support', payload: 'How do I contact support?' },
   { display: '💰 Check Balance', payload: 'Check my balance' },
   { display: '💸 Transfer Funds', payload: 'Transfer funds' },
   { display: '📋 Transaction History', payload: 'Show my transaction history' },
-  { display: '👤 Chat with Agent', payload: 'Chat with agent' }
+  { display: '👤 Talk to Agent', payload: 'Talk to agent' }
 ];
 
 // KB intents that don't require auth
@@ -38,7 +38,13 @@ const PROTECTED_INTENTS = [
   'request.agent'
 ];
 
-function isAuthenticated(contexts: DialogflowContext[]): boolean {
+function isAuthenticated(contexts: DialogflowContext[], parameters?: Record<string, any>): boolean {
+  // Check parameter first (more reliable - comes from queryParams.payload)
+  if (parameters?.isAuthenticated === true) {
+    return true;
+  }
+  
+  // Fallback to context check for backward compatibility
   const authContext = contexts.find(ctx => ctx.name.endsWith('/contexts/authenticated'));
   return authContext?.parameters?.authenticated === true;
 }
@@ -82,7 +88,7 @@ export const DialogflowFulfillment = {
     
     try {
       // AUTH CHECK - Protected intents require authentication
-      if (PROTECTED_INTENTS.includes(intentName) && !isAuthenticated(contexts)) {
+      if (PROTECTED_INTENTS.includes(intentName) && !isAuthenticated(contexts, parameters)) {
         console.log('Auth required for:', intentName);
         return {
           fulfillmentText: 'Please authenticate to continue.',
