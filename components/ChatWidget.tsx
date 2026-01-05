@@ -163,7 +163,7 @@ export default function ChatWidget() {
 
           {/* Messages Area */}
           <div className="flex-1 flex flex-col bg-gray-50 min-h-0">
-            <div className="flex-1 overflow-y-auto py-4 px-0">
+            <div className="flex-1 overflow-y-auto py-4 px-2">
               {messages.map((message, index) => (
                 <Message key={index} {...message} />
               ))}
