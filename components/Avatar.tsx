@@ -7,8 +7,10 @@ interface AvatarProps {
 
 const Avatar = ({ isUser, className = '' }: AvatarProps) => {
   return (
-    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-      isUser ? 'bg-blue-950 shadow-md' : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-md'
+    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
+      isUser 
+        ? 'bg-blue-600 shadow-md ring-2 ring-blue-100' 
+        : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-md ring-2 ring-blue-100'
     } ${className}`}>
       {isUser ? (
         // User Icon

@@ -99,11 +99,11 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Floating Action Button - Stationary */}
+      {/* Floating Action Button */}
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)} 
-          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
+          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-xl hover:bg-blue-700 hover:shadow-2xl transition-all hover:scale-105"
         >
           <CloudIcon className="w-8 h-8" />
           {/* Pulsing Notification Dot */}
@@ -114,24 +114,25 @@ export default function ChatWidget() {
         </button>
       )}
 
-      {/* Chat Window */}
+      {/* Chat Window - Redesigned */}
       {isOpen && (
-        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 bg-blue-200 shadow-2xl flex flex-col w-screen h-screen sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] rounded-none sm:rounded-lg animate-fade-in-up">
+        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-40 shadow-2xl flex flex-col w-screen h-screen sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] rounded-none sm:rounded-2xl overflow-hidden animate-fade-in-up bg-white border border-gray-200">
           
-          {/* Header */}
-          <div className="bg-blue-950 text-white p-4 rounded-t-none sm:rounded-t-lg flex items-center justify-between shadow-md">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+          {/* Header - Modern Glass Effect */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center ring-2 ring-white/30">
                 <CloudIcon className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-semibold">AI Assistant</h3>
+                <h3 className="font-semibold text-base">AI Assistant</h3>
+                <p className="text-xs text-blue-100">Ready to help</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button 
                 onClick={resetConversation} 
-                className="text-white hover:bg-white/20 rounded p-1 transition-colors" 
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all" 
                 title="Reset Chat"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,30 +141,36 @@ export default function ChatWidget() {
               </button>
               <button 
                 onClick={() => setIsOpen(false)} 
-                className="text-white hover:bg-white/20 rounded p-1 transition-colors" 
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all" 
                 title="Close"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
           </div>
           
-          {/* Status Bar */}
-          <div className="border-b border-gray-200 px-4 py-1.5 bg-gray-100 text-xs text-gray-600 flex justify-between items-center min-h-[28px]">
-            <span className="flex items-center gap-1">
+          {/* Status Bar - Subtle */}
+          <div className="border-b border-gray-200 px-4 py-2 bg-gray-50/50 backdrop-blur-sm">
+            <span className="flex items-center gap-2 text-xs text-gray-600">
               {isAuthenticated ? (
-                <><span className="text-green-600">●</span> Authenticated</>
+                <>
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span className="font-medium">Authenticated</span>
+                </>
               ) : (
-                <><span className="text-gray-400">○</span> Guest</>
+                <>
+                  <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
+                  <span>Guest</span>
+                </>
               )}
             </span>
           </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 flex flex-col bg-gray-50 min-h-0">
-            <div className="flex-1 overflow-y-auto py-4 px-2">
+          {/* Messages Area - Clean Background */}
+          <div className="flex-1 flex flex-col bg-gradient-to-b from-gray-50/50 to-white min-h-0">
+            <div className="flex-1 overflow-y-auto p-4">
               {messages.map((message, index) => (
                 <Message key={index} {...message} />
               ))}
@@ -178,7 +185,7 @@ export default function ChatWidget() {
               <div ref={messagesEndRef} />
             </div>
             
-            {/* Input Area */}
+            {/* Input Area - Modern */}
             <div className="border-t border-gray-200 p-4 bg-white">
               <div className="flex gap-2">
                 <input 
@@ -192,14 +199,14 @@ export default function ChatWidget() {
                       handleSendMessage(input);
                     }
                   }} 
-                  placeholder="Ask about hours, balances, transfers..." 
+                  placeholder="Type your message..." 
                   disabled={isTyping} 
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950 disabled:bg-gray-50 text-slate-800 placeholder-gray-400" 
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-800 placeholder-gray-400 transition-all" 
                 />
                 <button 
                   onClick={() => handleSendMessage(input)} 
                   disabled={isTyping || !input.trim()} 
-                  className="px-4 py-2 bg-blue-950 text-white rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
