@@ -54,22 +54,21 @@ export default function Home() {
               AI-Powered Customer Experience Demo
             </h1>
             <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed scroll-animate">
-              This project demonstrates a modern, AI-powered customer experience solution. 
-              It features a conversational chat application that integrates with multiple leading AI platforms 
-              and a custom backend. Built with Next.js, showcasing real-world scenarios like authentication, 
-              API integration, and dynamic response generation.
+              This project demonstrates a production-ready conversational AI platform powered by Google Dialogflow. 
+              Built with Next.js, it showcases advanced features including intent recognition, entity extraction, 
+              webhook fulfillment, context management, and knowledge base integration for intelligent, dynamic conversations.
             </p>
             
             {/* Key Features */}
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700 mb-8 scroll-animate">
               <span className="flex items-center gap-2">
-                <CheckIcon /> Google Dialogflow
-              </span>
-              <span className="flex items-center gap-2">
-                <CheckIcon /> Amazon Lex
+                <CheckIcon /> Google Dialogflow CX
               </span>
               <span className="flex items-center gap-2">
                 <CheckIcon /> Webhook Fulfillment
+              </span>
+              <span className="flex items-center gap-2">
+                <CheckIcon /> Knowledge Base
               </span>
               <span className="flex items-center gap-2">
                 <CheckIcon /> Custom REST API
@@ -107,66 +106,66 @@ export default function Home() {
             </h2>
             
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {/* Dialogflow Card */}
+              {/* Dialogflow Intents Card */}
               <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate text-center md:text-left">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto md:mx-0">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-3">Google Dialogflow</h3>
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">Intent Recognition & NLU</h3>
                 <p className="text-slate-600 mb-4">
-                  Banking assistant with webhook fulfillment for dynamic responses. Handles balance inquiries, 
-                  fund transfers, and transaction history with contextual authentication.
+                  Dialogflow's advanced Natural Language Understanding identifies user intents with high accuracy. 
+                  Extracts entities, handles variations, and maintains conversation context across multiple turns.
                 </p>
                 <ul className="space-y-2 text-sm text-slate-700">
-                  <li>• Balance Inquiry</li>
-                  <li>• Fund Transfers</li>
-                  <li>• Transaction History</li>
-                  <li>• Contextual Auth</li>
+                  <li>• Custom Intent Training</li>
+                  <li>• Entity Extraction</li>
+                  <li>• Context Management</li>
+                  <li>• Multi-turn Conversations</li>
                 </ul>
               </div>
 
-              {/* Lex Card */}
+              {/* Webhook Fulfillment Card */}
               <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate text-center md:text-left" style={{animationDelay: '0.1s'}}>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto md:mx-0">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-3">Amazon Lex V2</h3>
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">Webhook Fulfillment</h3>
                 <p className="text-slate-600 mb-4">
-                  FAQ and customer support bot integrated through AWS SDK. Provides quick replies, 
-                  confidence scoring, and seamless agent handoff capabilities.
+                  Custom webhook integration enables dynamic responses by connecting Dialogflow to backend services. 
+                  Processes transactions, queries databases, and implements complex business logic in real-time.
                 </p>
                 <ul className="space-y-2 text-sm text-slate-700">
-                  <li>• Account Support</li>
-                  <li>• Security Help</li>
-                  <li>• Quick Replies</li>
-                  <li>• Agent Handoff</li>
+                  <li>• Real-time API Integration</li>
+                  <li>• Dynamic Response Generation</li>
+                  <li>• Business Logic Processing</li>
+                  <li>• Secure Authentication Flow</li>
                 </ul>
               </div>
 
-              {/* API Card */}
+              {/* Knowledge Base Card */}
               <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 scroll-animate text-center md:text-left" style={{animationDelay: '0.2s'}}>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto md:mx-0">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-3">Custom Banking API</h3>
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">Knowledge Base Integration</h3>
                 <p className="text-slate-600 mb-4">
-                  RESTful API built with Next.js API routes. Features token-based authentication 
-                  and provides endpoints for account data, transactions, and transfers.
+                  Dialogflow Knowledge Base provides intelligent FAQ responses from unstructured documents. 
+                  Automatically generates answers, handles variations, and improves over time with machine learning.
                 </p>
                 <ul className="space-y-2 text-sm text-slate-700">
-                  <li>• Account Management</li>
-                  <li>• Transfer Processing</li>
-                  <li>• Transaction Queries</li>
-                  <li>• Mock Authentication</li>
+                  <li>• Document-based Answers</li>
+                  <li>• CSV/HTML Support</li>
+                  <li>• Automatic Response Generation</li>
+                  <li>• Confidence Scoring</li>
                 </ul>
               </div>
             </div>
@@ -191,7 +190,7 @@ export default function Home() {
                     </li>
                     <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                      TypeScript for type safety
+                      React 19 with TypeScript
                     </li>
                     <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
@@ -199,29 +198,29 @@ export default function Home() {
                     </li>
                     <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                      Real-time chat interface
+                      Zustand state management
                     </li>
                   </ul>
                 </div>
                 
                 <div>
-                  <h3 className="font-semibold text-lg mb-4 text-slate-800">Backend & Services</h3>
+                  <h3 className="font-semibold text-lg mb-4 text-slate-800">Backend & AI</h3>
                   <ul className="space-y-3 text-slate-600">
                     <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                      Vercel Edge Functions
+                      Google Dialogflow CX/ES
                     </li>
                     <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                      Dialogflow Webhook Fulfillment
+                      Dialogflow Node.js SDK
                     </li>
                     <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                      AWS SDK Integration
+                      NextAuth.js Authentication
                     </li>
                     <li className="flex items-center gap-2 justify-center md:justify-start">
                       <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                      Token-based Authentication
+                      Custom REST API with Next.js
                     </li>
                   </ul>
                 </div>
@@ -231,11 +230,12 @@ export default function Home() {
               <div className="mt-8 pt-6 border-t border-slate-200">
                 <h4 className="font-semibold text-sm text-slate-700 mb-3">Implementation Highlights</h4>
                 <div className="flex flex-wrap gap-3 text-sm justify-center md:justify-start">
+                  <span className="px-3 py-1 bg-white rounded-full text-slate-700">Intent Detection</span>
+                  <span className="px-3 py-1 bg-white rounded-full text-slate-700">Entity Extraction</span>
                   <span className="px-3 py-1 bg-white rounded-full text-slate-700">Webhook Fulfillment</span>
                   <span className="px-3 py-1 bg-white rounded-full text-slate-700">Context Management</span>
+                  <span className="px-3 py-1 bg-white rounded-full text-slate-700">Knowledge Base</span>
                   <span className="px-3 py-1 bg-white rounded-full text-slate-700">Session Persistence</span>
-                  <span className="px-3 py-1 bg-white rounded-full text-slate-700">Real-time Updates</span>
-                  <span className="px-3 py-1 bg-white rounded-full text-slate-700">Mobile Responsive</span>
                 </div>
               </div>
             </div>
@@ -246,7 +246,7 @@ export default function Home() {
         <footer className="py-8 bg-white/10 backdrop-blur-md border-b border-slate-200/50">
           <div className="container mx-auto px-4 text-center">
             <p className="text-slate-600">
-              © 2025 AI CX Demo • Built with Next.js, Dialogflow, and Amazon Lex
+              © 2025 AI CX Demo • Built with Next.js and Google Dialogflow
             </p>
           </div>
         </footer>
