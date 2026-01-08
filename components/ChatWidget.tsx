@@ -61,6 +61,7 @@ export default function ChatWidget() {
     }
   }, [authRequired, showLoginModal]);
 
+  // Lock body scroll when chat is open on mobile
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -238,33 +239,35 @@ export default function ChatWidget() {
       {/* Chat Window */}
       {isOpen && (
         <>
-          {/* Mobile overlay */}
-          <div className="fixed inset-0 z-40 bg-gradient-to-b from-slate-200 to-blue-200 sm:hidden" />
-          
-          {/* MOBILE: Fixed positioning layout */}
-          <div className="sm:hidden">
-            {/* Header */}
-            <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg">
+          {/* MOBILE: Fixed positioning layout using Flexbox and DVH (Dynamic Viewport Height)
+            This replaces the multiple fixed divs with a single flex container.
+            'interactiveWidget: resizes-content' in layout.tsx ensures this shrinks with the keyboard.
+          */}
+          <div className="sm:hidden fixed inset-0 z-50 flex flex-col h-[100dvh] bg-white">
+            
+            {/* Header - Fixed Height */}
+            <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg">
               <HeaderContent />
             </div>
 
-            {/* Status */}
-            <div className="fixed top-[72px] left-0 right-0 z-50 border-b border-gray-300 px-4 py-2 bg-white/95">
+            {/* Status - Fixed Height */}
+            <div className="flex-none border-b border-gray-300 px-4 py-2 bg-white/95">
               <StatusContent />
             </div>
 
-            {/* Messages */}
-            <div className="fixed top-[112px] bottom-[84px] left-0 right-0 z-40 overflow-y-auto overscroll-contain p-4">
+            {/* Messages - Takes remaining space and scrolls */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth">
               <MessagesContent />
             </div>
 
-            {/* Input */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-300 p-4 bg-white safe-bottom">
+            {/* Input - Fixed Height */}
+            <div className="flex-none border-t border-gray-300 p-4 bg-white safe-bottom">
               <InputContent isMobile={true} />
             </div>
+            
           </div>
 
-          {/* DESKTOP: Flexbox layout */}
+          {/* DESKTOP: Floating Widget (Unchanged) */}
           <div className="hidden sm:block fixed bottom-6 right-6 z-50 w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-slate-200 to-blue-200 border border-gray-300/50">
             <div className="flex flex-col h-full">
               {/* Header */}

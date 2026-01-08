@@ -22,6 +22,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  // This ensures the viewport shrinks when the keyboard opens
+  interactiveWidget: 'resizes-content', 
 };
 
 export default function RootLayout({
