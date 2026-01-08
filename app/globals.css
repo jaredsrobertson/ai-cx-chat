@@ -2,6 +2,8 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -10,45 +12,51 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Mobile: Messages area adapts to keyboard using dvh calculation */
-@media (max-width: 639px) {
-  .chat-content-mobile {
-    /* Calculate available height: viewport - header - status - input - padding */
-    /* Header: 64px, Status: 40px, Input: 76px, Total: ~180px = 11.25rem */
-    height: calc(100dvh - 11.25rem);
-    transition: height 0.2s ease-out;
-  }
-}
-
-/* Desktop: Messages area uses normal flexbox (flex-1) */
-@media (min-width: 640px) {
-  .chat-content-mobile {
-    height: auto; /* Let flexbox handle it */
-  }
-}
-
-/* Safe area support for iOS notch */
+/* ===== Mobile Safe Area Support ===== */
 @supports (padding: max(0px)) {
   .safe-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
 
+/* ===== Input Optimizations ===== */
 /* Prevent zoom on input focus (iOS) */
 input[type="text"],
 input[type="email"],
 input[type="password"],
+input[type="search"],
 textarea {
   font-size: 16px !important;
 }
 
-/* Smooth scrolling */
+/* ===== Scrolling Optimizations ===== */
+/* Smooth scrolling with momentum */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent pull-to-refresh */
 .overscroll-contain {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Animations */
+/* ===== Touch Optimizations ===== */
+/* Remove tap highlight */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch targets (Apple HIG: 44px minimum) */
+@media (max-width: 640px) {
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ===== Animations ===== */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -69,49 +77,51 @@ textarea {
   animation: fadeInUp 0.25s ease-out forwards;
 }
 
-/* Focus styles */
+/* ===== Focus Styles ===== */
 *:focus {
   outline: none;
 }
 
-/* Selection colors */
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ===== Selection Colors ===== */
 ::selection {
   background: #3b82f6;
   color: white;
 }
 
-/* Prevent iOS text size adjustment */
-html {
-  -webkit-text-size-adjust: 100%;
-  -moz-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+::-moz-selection {
+  background: #3b82f6;
+  color: white;
 }
 
-/* Smooth momentum scrolling */
-.overflow-y-auto {
-  -webkit-overflow-scrolling: touch;
+/* ===== Scrollbar Styling ===== */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-/* Prevent tap highlight */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Firefox */
 * {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Touch targets */
-@media (max-width: 640px) {
-  button,
-  a {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-/* iOS Safari fallback */
-@supports (-webkit-touch-callout: none) {
-  @media (max-width: 639px) {
-    .chat-content-mobile {
-      height: calc(-webkit-fill-available - 11.25rem);
-      height: calc(100dvh - 11.25rem);
-    }
-  }
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }

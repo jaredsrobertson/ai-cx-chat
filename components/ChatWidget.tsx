@@ -115,6 +115,110 @@ export default function ChatWidget() {
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
+  // ============================================
+  // EXTRACTED COMPONENTS (DRY)
+  // ============================================
+
+  const HeaderContent = () => (
+    <>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
+          <CloudIcon className="w-6 h-6 text-blue-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-base">AI Assistant</h3>
+          <p className="text-xs text-blue-100">Ready to help</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={resetConversation} 
+          className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all" 
+          title="Reset Chat"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+        <button 
+          onClick={() => setIsOpen(false)} 
+          className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all" 
+          title="Close"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </>
+  );
+
+  const StatusContent = () => (
+    <span className="flex items-center gap-2 text-xs text-gray-700">
+      {isAuthenticated ? (
+        <>
+          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+          <span className="font-medium">Authenticated</span>
+        </>
+      ) : (
+        <>
+          <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
+          <span>Guest</span>
+        </>
+      )}
+    </span>
+  );
+
+  const MessagesContent = () => (
+    <>
+      {messages.map((message, index) => (
+        <Message key={index} {...message} />
+      ))}
+      {isTyping && <Message text="" isUser={false} isTyping={true} />}
+      {shouldShowQuickReplies && lastBotMessage?.quickReplies && (
+        <QuickReplies 
+          replies={lastBotMessage.quickReplies} 
+          onReplyClick={handleSendMessage} 
+          disabled={isTyping} 
+        />
+      )}
+      <div ref={messagesEndRef} />
+    </>
+  );
+
+  const InputContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <div className="flex gap-2">
+      <input 
+        ref={isMobile ? inputRef : undefined}
+        type="text" 
+        value={input} 
+        onChange={(e) => setInput(e.target.value)} 
+        onKeyPress={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage(input);
+          }
+        }}
+        placeholder="Type your message..." 
+        disabled={isTyping} 
+        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-800 placeholder-gray-400 transition-all text-base" 
+        inputMode="text"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="sentences"
+      />
+      <button 
+        onClick={() => handleSendMessage(input)} 
+        disabled={isTyping || !input.trim()} 
+        className="px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center flex-shrink-0"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      </button>
+    </div>
+  );
+
   return (
     <>
       {/* FAB */}
@@ -131,112 +235,56 @@ export default function ChatWidget() {
         </button>
       )}
 
-      {/* Chat Window - Single Responsive Layout */}
+      {/* Chat Window */}
       {isOpen && (
         <>
           {/* Mobile overlay */}
           <div className="fixed inset-0 z-40 bg-gradient-to-b from-slate-200 to-blue-200 sm:hidden" />
           
-          {/* Main Container - Responsive positioning */}
-          <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 flex flex-col w-full sm:w-96 h-full sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] sm:rounded-2xl sm:shadow-2xl bg-gradient-to-b from-slate-200 to-blue-200 sm:border sm:border-gray-300/50">
-            
-            {/* Header - Fixed on mobile, regular on desktop */}
-            <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg sm:rounded-t-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
-                  <CloudIcon className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base">AI Assistant</h3>
-                  <p className="text-xs text-blue-100">Ready to help</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={resetConversation} 
-                  className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all" 
-                  title="Reset Chat"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-                <button 
-                  onClick={() => setIsOpen(false)} 
-                  className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all" 
-                  title="Close"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            {/* Status Bar */}
-            <div className="flex-none border-b border-gray-300 px-4 py-2 bg-white/95">
-              <span className="flex items-center gap-2 text-xs text-gray-700">
-                {isAuthenticated ? (
-                  <>
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    <span className="font-medium">Authenticated</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
-                    <span>Guest</span>
-                  </>
-                )}
-              </span>
+          {/* MOBILE: Fixed positioning layout */}
+          <div className="sm:hidden">
+            {/* Header */}
+            <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg">
+              <HeaderContent />
             </div>
 
-            {/* Messages Area - Mobile uses special class, desktop uses flex-1 */}
-            <div className="flex-1 chat-content-mobile sm:flex-none sm:flex-1 overflow-y-auto overscroll-contain p-4 min-h-0">
-              {messages.map((message, index) => (
-                <Message key={index} {...message} />
-              ))}
-              {isTyping && <Message text="" isUser={false} isTyping={true} />}
-              {shouldShowQuickReplies && lastBotMessage?.quickReplies && (
-                <QuickReplies 
-                  replies={lastBotMessage.quickReplies} 
-                  onReplyClick={handleSendMessage} 
-                  disabled={isTyping} 
-                />
-              )}
-              <div ref={messagesEndRef} />
+            {/* Status */}
+            <div className="fixed top-[72px] left-0 right-0 z-50 border-b border-gray-300 px-4 py-2 bg-white/95">
+              <StatusContent />
             </div>
-            
-            {/* Input Area */}
-            <div className="flex-none border-t border-gray-300 p-4 bg-white safe-bottom">
-              <div className="flex gap-2">
-                <input 
-                  ref={inputRef}
-                  type="text" 
-                  value={input} 
-                  onChange={(e) => setInput(e.target.value)} 
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage(input);
-                    }
-                  }}
-                  placeholder="Type your message..." 
-                  disabled={isTyping} 
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-800 placeholder-gray-400 transition-all text-base" 
-                  inputMode="text"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="sentences"
-                />
-                <button 
-                  onClick={() => handleSendMessage(input)} 
-                  disabled={isTyping || !input.trim()} 
-                  className="px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center flex-shrink-0"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </button>
+
+            {/* Messages */}
+            <div className="fixed top-[112px] bottom-[84px] left-0 right-0 z-40 overflow-y-auto overscroll-contain p-4">
+              <MessagesContent />
+            </div>
+
+            {/* Input */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-300 p-4 bg-white safe-bottom">
+              <InputContent isMobile={true} />
+            </div>
+          </div>
+
+          {/* DESKTOP: Flexbox layout */}
+          <div className="hidden sm:block fixed bottom-6 right-6 z-50 w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-slate-200 to-blue-200 border border-gray-300/50">
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg rounded-t-2xl">
+                <HeaderContent />
+              </div>
+
+              {/* Status */}
+              <div className="flex-none border-b border-gray-300 px-4 py-2 bg-white/95">
+                <StatusContent />
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 min-h-0">
+                <MessagesContent />
+              </div>
+
+              {/* Input */}
+              <div className="flex-none border-t border-gray-300 p-4 bg-white">
+                <InputContent />
               </div>
             </div>
           </div>
