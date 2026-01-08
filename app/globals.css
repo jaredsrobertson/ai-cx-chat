@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Smooth scrolling for the entire page */
 html {
   scroll-behavior: smooth;
 }
@@ -11,29 +10,24 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Mobile chat container - uses dynamic viewport height for smooth keyboard adaptation */
-.chat-container {
-  /* Fallback for browsers that don't support dvh */
-  height: 100vh;
-  
-  /* Dynamic viewport height - automatically adjusts when keyboard opens/closes */
-  height: 100dvh;
-  
-  /* Smooth transition when viewport height changes */
-  transition: height 0.2s ease-out;
-}
-
-/* Desktop: Use fixed height instead of viewport-based */
-@media (min-width: 640px) {
-  .chat-container {
-    height: 70vh;
-    max-height: 600px;
-    min-height: 400px;
-    transition: none;
+/* Mobile: Messages area adapts to keyboard using dvh calculation */
+@media (max-width: 639px) {
+  .chat-content-mobile {
+    /* Calculate available height: viewport - header - status - input - padding */
+    /* Header: 64px, Status: 40px, Input: 76px, Total: ~180px = 11.25rem */
+    height: calc(100dvh - 11.25rem);
+    transition: height 0.2s ease-out;
   }
 }
 
-/* Mobile optimizations */
+/* Desktop: Messages area uses normal flexbox (flex-1) */
+@media (min-width: 640px) {
+  .chat-content-mobile {
+    height: auto; /* Let flexbox handle it */
+  }
+}
+
+/* Safe area support for iOS notch */
 @supports (padding: max(0px)) {
   .safe-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
@@ -48,13 +42,13 @@ textarea {
   font-size: 16px !important;
 }
 
-/* Prevent pull-to-refresh on mobile when chat is open */
+/* Smooth scrolling */
 .overscroll-contain {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Scroll animation classes */
+/* Animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -75,14 +69,8 @@ textarea {
   animation: fadeInUp 0.25s ease-out forwards;
 }
 
-/* Better focus styles */
+/* Focus styles */
 *:focus {
-  outline: none;
-}
-
-input:focus,
-textarea:focus,
-button:focus {
   outline: none;
 }
 
@@ -96,21 +84,20 @@ button:focus {
 html {
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
-/* Smooth momentum scrolling on iOS */
+/* Smooth momentum scrolling */
 .overflow-y-auto {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Prevent tap highlight on mobile */
+/* Prevent tap highlight */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Better button touch targets for mobile */
+/* Touch targets */
 @media (max-width: 640px) {
   button,
   a {
@@ -119,11 +106,12 @@ html {
   }
 }
 
-/* Fix for iOS Safari bottom bar */
+/* iOS Safari fallback */
 @supports (-webkit-touch-callout: none) {
-  .chat-container {
-    /* Use -webkit-fill-available as fallback for older iOS */
-    height: -webkit-fill-available;
-    height: 100dvh;
+  @media (max-width: 639px) {
+    .chat-content-mobile {
+      height: calc(-webkit-fill-available - 11.25rem);
+      height: calc(100dvh - 11.25rem);
+    }
   }
 }

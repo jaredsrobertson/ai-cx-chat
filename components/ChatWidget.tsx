@@ -35,7 +35,6 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Update auth state when session changes
   useEffect(() => {
     if (status === 'authenticated') {
       setAuthenticated(true);
@@ -44,12 +43,10 @@ export default function ChatWidget() {
     }
   }, [status, setAuthenticated]);
 
-  // Trigger welcome when chat opens
   useEffect(() => {
     if (isOpen) triggerWelcome();
   }, [isOpen, triggerWelcome]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => {
@@ -58,14 +55,12 @@ export default function ChatWidget() {
     }
   }, [messages]);
 
-  // Show login modal when auth is required
   useEffect(() => {
     if (authRequired.required && !showLoginModal) {
       setShowLoginModal(true);
     }
   }, [authRequired, showLoginModal]);
 
-  // Prevent body scroll when chat is open on mobile
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -101,7 +96,6 @@ export default function ChatWidget() {
     setPendingMessage(null);
   };
 
-  // Callback executed after successful login
   const handleLoginSuccess = async () => {
     console.log('Login success callback triggered');
     const messageToRetry = pendingMessage;
@@ -123,7 +117,7 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Floating Action Button */}
+      {/* FAB */}
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)} 
@@ -137,18 +131,16 @@ export default function ChatWidget() {
         </button>
       )}
 
-      {/* Chat Window - Industry Standard Layout */}
+      {/* Chat Window - Single Responsive Layout */}
       {isOpen && (
         <>
-          {/* Mobile: Full-screen solid overlay */}
+          {/* Mobile overlay */}
           <div className="fixed inset-0 z-40 bg-gradient-to-b from-slate-200 to-blue-200 sm:hidden" />
           
-          {/* Chat Container - Uses dvh (dynamic viewport height) for smooth keyboard handling */}
-          <div 
-            className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 flex flex-col w-full sm:w-96 sm:rounded-2xl sm:shadow-2xl bg-gradient-to-b from-slate-200 to-blue-200 sm:border sm:border-gray-300/50 chat-container"
-          >
+          {/* Main Container - Responsive positioning */}
+          <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 flex flex-col w-full sm:w-96 h-full sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] sm:rounded-2xl sm:shadow-2xl bg-gradient-to-b from-slate-200 to-blue-200 sm:border sm:border-gray-300/50">
             
-            {/* Header - Fixed at top, never moves */}
+            {/* Header - Fixed on mobile, regular on desktop */}
             <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg sm:rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
@@ -181,7 +173,7 @@ export default function ChatWidget() {
               </div>
             </div>
             
-            {/* Status Bar - Fixed below header */}
+            {/* Status Bar */}
             <div className="flex-none border-b border-gray-300 px-4 py-2 bg-white/95">
               <span className="flex items-center gap-2 text-xs text-gray-700">
                 {isAuthenticated ? (
@@ -198,8 +190,8 @@ export default function ChatWidget() {
               </span>
             </div>
 
-            {/* Messages Area - Flexible, automatically shrinks when keyboard opens */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-4 min-h-0">
+            {/* Messages Area - Mobile uses special class, desktop uses flex-1 */}
+            <div className="flex-1 chat-content-mobile sm:flex-none sm:flex-1 overflow-y-auto overscroll-contain p-4 min-h-0">
               {messages.map((message, index) => (
                 <Message key={index} {...message} />
               ))}
@@ -214,7 +206,7 @@ export default function ChatWidget() {
               <div ref={messagesEndRef} />
             </div>
             
-            {/* Input Area - Fixed at bottom, sits above keyboard on mobile */}
+            {/* Input Area */}
             <div className="flex-none border-t border-gray-300 p-4 bg-white safe-bottom">
               <div className="flex gap-2">
                 <input 
