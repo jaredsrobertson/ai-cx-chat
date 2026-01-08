@@ -11,6 +11,26 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* Mobile optimizations */
+@supports (padding: max(0px)) {
+  .safe-area-inset-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Prevent zoom on input focus (iOS) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  font-size: 16px !important;
+}
+
+/* Prevent pull-to-refresh on mobile when chat is open */
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
 /* Scroll animation classes */
 @keyframes fadeInUp {
   from {
@@ -35,7 +55,12 @@ body {
 /* Better focus styles */
 *:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+input:focus,
+textarea:focus,
+button:focus {
+  outline: none;
 }
 
 /* Selection colors */
@@ -44,19 +69,36 @@ body {
   color: white;
 }
 
-/* Slow bounce animation for chat button */
-@keyframes bounce-pause {
-  0%, 20%, 50%, 80%, 100% { 
-    transform: translateY(0);
-  }
-  40% { 
-    transform: translateY(-10px);
-  }
-  60% { 
-    transform: translateY(-5px);
+/* Mobile viewport fix - prevent address bar from affecting layout */
+@supports (-webkit-touch-callout: none) {
+  .h-full {
+    height: -webkit-fill-available;
   }
 }
 
-.animate-bounce-pause {
-  animation: bounce-pause 3s ease-in-out infinite;
+/* Prevent iOS text size adjustment */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Smooth momentum scrolling on iOS */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent tap highlight on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Better button touch targets for mobile */
+@media (max-width: 640px) {
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
