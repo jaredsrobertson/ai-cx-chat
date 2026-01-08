@@ -11,9 +11,31 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* Mobile chat container - uses dynamic viewport height for smooth keyboard adaptation */
+.chat-container {
+  /* Fallback for browsers that don't support dvh */
+  height: 100vh;
+  
+  /* Dynamic viewport height - automatically adjusts when keyboard opens/closes */
+  height: 100dvh;
+  
+  /* Smooth transition when viewport height changes */
+  transition: height 0.2s ease-out;
+}
+
+/* Desktop: Use fixed height instead of viewport-based */
+@media (min-width: 640px) {
+  .chat-container {
+    height: 70vh;
+    max-height: 600px;
+    min-height: 400px;
+    transition: none;
+  }
+}
+
 /* Mobile optimizations */
 @supports (padding: max(0px)) {
-  .safe-area-inset-bottom {
+  .safe-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
@@ -29,6 +51,7 @@ textarea {
 /* Prevent pull-to-refresh on mobile when chat is open */
 .overscroll-contain {
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Scroll animation classes */
@@ -69,13 +92,6 @@ button:focus {
   color: white;
 }
 
-/* Mobile viewport fix - prevent address bar from affecting layout */
-@supports (-webkit-touch-callout: none) {
-  .h-full {
-    height: -webkit-fill-available;
-  }
-}
-
 /* Prevent iOS text size adjustment */
 html {
   -webkit-text-size-adjust: 100%;
@@ -100,5 +116,14 @@ html {
   a {
     min-height: 44px;
     min-width: 44px;
+  }
+}
+
+/* Fix for iOS Safari bottom bar */
+@supports (-webkit-touch-callout: none) {
+  .chat-container {
+    /* Use -webkit-fill-available as fallback for older iOS */
+    height: -webkit-fill-available;
+    height: 100dvh;
   }
 }

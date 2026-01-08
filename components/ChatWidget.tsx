@@ -34,7 +34,6 @@ export default function ChatWidget() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Update auth state when session changes
   useEffect(() => {
@@ -50,11 +49,14 @@ export default function ChatWidget() {
     if (isOpen) triggerWelcome();
   }, [isOpen, triggerWelcome]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    if (isOpen && !isTyping) inputRef.current?.focus();
-  }, [messages, isOpen, isTyping]);
+    if (messages.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
+    }
+  }, [messages]);
 
   // Show login modal when auth is required
   useEffect(() => {
@@ -63,51 +65,27 @@ export default function ChatWidget() {
     }
   }, [authRequired, showLoginModal]);
 
-  // Mobile optimization: Prevent body scroll when chat is open
+  // Prevent body scroll when chat is open on mobile
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
-      document.body.style.height = '100%';
     } else {
-      document.body.style.overflow = '';
+      const scrollY = document.body.style.top;
       document.body.style.position = '';
+      document.body.style.top = '';
       document.body.style.width = '';
-      document.body.style.height = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
     
     return () => {
-      document.body.style.overflow = '';
       document.body.style.position = '';
+      document.body.style.top = '';
       document.body.style.width = '';
-      document.body.style.height = '';
-    };
-  }, [isOpen]);
-
-  // Mobile keyboard handling: scroll input into view
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleResize = () => {
-      // On mobile, when keyboard opens, scroll to bottom
-      if (window.visualViewport && inputRef.current) {
-        const visualViewportHeight = window.visualViewport.height;
-        const windowHeight = window.innerHeight;
-        
-        // Keyboard is open if visual viewport is smaller
-        if (visualViewportHeight < windowHeight) {
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-          }, 100);
-        }
-      }
-    };
-
-    window.visualViewport?.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.visualViewport?.removeEventListener('resize', handleResize);
     };
   }, [isOpen]);
 
@@ -133,13 +111,10 @@ export default function ChatWidget() {
       return;
     }
     
-    // Clear state
     setPendingMessage(null);
     setAuthRequired({ required: false, message: '' });
     
     console.log('Retrying message with authenticated session:', messageToRetry.substring(0, 50));
-    
-    // Retry the message (pass true to indicate this is an auth retry)
     await sendMessage(messageToRetry, true);
   };
 
@@ -155,7 +130,6 @@ export default function ChatWidget() {
           className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-xl hover:bg-blue-700 hover:shadow-2xl transition-all hover:scale-105"
         >
           <CloudIcon className="w-8 h-8" />
-          {/* Pulsing Notification Dot */}
           <span className="absolute top-0 right-0 flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
@@ -163,20 +137,19 @@ export default function ChatWidget() {
         </button>
       )}
 
-      {/* Chat Window - Mobile Optimized */}
+      {/* Chat Window - Industry Standard Layout */}
       {isOpen && (
         <>
-          {/* Mobile: Solid overlay background to prevent page showing through */}
+          {/* Mobile: Full-screen solid overlay */}
           <div className="fixed inset-0 z-40 bg-gradient-to-b from-slate-200 to-blue-200 sm:hidden" />
           
-          {/* Chat Container */}
+          {/* Chat Container - Uses dvh (dynamic viewport height) for smooth keyboard handling */}
           <div 
-            ref={chatContainerRef}
-            className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 shadow-2xl flex flex-col w-full h-full sm:w-96 sm:h-[70vh] sm:max-h-[600px] sm:min-h-[400px] sm:rounded-2xl overflow-hidden animate-fade-in-up bg-gradient-to-b from-slate-200 to-blue-200 sm:border sm:border-gray-300/50"
+            className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 flex flex-col w-full sm:w-96 sm:rounded-2xl sm:shadow-2xl bg-gradient-to-b from-slate-200 to-blue-200 sm:border sm:border-gray-300/50 chat-container"
           >
             
-            {/* Header - Solid, no transparency */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg flex-shrink-0">
+            {/* Header - Fixed at top, never moves */}
+            <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg sm:rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
                   <CloudIcon className="w-6 h-6 text-blue-600" />
@@ -208,8 +181,8 @@ export default function ChatWidget() {
               </div>
             </div>
             
-            {/* Status Bar - Solid background */}
-            <div className="border-b border-gray-300 px-4 py-2 bg-white/95 flex-shrink-0">
+            {/* Status Bar - Fixed below header */}
+            <div className="flex-none border-b border-gray-300 px-4 py-2 bg-white/95">
               <span className="flex items-center gap-2 text-xs text-gray-700">
                 {isAuthenticated ? (
                   <>
@@ -225,7 +198,7 @@ export default function ChatWidget() {
               </span>
             </div>
 
-            {/* Messages Area - Scrollable with proper mobile height */}
+            {/* Messages Area - Flexible, automatically shrinks when keyboard opens */}
             <div className="flex-1 overflow-y-auto overscroll-contain p-4 min-h-0">
               {messages.map((message, index) => (
                 <Message key={index} {...message} />
@@ -241,8 +214,8 @@ export default function ChatWidget() {
               <div ref={messagesEndRef} />
             </div>
             
-            {/* Input Area - Solid background, safe area for mobile keyboard */}
-            <div className="border-t border-gray-300 p-4 bg-white flex-shrink-0 safe-area-inset-bottom">
+            {/* Input Area - Fixed at bottom, sits above keyboard on mobile */}
+            <div className="flex-none border-t border-gray-300 p-4 bg-white safe-bottom">
               <div className="flex gap-2">
                 <input 
                   ref={inputRef}
@@ -254,12 +227,6 @@ export default function ChatWidget() {
                       e.preventDefault();
                       handleSendMessage(input);
                     }
-                  }}
-                  onFocus={() => {
-                    // Scroll to bottom when input is focused (mobile keyboard opens)
-                    setTimeout(() => {
-                      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                    }, 300);
                   }}
                   placeholder="Type your message..." 
                   disabled={isTyping} 
