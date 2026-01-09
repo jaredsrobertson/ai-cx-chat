@@ -11,7 +11,7 @@ import AgentModal from './AgentModal';
 import CloudIcon from './CloudIcon';
 
 // ============================================
-// STANDALONE COMPONENTS (Fixed Focus Issue)
+// STANDALONE COMPONENTS
 // ============================================
 
 interface ChatHeaderProps {
@@ -74,7 +74,7 @@ interface ChatMessagesProps {
   isTyping: boolean;
   lastBotMessage: any;
   handleSendMessage: (text: string) => void;
-  // Updated type to allow null
+  // Fixed type to allow null from useRef
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -110,7 +110,7 @@ interface ChatInputProps {
   setInput: (value: string) => void;
   handleSendMessage: (text: string) => void;
   isTyping: boolean;
-  // Updated type to allow null
+  // Fixed type to allow null from useRef
   inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -202,6 +202,7 @@ export default function ChatWidget() {
     }
   }, [authRequired, showLoginModal]);
 
+  // Lock body scroll when chat is open on mobile/fullscreen view
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -274,8 +275,10 @@ export default function ChatWidget() {
       {/* Chat Window */}
       {isOpen && (
         <>
-          {/* MOBILE: Fixed positioning layout */}
-          <div className="sm:hidden fixed inset-0 z-50 flex flex-col h-[100dvh] bg-white">
+          {/* MOBILE / LANDSCAPE: Fullscreen Flex Layout 
+              Changed 'sm:hidden' to 'lg:hidden' to cover landscape phones and tablets 
+          */}
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col h-[100dvh] bg-white">
             
             {/* Header */}
             <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg">
@@ -311,8 +314,10 @@ export default function ChatWidget() {
             
           </div>
 
-          {/* DESKTOP: Floating Widget */}
-          <div className="hidden sm:block fixed bottom-6 right-6 z-50 w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-slate-200 to-blue-200 border border-gray-300/50">
+          {/* DESKTOP: Floating Widget 
+              Changed 'hidden sm:block' to 'hidden lg:block'
+          */}
+          <div className="hidden lg:block fixed bottom-6 right-6 z-50 w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-slate-200 to-blue-200 border border-gray-300/50">
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg rounded-t-2xl">
