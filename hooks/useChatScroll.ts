@@ -6,16 +6,20 @@ import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
  * 1. useLayoutEffect for synchronous DOM updates
  * 2. MutationObserver to detect DOM changes
  * 3. ResizeObserver to detect content size changes
- * 4. Multiple animation frames for React reconciliation
- * 5. Mobile-specific keyboard and viewport handling
+ * 4. IntersectionObserver to detect content visibility
+ * 5. Multiple animation frames for React reconciliation
+ * 6. Mobile-specific keyboard and viewport handling
  */
 export const useChatScroll = (dependencies: any[]) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<MutationObserver | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
   const isUserScrollingRef = useRef(false);
   const lastScrollHeightRef = useRef(0);
   const isMobileRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect mobile on mount
   useEffect(() => {
@@ -23,35 +27,39 @@ export const useChatScroll = (dependencies: any[]) => {
   }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth', force: boolean = false) => {
-    if (!scrollRef.current) return;
+    if (!scrollRef.current || !sentinelRef.current) return;
 
-    const element = scrollRef.current;
-    const scrollHeight = element.scrollHeight;
-    const clientHeight = element.clientHeight;
-    const maxScroll = scrollHeight - clientHeight;
-    const currentScroll = element.scrollTop;
-
-    // Check if user is near the bottom (within 150px)
-    const distanceFromBottom = maxScroll - currentScroll;
-    const isNearBottom = distanceFromBottom < 150;
-
-    // Check if content size has changed
-    const hasNewContent = lastScrollHeightRef.current !== scrollHeight;
-    const newContentHeight = scrollHeight - lastScrollHeightRef.current;
+    const container = scrollRef.current;
+    const sentinel = sentinelRef.current;
 
     // On mobile, always use 'auto' behavior for instant scrolling (no animation lag)
     const effectiveBehavior = isMobileRef.current ? 'auto' : behavior;
 
-    // SCROLL LOGIC:
-    // 1. Force: Always scroll if explicitly requested
-    // 2. Near Bottom: User is reading recent messages -> scroll
-    // 3. New Content: If content grew and user WAS at the bottom (distance ≈ new content), scroll
-    //    (This fixes the issue where long messages break the 'isNearBottom' check)
-    if (force || isNearBottom || (hasNewContent && distanceFromBottom <= newContentHeight + 150)) {
-      element.scrollTo({
-        top: maxScroll,
-        behavior: effectiveBehavior
+    // Calculate scroll position to show sentinel (last element) above input
+    const containerRect = container.getBoundingClientRect();
+    const sentinelRect = sentinel.getBoundingClientRect();
+    
+    // Get current scroll position
+    const currentScroll = container.scrollTop;
+    const scrollHeight = container.scrollHeight;
+    const clientHeight = container.clientHeight;
+    const maxScroll = scrollHeight - clientHeight;
+    
+    // Check if near bottom
+    const isNearBottom = maxScroll - currentScroll < 150;
+
+    // Force scroll if requested, or if near bottom, or if new content appeared
+    if (force || isNearBottom || lastScrollHeightRef.current !== scrollHeight) {
+      // Scroll to absolute bottom
+      container.scrollTop = maxScroll;
+      
+      // Use scrollIntoView on sentinel for more reliable positioning
+      sentinel.scrollIntoView({ 
+        behavior: effectiveBehavior, 
+        block: 'end',
+        inline: 'nearest'
       });
+      
       lastScrollHeightRef.current = scrollHeight;
     }
   }, []);
@@ -63,28 +71,43 @@ export const useChatScroll = (dependencies: any[]) => {
 
   // Strategy 2: Async scroll with multiple requestAnimationFrame
   useEffect(() => {
+    // Cancel any pending scroll
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
     // First RAF - after React updates
     requestAnimationFrame(() => {
       // Second RAF - after browser layout
       requestAnimationFrame(() => {
         // Third RAF - after browser paint (handles slow renders)
         requestAnimationFrame(() => {
-          scrollToBottom('smooth');
+          scrollToBottom('smooth', true);
+          
+          // Fourth RAF - extra safety for mobile
+          if (isMobileRef.current) {
+            requestAnimationFrame(() => {
+              scrollToBottom('auto', true);
+            });
+          }
         });
       });
     });
   }, dependencies);
 
-  // Strategy 2.5: Mobile-specific delayed scroll (for keyboard animation)
+  // Strategy 2.5: Mobile-specific aggressive delayed scroll (for keyboard animation)
   useEffect(() => {
     if (isMobileRef.current) {
-      // Mobile keyboards take time to animate, add extra delay
-      // Increased to 300ms to better handle iOS keyboard animations
-      const timer = setTimeout(() => {
-        scrollToBottom('auto', true);
-      }, 300);
+      // Multiple timeouts to catch keyboard at different animation stages
+      const timers = [100, 200, 350, 500].map(delay => 
+        setTimeout(() => {
+          scrollToBottom('auto', true);
+        }, delay)
+      );
       
-      return () => clearTimeout(timer);
+      return () => {
+        timers.forEach(timer => clearTimeout(timer));
+      };
     }
   }, dependencies);
 
@@ -99,9 +122,15 @@ export const useChatScroll = (dependencies: any[]) => {
       // Only scroll if new content was added
       const hasAddedNodes = mutations.some(m => m.addedNodes.length > 0);
       if (hasAddedNodes) {
+        // Immediate scroll
         requestAnimationFrame(() => {
-          scrollToBottom('smooth');
+          scrollToBottom('auto', true);
         });
+        
+        // Delayed scroll for content that renders slowly
+        setTimeout(() => {
+          scrollToBottom('auto', true);
+        }, 100);
       }
     });
 
@@ -125,7 +154,7 @@ export const useChatScroll = (dependencies: any[]) => {
 
     resizeObserverRef.current = new ResizeObserver(() => {
       requestAnimationFrame(() => {
-        scrollToBottom('smooth');
+        scrollToBottom('auto', true);
       });
     });
 
@@ -133,6 +162,35 @@ export const useChatScroll = (dependencies: any[]) => {
 
     return () => {
       resizeObserverRef.current?.disconnect();
+    };
+  }, [scrollToBottom]);
+
+  // Strategy 4.5: IntersectionObserver to detect when sentinel becomes visible
+  useEffect(() => {
+    if (!scrollRef.current || !sentinelRef.current) return;
+
+    const sentinel = sentinelRef.current;
+
+    intersectionObserverRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // If sentinel is not fully visible, scroll to it
+          if (!entry.isIntersecting || entry.intersectionRatio < 1) {
+            scrollToBottom('auto', true);
+          }
+        });
+      },
+      {
+        root: scrollRef.current,
+        threshold: [0, 0.5, 1.0],
+        rootMargin: '0px 0px -50px 0px' // Account for input area height
+      }
+    );
+
+    intersectionObserverRef.current.observe(sentinel);
+
+    return () => {
+      intersectionObserverRef.current?.disconnect();
     };
   }, [scrollToBottom]);
 
@@ -201,9 +259,12 @@ export const useChatScroll = (dependencies: any[]) => {
 
     const handleFocusIn = () => {
       // Input focused, keyboard will open
-      setTimeout(() => {
-        scrollToBottom('auto', true);
-      }, 300); // Wait for keyboard animation
+      // Multiple delays to catch keyboard at different animation stages
+      [100, 250, 400, 600].forEach(delay => {
+        setTimeout(() => {
+          scrollToBottom('auto', true);
+        }, delay);
+      });
     };
 
     window.addEventListener('focusin', handleFocusIn);
@@ -213,5 +274,5 @@ export const useChatScroll = (dependencies: any[]) => {
     };
   }, [scrollToBottom]);
 
-  return { scrollRef, scrollToBottom };
+  return { scrollRef, sentinelRef, scrollToBottom };
 };

@@ -77,6 +77,7 @@ interface ChatMessagesProps {
   lastBotMessage: any;
   handleSendMessage: (text: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  sentinelRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const ChatMessages = ({ 
@@ -84,17 +85,19 @@ const ChatMessages = ({
   isTyping, 
   lastBotMessage, 
   handleSendMessage, 
-  scrollRef 
+  scrollRef,
+  sentinelRef
 }: ChatMessagesProps) => {
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
   return (
     <div 
       ref={scrollRef} 
-      className="flex-1 overflow-y-auto overscroll-contain p-4"
+      className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth"
       style={{ 
         WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain'
+        overscrollBehavior: 'contain',
+        scrollBehavior: 'smooth'
       }}
     >
       {messages.map((message, index) => (
@@ -108,8 +111,8 @@ const ChatMessages = ({
           disabled={isTyping} 
         />
       )}
-      {/* Spacer for keyboard on mobile */}
-      <div style={{ height: '20px' }} />
+      {/* Sentinel element - scroll target to ensure content is visible above keyboard */}
+      <div ref={sentinelRef} style={{ height: '1px', width: '100%' }} />
     </div>
   );
 };
@@ -188,7 +191,7 @@ export default function ChatWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Use the robust chat scroll hook
-  const { scrollRef, scrollToBottom } = useChatScroll([
+  const { scrollRef, sentinelRef, scrollToBottom } = useChatScroll([
     messages.length,
     isTyping,
     messages[messages.length - 1]?.quickReplies,
@@ -262,16 +265,17 @@ export default function ChatWidget() {
     }
 
     // Trigger immediate forced scroll for user message
-    // Force scroll ensures it happens even if user was reading history
     scrollToBottom('auto', true);
 
     await sendMessage(text);
     
-    // Mobile: Scroll again after a delay to handle keyboard animation
+    // Mobile: Multiple aggressive scrolls to handle keyboard animation
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      setTimeout(() => {
-        scrollToBottom('auto', true);
-      }, 300);
+      [150, 300, 500, 700].forEach(delay => {
+        setTimeout(() => {
+          scrollToBottom('auto', true);
+        }, delay);
+      });
     }
   };
 
@@ -355,7 +359,8 @@ export default function ChatWidget() {
               isTyping={isTyping} 
               lastBotMessage={lastBotMessage} 
               handleSendMessage={handleSendMessage} 
-              scrollRef={scrollRef} 
+              scrollRef={scrollRef}
+              sentinelRef={sentinelRef}
             />
 
             {/* Input */}
@@ -390,7 +395,8 @@ export default function ChatWidget() {
                 isTyping={isTyping} 
                 lastBotMessage={lastBotMessage} 
                 handleSendMessage={handleSendMessage} 
-                scrollRef={scrollRef} 
+                scrollRef={scrollRef}
+                sentinelRef={sentinelRef}
               />
 
               {/* Input */}
