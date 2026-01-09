@@ -22,30 +22,30 @@ interface ChatHeaderProps {
 const ChatHeader = ({ resetConversation, setIsOpen }: ChatHeaderProps) => (
   <>
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
-        <CloudIcon className="w-6 h-6 text-blue-600" />
+      <div className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center">
+        <CloudIcon className="w-5 h-5 text-blue-600" />
       </div>
       <div>
-        <h3 className="font-semibold text-base">AI Assistant</h3>
-        <p className="text-xs text-blue-100">Ready to help</p>
+        <h3 className="font-semibold text-sm">AI Assistant</h3>
+        <p className="text-[10px] text-blue-100 leading-tight">Ready to help</p>
       </div>
     </div>
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <button 
         onClick={resetConversation} 
-        className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all" 
+        className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all" 
         title="Reset Chat"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       </button>
       <button 
         onClick={() => setIsOpen(false)} 
-        className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all" 
+        className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all" 
         title="Close"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
@@ -54,15 +54,15 @@ const ChatHeader = ({ resetConversation, setIsOpen }: ChatHeaderProps) => (
 );
 
 const ChatStatus = ({ isAuthenticated }: { isAuthenticated: boolean }) => (
-  <span className="flex items-center gap-2 text-xs text-gray-700">
+  <span className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
     {isAuthenticated ? (
       <>
-        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-        <span className="font-medium">Authenticated</span>
+        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+        <span>Authenticated</span>
       </>
     ) : (
       <>
-        <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
+        <span className="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>
         <span>Guest</span>
       </>
     )}
@@ -74,7 +74,6 @@ interface ChatMessagesProps {
   isTyping: boolean;
   lastBotMessage: any;
   handleSendMessage: (text: string) => void;
-  // Fixed type to allow null from useRef
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -110,7 +109,6 @@ interface ChatInputProps {
   setInput: (value: string) => void;
   handleSendMessage: (text: string) => void;
   isTyping: boolean;
-  // Fixed type to allow null from useRef
   inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -129,7 +127,8 @@ const ChatInput = ({ input, setInput, handleSendMessage, isTyping, inputRef }: C
       }}
       placeholder="Type your message..." 
       disabled={isTyping} 
-      className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-800 placeholder-gray-400 transition-all text-base" 
+      // REDUCED PADDING: px-4 py-3 -> px-3 py-2
+      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-800 placeholder-gray-400 transition-all text-sm" 
       inputMode="text"
       autoComplete="off"
       autoCorrect="off"
@@ -138,7 +137,8 @@ const ChatInput = ({ input, setInput, handleSendMessage, isTyping, inputRef }: C
     <button 
       onClick={() => handleSendMessage(input)} 
       disabled={isTyping || !input.trim()} 
-      className="px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center flex-shrink-0"
+      // REDUCED PADDING: px-5 py-3 -> px-3 py-2
+      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center flex-shrink-0"
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -202,7 +202,6 @@ export default function ChatWidget() {
     }
   }, [authRequired, showLoginModal]);
 
-  // Lock body scroll when chat is open on mobile/fullscreen view
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -275,18 +274,16 @@ export default function ChatWidget() {
       {/* Chat Window */}
       {isOpen && (
         <>
-          {/* MOBILE / LANDSCAPE: Fullscreen Flex Layout 
-              Changed 'sm:hidden' to 'lg:hidden' to cover landscape phones and tablets 
-          */}
+          {/* MOBILE / LANDSCAPE: Fullscreen Flex Layout */}
           <div className="lg:hidden fixed inset-0 z-50 flex flex-col h-[100dvh] bg-white">
             
-            {/* Header */}
-            <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg">
+            {/* Header - REDUCED PADDING: py-4 -> py-2 */}
+            <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 flex items-center justify-between shadow-md">
               <ChatHeader resetConversation={resetConversation} setIsOpen={setIsOpen} />
             </div>
 
             {/* Status */}
-            <div className="flex-none border-b border-gray-300 px-4 py-2 bg-white/95">
+            <div className="flex-none border-b border-gray-300 px-4 py-1.5 bg-gray-50/95">
               <ChatStatus isAuthenticated={isAuthenticated} />
             </div>
 
@@ -301,8 +298,8 @@ export default function ChatWidget() {
               />
             </div>
 
-            {/* Input */}
-            <div className="flex-none border-t border-gray-300 p-4 bg-white safe-bottom">
+            {/* Input - REDUCED PADDING: p-4 -> p-2 */}
+            <div className="flex-none border-t border-gray-300 p-2 bg-white safe-bottom">
               <ChatInput 
                 input={input} 
                 setInput={setInput} 
@@ -314,18 +311,16 @@ export default function ChatWidget() {
             
           </div>
 
-          {/* DESKTOP: Floating Widget 
-              Changed 'hidden sm:block' to 'hidden lg:block'
-          */}
+          {/* DESKTOP: Floating Widget */}
           <div className="hidden lg:block fixed bottom-6 right-6 z-50 w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-slate-200 to-blue-200 border border-gray-300/50">
             <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 flex items-center justify-between shadow-lg rounded-t-2xl">
+              {/* Header - REDUCED PADDING: py-4 -> py-3 */}
+              <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3 flex items-center justify-between shadow-lg rounded-t-2xl">
                 <ChatHeader resetConversation={resetConversation} setIsOpen={setIsOpen} />
               </div>
 
               {/* Status */}
-              <div className="flex-none border-b border-gray-300 px-4 py-2 bg-white/95">
+              <div className="flex-none border-b border-gray-300 px-4 py-1.5 bg-gray-50/95">
                 <ChatStatus isAuthenticated={isAuthenticated} />
               </div>
 
@@ -340,8 +335,8 @@ export default function ChatWidget() {
                 />
               </div>
 
-              {/* Input */}
-              <div className="flex-none border-t border-gray-300 p-4 bg-white">
+              {/* Input - REDUCED PADDING: p-4 -> p-3 */}
+              <div className="flex-none border-t border-gray-300 p-3 bg-white">
                 <ChatInput 
                   input={input} 
                   setInput={setInput} 
