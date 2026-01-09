@@ -1,4 +1,3 @@
-// components/ChatWidget.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -127,8 +126,10 @@ const ChatInput = ({ input, setInput, handleSendMessage, isTyping, inputRef }: C
           handleSendMessage(input);
         }
       }}
-      placeholder="Type your message..." 
-      disabled={isTyping} 
+      placeholder="Type your message..."
+      // UX IMPROVEMENT: Do not disable input while typing. 
+      // This prevents focus loss and allows users to queue or fix typos.
+      // disabled={isTyping} 
       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-800 placeholder-gray-400 transition-all text-sm" 
       inputMode="text"
       autoComplete="off"
@@ -183,16 +184,9 @@ export default function ChatWidget() {
 
   // Animation Sequence on Mount
   useEffect(() => {
-    // 1. Visible at 1300ms (Matches page buttons appearance)
     const timer1 = setTimeout(() => setFabVisible(true), 1300);
-    
-    // 2. Flash/Ping Once at 2300ms (Matches "Try Chat" button flash)
     const timer2 = setTimeout(() => setFabFlash(true), 2300);
-
-    // 3. Remove Flash class at 3000ms
     const timer3 = setTimeout(() => setFabFlash(false), 3000);
-
-    // 4. Start Notification Ping Loop at 3500ms
     const timer4 = setTimeout(() => setFabPingLoop(true), 3500);
 
     return () => {
@@ -215,6 +209,7 @@ export default function ChatWidget() {
     if (isOpen) triggerWelcome();
   }, [isOpen, triggerWelcome]);
 
+  // SCROLL TO BOTTOM: Triggers on every message update
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => {
@@ -254,7 +249,21 @@ export default function ChatWidget() {
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
+    
+    // Clear input immediately for better UX
     setInput('');
+    
+    // UX IMPROVEMENT: Explicitly focus the input back
+    // This is crucial for "Chat" feel, so users don't have to tap again
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+
+    // Trigger scroll immediately for user message
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
     await sendMessage(text);
   };
 
