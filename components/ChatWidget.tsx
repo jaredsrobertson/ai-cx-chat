@@ -91,11 +91,10 @@ const ChatMessages = ({
   return (
     <div 
       ref={scrollRef} 
-      className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth"
+      className="flex-1 overflow-y-auto overscroll-contain p-4"
       style={{ 
         WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain',
-        scrollBehavior: 'smooth'
+        overscrollBehavior: 'contain'
       }}
     >
       {messages.map((message, index) => (

@@ -29,16 +29,25 @@ export const useChatScroll = (dependencies: any[]) => {
     const scrollHeight = element.scrollHeight;
     const clientHeight = element.clientHeight;
     const maxScroll = scrollHeight - clientHeight;
-
-    // Check if user has manually scrolled up
     const currentScroll = element.scrollTop;
-    const isNearBottom = maxScroll - currentScroll < 150; // Within 150px of bottom
+
+    // Check if user is near the bottom (within 150px)
+    const distanceFromBottom = maxScroll - currentScroll;
+    const isNearBottom = distanceFromBottom < 150;
+
+    // Check if content size has changed
+    const hasNewContent = lastScrollHeightRef.current !== scrollHeight;
+    const newContentHeight = scrollHeight - lastScrollHeightRef.current;
 
     // On mobile, always use 'auto' behavior for instant scrolling (no animation lag)
     const effectiveBehavior = isMobileRef.current ? 'auto' : behavior;
 
-    // Force scroll if requested, or if near bottom, or if new content appeared
-    if (force || isNearBottom || lastScrollHeightRef.current !== scrollHeight) {
+    // SCROLL LOGIC:
+    // 1. Force: Always scroll if explicitly requested
+    // 2. Near Bottom: User is reading recent messages -> scroll
+    // 3. New Content: If content grew and user WAS at the bottom (distance ≈ new content), scroll
+    //    (This fixes the issue where long messages break the 'isNearBottom' check)
+    if (force || isNearBottom || (hasNewContent && distanceFromBottom <= newContentHeight + 150)) {
       element.scrollTo({
         top: maxScroll,
         behavior: effectiveBehavior
@@ -70,9 +79,10 @@ export const useChatScroll = (dependencies: any[]) => {
   useEffect(() => {
     if (isMobileRef.current) {
       // Mobile keyboards take time to animate, add extra delay
+      // Increased to 300ms to better handle iOS keyboard animations
       const timer = setTimeout(() => {
         scrollToBottom('auto', true);
-      }, 150);
+      }, 300);
       
       return () => clearTimeout(timer);
     }
