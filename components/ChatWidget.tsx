@@ -182,6 +182,18 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Helper function to scroll to bottom
+  const scrollToBottom = () => {
+    if (!isOpen) return;
+    
+    // Use double requestAnimationFrame to ensure DOM updates are complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      });
+    });
+  };
+
   // Animation Sequence on Mount
   useEffect(() => {
     const timer1 = setTimeout(() => setFabVisible(true), 1300);
@@ -209,14 +221,19 @@ export default function ChatWidget() {
     if (isOpen) triggerWelcome();
   }, [isOpen, triggerWelcome]);
 
-  // SCROLL TO BOTTOM: Triggers on messages OR isTyping changes
+  // SCROLL TO BOTTOM: Triggers on messages, isTyping changes, or when quick replies appear
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }, 100);
-    }
+    scrollToBottom();
   }, [messages, isTyping, isOpen]);
+
+  // Additional scroll trigger specifically for quick replies appearing
+  // This ensures we scroll when the typing indicator disappears and quick replies show
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (!isTyping && lastMessage && !lastMessage.isUser && lastMessage.quickReplies) {
+      scrollToBottom();
+    }
+  }, [isTyping, messages]);
 
   useEffect(() => {
     if (authRequired.required && !showLoginModal) {
@@ -260,9 +277,7 @@ export default function ChatWidget() {
     }
 
     // Trigger scroll immediately for user message
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
+    scrollToBottom();
 
     await sendMessage(text);
   };
