@@ -89,7 +89,15 @@ const ChatMessages = ({
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth">
+    <div 
+      ref={scrollRef} 
+      className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth"
+      style={{ 
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain',
+        scrollBehavior: 'smooth'
+      }}
+    >
       {messages.map((message, index) => (
         <Message key={index} {...message} />
       ))}
@@ -101,6 +109,8 @@ const ChatMessages = ({
           disabled={isTyping} 
         />
       )}
+      {/* Spacer for keyboard on mobile */}
+      <div style={{ height: '20px' }} />
     </div>
   );
 };
@@ -252,10 +262,18 @@ export default function ChatWidget() {
       inputRef.current.focus();
     }
 
-    // Trigger immediate scroll for user message
-    scrollToBottom('auto');
+    // Trigger immediate forced scroll for user message
+    // Force scroll ensures it happens even if user was reading history
+    scrollToBottom('auto', true);
 
     await sendMessage(text);
+    
+    // Mobile: Scroll again after a delay to handle keyboard animation
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      setTimeout(() => {
+        scrollToBottom('auto', true);
+      }, 300);
+    }
   };
 
   const handleCloseLoginModal = () => {
@@ -320,7 +338,7 @@ export default function ChatWidget() {
       {isOpen && (
         <>
           {/* MOBILE / LANDSCAPE: Fullscreen Flex Layout */}
-          <div className="lg:hidden fixed inset-0 z-50 flex flex-col h-[100dvh] bg-white">
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-white" style={{ height: '100dvh', maxHeight: '-webkit-fill-available' }}>
             
             {/* Header */}
             <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 flex items-center justify-between shadow-md">

@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 
 /**
- * Production-grade chat scroll hook
+ * Production-grade chat scroll hook with mobile optimization
  * Uses multiple strategies to ensure reliable scrolling:
  * 1. useLayoutEffect for synchronous DOM updates
  * 2. MutationObserver to detect DOM changes
  * 3. ResizeObserver to detect content size changes
  * 4. Multiple animation frames for React reconciliation
+ * 5. Mobile-specific keyboard and viewport handling
  */
 export const useChatScroll = (dependencies: any[]) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -14,8 +15,14 @@ export const useChatScroll = (dependencies: any[]) => {
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const isUserScrollingRef = useRef(false);
   const lastScrollHeightRef = useRef(0);
+  const isMobileRef = useRef(false);
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+  // Detect mobile on mount
+  useEffect(() => {
+    isMobileRef.current = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  }, []);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth', force: boolean = false) => {
     if (!scrollRef.current) return;
 
     const element = scrollRef.current;
@@ -27,11 +34,14 @@ export const useChatScroll = (dependencies: any[]) => {
     const currentScroll = element.scrollTop;
     const isNearBottom = maxScroll - currentScroll < 150; // Within 150px of bottom
 
-    // Only auto-scroll if user is near bottom or content just appeared
-    if (isNearBottom || lastScrollHeightRef.current !== scrollHeight) {
+    // On mobile, always use 'auto' behavior for instant scrolling (no animation lag)
+    const effectiveBehavior = isMobileRef.current ? 'auto' : behavior;
+
+    // Force scroll if requested, or if near bottom, or if new content appeared
+    if (force || isNearBottom || lastScrollHeightRef.current !== scrollHeight) {
       element.scrollTo({
         top: maxScroll,
-        behavior: behavior
+        behavior: effectiveBehavior
       });
       lastScrollHeightRef.current = scrollHeight;
     }
@@ -39,7 +49,7 @@ export const useChatScroll = (dependencies: any[]) => {
 
   // Strategy 1: Synchronous scroll with useLayoutEffect (runs before browser paint)
   useLayoutEffect(() => {
-    scrollToBottom('auto'); // Use instant scroll for layout effect
+    scrollToBottom('auto', true); // Force scroll on layout
   }, dependencies);
 
   // Strategy 2: Async scroll with multiple requestAnimationFrame
@@ -54,6 +64,18 @@ export const useChatScroll = (dependencies: any[]) => {
         });
       });
     });
+  }, dependencies);
+
+  // Strategy 2.5: Mobile-specific delayed scroll (for keyboard animation)
+  useEffect(() => {
+    if (isMobileRef.current) {
+      // Mobile keyboards take time to animate, add extra delay
+      const timer = setTimeout(() => {
+        scrollToBottom('auto', true);
+      }, 150);
+      
+      return () => clearTimeout(timer);
+    }
   }, dependencies);
 
   // Strategy 3: MutationObserver to watch for DOM changes
@@ -121,11 +143,65 @@ export const useChatScroll = (dependencies: any[]) => {
     };
 
     element.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Also listen for touch events on mobile
+    if (isMobileRef.current) {
+      element.addEventListener('touchstart', () => {
+        isUserScrollingRef.current = true;
+      }, { passive: true });
+      
+      element.addEventListener('touchend', handleScroll, { passive: true });
+    }
 
     return () => {
       element.removeEventListener('scroll', handleScroll);
+      if (isMobileRef.current) {
+        element.removeEventListener('touchstart', handleScroll);
+        element.removeEventListener('touchend', handleScroll);
+      }
     };
   }, []);
+
+  // Strategy 6: Mobile keyboard detection using visualViewport API
+  useEffect(() => {
+    if (!isMobileRef.current || typeof window === 'undefined') return;
+    
+    // Use visualViewport API to detect keyboard open/close
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleViewportResize = () => {
+      // When keyboard opens, viewport height shrinks
+      // Scroll after a brief delay to let the browser settle
+      setTimeout(() => {
+        scrollToBottom('auto', true);
+      }, 100);
+    };
+
+    viewport.addEventListener('resize', handleViewportResize);
+    
+    return () => {
+      viewport.removeEventListener('resize', handleViewportResize);
+    };
+  }, [scrollToBottom]);
+
+  // Strategy 7: Focus event handling (when input is focused, keyboard opens)
+  useEffect(() => {
+    if (!isMobileRef.current) return;
+
+    const handleFocusIn = () => {
+      // Input focused, keyboard will open
+      setTimeout(() => {
+        scrollToBottom('auto', true);
+      }, 300); // Wait for keyboard animation
+    };
+
+    window.addEventListener('focusin', handleFocusIn);
+    
+    return () => {
+      window.removeEventListener('focusin', handleFocusIn);
+    };
+  }, [scrollToBottom]);
 
   return { scrollRef, scrollToBottom };
 };
