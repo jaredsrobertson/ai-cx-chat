@@ -84,7 +84,7 @@ const ChatMessages = ({
   isTyping, 
   lastBotMessage, 
   handleSendMessage, 
-  scrollRef,
+  scrollRef 
 }: ChatMessagesProps) => {
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
@@ -94,7 +94,7 @@ const ChatMessages = ({
       className="p-4"
       style={{ 
         flex: '1 1 0%', // Explicit flex shorthand
-        overflowY: 'auto',
+        overflowY: 'scroll',
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain',
@@ -112,7 +112,8 @@ const ChatMessages = ({
           disabled={isTyping} 
         />
       )}
-      
+      {/* Bottom padding */}
+      <div style={{ height: '20px' }} />
     </div>
   );
 };
