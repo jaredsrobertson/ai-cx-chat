@@ -77,7 +77,6 @@ interface ChatMessagesProps {
   lastBotMessage: any;
   handleSendMessage: (text: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  sentinelRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const ChatMessages = ({ 
@@ -85,19 +84,17 @@ const ChatMessages = ({
   isTyping, 
   lastBotMessage, 
   handleSendMessage, 
-  scrollRef,
-  sentinelRef
+  scrollRef 
 }: ChatMessagesProps) => {
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
   return (
     <div 
       ref={scrollRef} 
-      className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth"
+      className="flex-1 overflow-y-auto overscroll-contain p-4"
       style={{ 
         WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain',
-        scrollBehavior: 'smooth'
+        overscrollBehavior: 'contain'
       }}
     >
       {messages.map((message, index) => (
@@ -111,8 +108,8 @@ const ChatMessages = ({
           disabled={isTyping} 
         />
       )}
-      {/* Sentinel element - scroll target to ensure content is visible above keyboard */}
-      <div ref={sentinelRef} style={{ height: '1px', width: '100%' }} />
+      {/* Bottom padding to ensure last message is visible above keyboard */}
+      <div style={{ height: '20px' }} />
     </div>
   );
 };
@@ -190,11 +187,14 @@ export default function ChatWidget() {
   
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Use the robust chat scroll hook
-  const { scrollRef, sentinelRef, scrollToBottom } = useChatScroll([
+  // Get last bot message for quick replies
+  const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
+
+  // Use the simple scroll hook - it handles everything
+  const { scrollRef, scrollToBottom } = useChatScroll([
     messages.length,
     isTyping,
-    messages[messages.length - 1]?.quickReplies,
+    lastBotMessage?.quickReplies?.length,
   ]);
 
   // Animation Sequence on Mount
@@ -259,23 +259,21 @@ export default function ChatWidget() {
     // Clear input immediately for better UX
     setInput('');
     
-    // UX IMPROVEMENT: Explicitly focus the input back
+    // Focus input back
     if (inputRef.current) {
       inputRef.current.focus();
     }
 
-    // Trigger immediate forced scroll for user message
-    scrollToBottom('auto', true);
+    // Scroll immediately when user sends
+    scrollToBottom();
 
     await sendMessage(text);
     
-    // Mobile: Multiple aggressive scrolls to handle keyboard animation
+    // Extra scroll after send on mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      [150, 300, 500, 700].forEach(delay => {
-        setTimeout(() => {
-          scrollToBottom('auto', true);
-        }, delay);
-      });
+      setTimeout(scrollToBottom, 200);
+      setTimeout(scrollToBottom, 400);
+      setTimeout(scrollToBottom, 600);
     }
   };
 
@@ -300,8 +298,6 @@ export default function ChatWidget() {
     console.log('Retrying message with authenticated session:', messageToRetry.substring(0, 50));
     await sendMessage(messageToRetry, true);
   };
-
-  const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
 
   return (
     <>
@@ -353,14 +349,13 @@ export default function ChatWidget() {
               <ChatStatus isAuthenticated={isAuthenticated} />
             </div>
 
-            {/* Messages - scrollRef is now managed by useChatScroll */}
+            {/* Messages */}
             <ChatMessages 
               messages={messages} 
               isTyping={isTyping} 
               lastBotMessage={lastBotMessage} 
               handleSendMessage={handleSendMessage} 
               scrollRef={scrollRef}
-              sentinelRef={sentinelRef}
             />
 
             {/* Input */}
@@ -389,14 +384,13 @@ export default function ChatWidget() {
                 <ChatStatus isAuthenticated={isAuthenticated} />
               </div>
 
-              {/* Messages - scrollRef is now managed by useChatScroll */}
+              {/* Messages */}
               <ChatMessages 
                 messages={messages} 
                 isTyping={isTyping} 
                 lastBotMessage={lastBotMessage} 
                 handleSendMessage={handleSendMessage} 
                 scrollRef={scrollRef}
-                sentinelRef={sentinelRef}
               />
 
               {/* Input */}
