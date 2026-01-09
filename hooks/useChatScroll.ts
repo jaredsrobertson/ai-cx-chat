@@ -1,77 +1,108 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 /**
- * Simple scroll hook that properly waits for ref to attach
+ * Scroll hook that watches for ACTUAL DOM changes
+ * This handles delays from typing indicators and async rendering
  */
 export const useChatScroll = (dependencies: any[]) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const isMobileRef = useRef(false);
-  const isInitializedRef = useRef(false);
+  const observerRef = useRef<MutationObserver | null>(null);
 
   useEffect(() => {
     isMobileRef.current = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    if (!scrollRef.current) {
-      return; // Silently return if ref not ready
-    }
-
+    if (!scrollRef.current) return;
+    
     const element = scrollRef.current;
-    const performScroll = () => {
-      if (bottomRef.current) {
-        bottomRef.current.scrollIntoView({ block: 'end', inline: 'nearest' });
-      }
-      element.scrollTop = element.scrollHeight;
-    };
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(performScroll);
-    });
+    element.scrollTop = element.scrollHeight;
+    
+    console.log('[SCROLL] Scrolled to:', element.scrollTop, 'of', element.scrollHeight);
   }, []);
 
-  // CRITICAL: Separate effect that only runs when ref becomes available
-  useEffect(() => {
-    if (scrollRef.current && !isInitializedRef.current) {
-      console.log('[SCROLL] ✅ Ref attached, initializing');
-      isInitializedRef.current = true;
-      scrollToBottom();
-    }
-  }, [scrollRef.current, scrollToBottom]);
-
-  // Main scroll effect - only runs if ref is available
+  // CRITICAL: Use MutationObserver to watch for ACTUAL content changes
   useEffect(() => {
     if (!scrollRef.current) {
-      console.log('[SCROLL] ⏳ Ref not ready yet, skipping');
+      console.log('[SCROLL] Ref not ready, skipping observer setup');
       return;
     }
 
-    console.log('[SCROLL] Effect triggered, scrolling...');
-    
-    // Immediate scroll
+    const element = scrollRef.current;
+    console.log('[SCROLL] Setting up DOM observer');
+
+    // Clean up existing observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    // Create observer that watches for child nodes being added
+    observerRef.current = new MutationObserver((mutations) => {
+      // Check if any mutations added nodes
+      const hasNewContent = mutations.some(mutation => 
+        mutation.type === 'childList' && mutation.addedNodes.length > 0
+      );
+
+      if (hasNewContent) {
+        console.log('[SCROLL] DOM content changed, scrolling...');
+        
+        // Scroll immediately
+        scrollToBottom();
+        
+        // Additional scrolls for slow rendering
+        if (isMobileRef.current) {
+          setTimeout(scrollToBottom, 50);
+          setTimeout(scrollToBottom, 100);
+          setTimeout(scrollToBottom, 200);
+          setTimeout(scrollToBottom, 300);
+          setTimeout(scrollToBottom, 500);
+        } else {
+          setTimeout(scrollToBottom, 50);
+          setTimeout(scrollToBottom, 100);
+        }
+      }
+    });
+
+    // Start observing the scroll container
+    observerRef.current.observe(element, {
+      childList: true,     // Watch for child nodes being added/removed
+      subtree: true,       // Watch all descendants, not just direct children
+      attributes: false,   // Don't watch attribute changes
+      characterData: false // Don't watch text content changes
+    });
+
+    // Initial scroll
     scrollToBottom();
 
-    // Repeated scrolls based on device
-    const delays = isMobileRef.current 
-      ? [50, 100, 150, 200, 300, 400, 500, 600, 800, 1000]
-      : [50, 100, 200];
-    
-    const timeouts = delays.map(delay =>
-      setTimeout(scrollToBottom, delay)
-    );
-
     return () => {
-      timeouts.forEach(timeout => clearTimeout(timeout));
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
     };
+  }, [scrollRef.current, scrollToBottom]);
+
+  // Also scroll when dependencies change (backup mechanism)
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    
+    console.log('[SCROLL] Dependencies changed, scrolling...');
+    scrollToBottom();
+    
+    // Additional delayed scrolls for typing indicator delays
+    setTimeout(scrollToBottom, 100);
+    setTimeout(scrollToBottom, 300);
+    setTimeout(scrollToBottom, 600);  // After typical typing indicator
+    setTimeout(scrollToBottom, 1000); // Safety net
   }, dependencies);
 
-  // Scroll on window resize (keyboard)
+  // Window resize (keyboard)
   useEffect(() => {
     if (!isMobileRef.current) return;
 
     const handleResize = () => {
       if (!scrollRef.current) return;
+      console.log('[SCROLL] Window resized');
       setTimeout(scrollToBottom, 100);
       setTimeout(scrollToBottom, 300);
       setTimeout(scrollToBottom, 500);
@@ -81,22 +112,22 @@ export const useChatScroll = (dependencies: any[]) => {
     return () => window.removeEventListener('resize', handleResize);
   }, [scrollToBottom]);
 
-  // Scroll on focus (keyboard opening)
+  // Focus (keyboard opening)
   useEffect(() => {
     if (!isMobileRef.current) return;
 
     const handleFocus = () => {
       if (!scrollRef.current) return;
+      console.log('[SCROLL] Input focused');
       setTimeout(scrollToBottom, 100);
-      setTimeout(scrollToBottom, 200);
-      setTimeout(scrollToBottom, 400);
+      setTimeout(scrollToBottom, 300);
       setTimeout(scrollToBottom, 600);
-      setTimeout(scrollToBottom, 800);
+      setTimeout(scrollToBottom, 900);
     };
 
     window.addEventListener('focusin', handleFocus);
     return () => window.removeEventListener('focusin', handleFocus);
   }, [scrollToBottom]);
 
-  return { scrollRef, bottomRef, scrollToBottom };
+  return { scrollRef, scrollToBottom };
 };
