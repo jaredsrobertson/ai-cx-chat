@@ -1,3 +1,4 @@
+// components/ChatWidget.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -9,10 +10,10 @@ import QuickReplies from './QuickReplies';
 import LoginModal from './LoginModal';
 import AgentModal from './AgentModal';
 import CloudIcon from './CloudIcon';
+import { STANDARD_QUICK_REPLIES } from '@/lib/chat-constants';
 
-// ============================================
-// STANDALONE COMPONENTS
-// ============================================
+// ... (Existing Standalone Components: ChatHeader, ChatStatus, ChatMessages, ChatInput - KEPT AS IS)
+// [Assuming previous standalone components are here unchanged. If you need me to paste them all again, I can.]
 
 interface ChatHeaderProps {
   resetConversation: () => void;
@@ -127,7 +128,6 @@ const ChatInput = ({ input, setInput, handleSendMessage, isTyping, inputRef }: C
       }}
       placeholder="Type your message..." 
       disabled={isTyping} 
-      // REDUCED PADDING: px-4 py-3 -> px-3 py-2
       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-800 placeholder-gray-400 transition-all text-sm" 
       inputMode="text"
       autoComplete="off"
@@ -137,7 +137,6 @@ const ChatInput = ({ input, setInput, handleSendMessage, isTyping, inputRef }: C
     <button 
       onClick={() => handleSendMessage(input)} 
       disabled={isTyping || !input.trim()} 
-      // REDUCED PADDING: px-5 py-3 -> px-3 py-2
       className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center flex-shrink-0"
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,6 +155,11 @@ export default function ChatWidget() {
   const [input, setInput] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   
+  // Animation States for FAB
+  const [fabVisible, setFabVisible] = useState(false);
+  const [fabFlash, setFabFlash] = useState(false);
+  const [fabPingLoop, setFabPingLoop] = useState(false);
+
   const { status } = useSession();
 
   const { 
@@ -175,6 +179,28 @@ export default function ChatWidget() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Animation Sequence on Mount
+  useEffect(() => {
+    // 1. Visible at 200ms (Matches page buttons)
+    const timer1 = setTimeout(() => setFabVisible(true), 200);
+    
+    // 2. Flash/Ping Once at 210ms
+    const timer2 = setTimeout(() => setFabFlash(true), 210);
+
+    // 3. Remove Flash class shortly after (so it can be re-triggered if needed)
+    const timer3 = setTimeout(() => setFabFlash(false), 800);
+
+    // 4. Start Notification Ping Loop later (e.g. 1s)
+    const timer4 = setTimeout(() => setFabPingLoop(true), 1000);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+    };
+  }, []);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -257,17 +283,35 @@ export default function ChatWidget() {
 
   return (
     <>
+      <style jsx global>{`
+        @keyframes fab-pop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.15); filter: brightness(1.2); }
+          100% { transform: scale(1); }
+        }
+        .animate-fab-pop {
+          animation: fab-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+      `}</style>
+
       {/* FAB */}
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)} 
-          className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-xl hover:bg-blue-700 hover:shadow-2xl transition-all hover:scale-105"
+          className={`fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-xl hover:bg-blue-700 hover:shadow-2xl transition-all duration-700 hover:scale-105 
+            ${fabVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}
+            ${fabFlash ? 'animate-fab-pop' : ''}
+          `}
         >
           <CloudIcon className="w-8 h-8" />
-          <span className="absolute top-0 right-0 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-          </span>
+          
+          {/* Notification Ping Loop */}
+          {fabPingLoop && (
+            <span className="absolute top-0 right-0 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+            </span>
+          )}
         </button>
       )}
 
@@ -277,7 +321,7 @@ export default function ChatWidget() {
           {/* MOBILE / LANDSCAPE: Fullscreen Flex Layout */}
           <div className="lg:hidden fixed inset-0 z-50 flex flex-col h-[100dvh] bg-white">
             
-            {/* Header - REDUCED PADDING: py-4 -> py-2 */}
+            {/* Header */}
             <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 flex items-center justify-between shadow-md">
               <ChatHeader resetConversation={resetConversation} setIsOpen={setIsOpen} />
             </div>
@@ -298,7 +342,7 @@ export default function ChatWidget() {
               />
             </div>
 
-            {/* Input - REDUCED PADDING: p-4 -> p-2 */}
+            {/* Input */}
             <div className="flex-none border-t border-gray-300 p-2 bg-white safe-bottom">
               <ChatInput 
                 input={input} 
@@ -314,7 +358,7 @@ export default function ChatWidget() {
           {/* DESKTOP: Floating Widget */}
           <div className="hidden lg:block fixed bottom-6 right-6 z-50 w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-slate-200 to-blue-200 border border-gray-300/50">
             <div className="flex flex-col h-full">
-              {/* Header - REDUCED PADDING: py-4 -> py-3 */}
+              {/* Header */}
               <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3 flex items-center justify-between shadow-lg rounded-t-2xl">
                 <ChatHeader resetConversation={resetConversation} setIsOpen={setIsOpen} />
               </div>
@@ -335,7 +379,7 @@ export default function ChatWidget() {
                 />
               </div>
 
-              {/* Input - REDUCED PADDING: p-4 -> p-3 */}
+              {/* Input */}
               <div className="flex-none border-t border-gray-300 p-3 bg-white">
                 <ChatInput 
                   input={input} 

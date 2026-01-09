@@ -2,6 +2,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 import CloudIcon from '@/components/CloudIcon';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
@@ -9,12 +10,34 @@ import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
 
 export default function Home() {
-  // Use the custom hook to handle scroll animations
+  // Use the custom hook to handle scroll animations for sections further down
   useScrollAnimation();
 
+  // Animation Sequence State
+  // 0: Initial (Hidden)
+  // 1: Hero Fade In (T+100ms)
+  // 2: Buttons & FAB Fade In (T+200ms)
+  // 3: Flash & Ping Trigger (T+210ms)
+  const [animStage, setAnimStage] = useState(0);
+
+  useEffect(() => {
+    // Stage 1: Hero Fade In (100ms)
+    const timer1 = setTimeout(() => setAnimStage(1), 100);
+    
+    // Stage 2: Buttons Fade In (200ms)
+    const timer2 = setTimeout(() => setAnimStage(2), 200);
+
+    // Stage 3: Flash Trigger (210ms - 10ms after buttons appear)
+    const timer3 = setTimeout(() => setAnimStage(3), 210);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, []);
+
   const openChatWidget = () => {
-    // In a production app, you might use a context or event bus.
-    // For this demo, selecting the button by class is sufficient.
     const chatButton = document.querySelector('[class*="fixed bottom-6 right-6"]') as HTMLButtonElement;
     if (chatButton) {
       chatButton.click();
@@ -23,6 +46,16 @@ export default function Home() {
 
   return (
     <>
+      <style jsx global>{`
+        @keyframes flash-highlight {
+          0%, 100% { background-color: rgb(37 99 235); transform: scale(1); }
+          50% { background-color: rgb(96 165 250); transform: scale(1.05); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        }
+        .animate-flash-once {
+          animation: flash-highlight 0.4s ease-out forwards;
+        }
+      `}</style>
+
       {/* Fixed Background */}
       <div className="fixed inset-0 bg-gradient-to-b from-slate-200 to-blue-200 z-0" />
       
@@ -50,36 +83,40 @@ export default function Home() {
         {/* Hero Section */}
         <section className="min-h-screen flex items-center justify-center px-4">
           <div className="max-w-5xl mx-auto text-center py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-slate-700 mb-6 scroll-animate">
-              AI-Powered Customer Experience Demo
-            </h1>
-            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed scroll-animate">
-              This project demonstrates a production-ready conversational AI platform powered by Google Dialogflow. 
-              Built with Next.js, it showcases advanced features including intent recognition, entity extraction, 
-              webhook fulfillment, context management, and knowledge base integration for intelligent, dynamic conversations.
-            </p>
-            
-            {/* Key Features */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700 mb-8 scroll-animate">
-              <span className="flex items-center gap-2">
-                <CheckIcon /> Google Dialogflow CX
-              </span>
-              <span className="flex items-center gap-2">
-                <CheckIcon /> Webhook Fulfillment
-              </span>
-              <span className="flex items-center gap-2">
-                <CheckIcon /> Knowledge Base
-              </span>
-              <span className="flex items-center gap-2">
-                <CheckIcon /> Custom REST API
-              </span>
+            {/* Hero Text Container - Fades in at Stage 1 */}
+            <div className={`transition-opacity duration-700 ease-out ${animStage >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+              <h1 className="text-4xl md:text-6xl font-bold text-slate-700 mb-6">
+                AI-Powered Customer Experience Demo
+              </h1>
+              <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed">
+                This project demonstrates a production-ready conversational AI platform powered by Google Dialogflow. 
+                Built with Next.js, it showcases advanced features including intent recognition, entity extraction, 
+                webhook fulfillment, context management, and knowledge base integration for intelligent, dynamic conversations.
+              </p>
+              
+              {/* Key Features */}
+              <div className="flex flex-wrap items-center justify-center gap-4 text-sm md:text-base text-slate-700 mb-8">
+                <span className="flex items-center gap-2">
+                  <CheckIcon /> Google Dialogflow CX
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckIcon /> Webhook Fulfillment
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckIcon /> Knowledge Base
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckIcon /> Custom REST API
+                </span>
+              </div>
             </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 scroll-animate">
+            {/* CTA Buttons - Fades in at Stage 2 */}
+            <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 transition-opacity duration-700 ease-out ${animStage >= 2 ? 'opacity-100' : 'opacity-0'}`}>
               <button 
                 onClick={openChatWidget}
-                className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg">
+                // Applies 'animate-flash-once' only when Stage 3 is reached
+                className={`px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-lg ${animStage === 3 ? 'animate-flash-once' : ''}`}>
                 Launch Chat Demo
               </button>
               
