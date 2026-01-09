@@ -200,7 +200,7 @@ export default function ChatWidget() {
   // Get last bot message for quick replies
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
 
-  // Use the scroll hook - destructure bottomRef
+  // Use the scroll hook
   const { scrollRef, bottomRef, scrollToBottom } = useChatScroll([
     messages.length,
     isTyping,
@@ -272,14 +272,13 @@ export default function ChatWidget() {
       inputRef.current.focus();
     }
 
-    scrollToBottom();
+    scrollToBottom('smooth');
     await sendMessage(text);
     
-    // Extra scrolls on mobile
+    // Extra scrolls on mobile (use 'auto' for race-condition safe snapping)
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      setTimeout(scrollToBottom, 200);
-      setTimeout(scrollToBottom, 400);
-      setTimeout(scrollToBottom, 600);
+      setTimeout(() => scrollToBottom('auto'), 200);
+      setTimeout(() => scrollToBottom('auto'), 400);
     }
   };
 
@@ -290,18 +289,13 @@ export default function ChatWidget() {
   };
 
   const handleLoginSuccess = async () => {
-    console.log('Login success callback triggered');
     const messageToRetry = pendingMessage;
     
-    if (!messageToRetry) {
-      console.warn('No pending message to retry');
-      return;
-    }
+    if (!messageToRetry) return;
     
     setPendingMessage(null);
     setAuthRequired({ required: false, message: '' });
     
-    console.log('Retrying message with authenticated session:', messageToRetry.substring(0, 50));
     await sendMessage(messageToRetry, true);
   };
 
@@ -349,6 +343,7 @@ export default function ChatWidget() {
               zIndex: 50,
               display: 'flex',
               flexDirection: 'column',
+              // FIX #2: Use 100dvh to account for browser address bar on mobile
               height: '100dvh',
               maxHeight: '-webkit-fill-available'
             }}

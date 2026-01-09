@@ -14,10 +14,11 @@ export const useChatScroll = (dependencies: any[]) => {
     isMobileRef.current = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
   }, []);
 
-  const scrollToBottom = useCallback(() => {
+  // UPDATED: Accepts 'behavior' to toggle between smooth (for messages) and auto (for keyboard fixes)
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     // 1. Priority: Scroll the anchor into view (Most reliable for mobile/iOS)
     if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      bottomRef.current.scrollIntoView({ behavior, block: 'end' });
       return;
     }
     
@@ -30,86 +31,76 @@ export const useChatScroll = (dependencies: any[]) => {
 
   // CRITICAL: Use MutationObserver to watch for ACTUAL content changes
   useEffect(() => {
-    if (!scrollRef.current) {
-      return;
-    }
+    if (!scrollRef.current) return;
 
     const element = scrollRef.current;
 
-    // Clean up existing observer
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
+    if (observerRef.current) observerRef.current.disconnect();
 
-    // Create observer that watches for child nodes AND text changes
     observerRef.current = new MutationObserver((mutations) => {
-      // Check if any mutations added nodes OR changed text (streaming)
       const hasNewContent = mutations.some(mutation => 
         (mutation.type === 'childList' && mutation.addedNodes.length > 0) ||
-        (mutation.type === 'characterData') // Watch for text updates
+        (mutation.type === 'characterData')
       );
 
       if (hasNewContent) {
-        // Scroll immediately
-        scrollToBottom();
+        // New message arrives? SCROLL SMOOTHLY
+        scrollToBottom('smooth');
         
-        // Additional scrolls for slow rendering on mobile
+        // FIX #1: The "Race Condition"
+        // On mobile, force INSTANT ('auto') scrolls after short delays.
+        // This ensures if the keyboard is animating up, we snap to bottom
+        // instead of trying to animate simultaneously (which often fails).
         if (isMobileRef.current) {
-          setTimeout(scrollToBottom, 100);
-          setTimeout(scrollToBottom, 300);
-          setTimeout(scrollToBottom, 500);
+          setTimeout(() => scrollToBottom('auto'), 100);
+          setTimeout(() => scrollToBottom('auto'), 300);
+          setTimeout(() => scrollToBottom('auto'), 500);
         }
       }
     });
 
-    // Start observing the scroll container
     observerRef.current.observe(element, {
-      childList: true,     // Watch for child nodes being added/removed
-      subtree: true,       // Watch all descendants
-      attributes: false,   // Don't watch attribute changes
-      characterData: true  // Critical: Watch text content changes (AI streaming)
+      childList: true,
+      subtree: true,
+      attributes: false,
+      characterData: true 
     });
 
-    // Initial scroll
-    scrollToBottom();
+    scrollToBottom('auto'); // Initial load is instant
 
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
+    return () => observerRef.current?.disconnect();
   }, [scrollRef.current, scrollToBottom]);
 
-  // Also scroll when dependencies change (backup mechanism)
+  // Dependency change backup (e.g. typing indicator toggles)
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom('smooth');
     
-    // Additional delayed scrolls for typing indicator delays
-    setTimeout(scrollToBottom, 100);
-    setTimeout(scrollToBottom, 300);
-    setTimeout(scrollToBottom, 600);
+    // Safety nets for layout shifts
+    setTimeout(() => scrollToBottom('smooth'), 100);
+    setTimeout(() => scrollToBottom('smooth'), 400); 
   }, dependencies);
 
-  // Window resize (keyboard)
+  // Window resize (Software Keyboard opening/closing)
   useEffect(() => {
     if (!isMobileRef.current) return;
 
     const handleResize = () => {
-      setTimeout(scrollToBottom, 100);
-      setTimeout(scrollToBottom, 300);
+      // Keyboard movement is jerky; use 'auto' to snap to position immediately
+      setTimeout(() => scrollToBottom('auto'), 100);
+      setTimeout(() => scrollToBottom('auto'), 300);
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [scrollToBottom]);
 
-  // Focus (keyboard opening)
+  // Input Focus (Alternative keyboard trigger)
   useEffect(() => {
     if (!isMobileRef.current) return;
 
     const handleFocus = () => {
-      setTimeout(scrollToBottom, 100);
-      setTimeout(scrollToBottom, 300);
+      setTimeout(() => scrollToBottom('auto'), 100);
+      setTimeout(() => scrollToBottom('auto'), 300);
     };
 
     window.addEventListener('focusin', handleFocus);
