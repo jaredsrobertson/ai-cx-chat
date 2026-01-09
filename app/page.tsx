@@ -1,4 +1,3 @@
-// app/page.tsx
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -212,9 +211,21 @@ export default function Home() {
         {/* Tech Stack Section */}
         <section id="tech-stack" className="py-20">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-700 mb-12 scroll-animate">
+            <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-700 mb-8 scroll-animate">
               Technical Stack
             </h2>
+
+            {/* Architecture Evolution Note */}
+            <div className="max-w-4xl mx-auto mb-10 bg-blue-50/80 border border-blue-100 rounded-lg p-4 flex gap-3 scroll-animate">
+              <div className="flex-shrink-0">
+                <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="text-sm text-slate-600 leading-relaxed">
+                <span className="font-semibold text-slate-800">Architecture Evolution:</span> Previous versions of this application leveraged <strong>AWS Lex</strong> for conversational interfaces and <strong>AWS Kendra</strong> for enterprise search. The system has since been re-architected to utilize <strong>Google Dialogflow CX</strong>, which now handles both the NLU (replacing Lex) and Knowledge Base retrieval (replacing Kendra), offering a more cost-efficient unified solution.
+              </div>
+            </div>
             
             <div className="max-w-4xl mx-auto bg-white/80 backdrop-blur-sm rounded-lg p-8 scroll-animate text-center md:text-left">
               <div className="grid md:grid-cols-2 gap-8">
