@@ -1,29 +1,6 @@
 // lib/services/orchestrator-service.ts
 import { DialogflowService } from './dialogflow-service';
-
-// Standard Quick Replies - custom format for frontend (no emojis)
-const STANDARD_QRB = [
-  { display: 'Hours', payload: 'What are your hours?' },
-  { display: 'Locations', payload: 'Where are you located?' },
-  { display: 'Routing Number', payload: 'What is your routing number?' },
-  { display: 'Contact Support', payload: 'How do I contact support?' },
-  { display: 'Check Balance', payload: 'Check my balance' },
-  { display: 'Transfer Funds', payload: 'Transfer funds' },
-  { display: 'Transaction History', payload: 'Show my transaction history' },
-  { display: 'Talk to Agent', payload: 'Talk to agent' }
-];
-
-// Mapping from simple display text to custom QRB object
-const QRB_MAP: Record<string, { display: string; payload: string }> = {
-  'Hours': { display: 'Hours', payload: 'What are your hours?' },
-  'Locations': { display: 'Locations', payload: 'Where are you located?' },
-  'Routing Number': { display: 'Routing Number', payload: 'What is your routing number?' },
-  'Contact Support': { display: 'Contact Support', payload: 'How do I contact support?' },
-  'Check Balance': { display: 'Check Balance', payload: 'Check my balance' },
-  'Transfer Funds': { display: 'Transfer Funds', payload: 'Transfer funds' },
-  'Transaction History': { display: 'Transaction History', payload: 'Show my transaction history' },
-  'Talk to Agent': { display: 'Talk to Agent', payload: 'Talk to agent' }
-};
+import { STANDARD_QUICK_REPLIES, QUICK_REPLY_MAP } from '@/lib/chat-constants';
 
 // Convert simple string QRBs from Dialogflow to custom format for frontend
 function convertToCustomQRBs(simpleQRBs: any[]): any[] {
@@ -32,9 +9,9 @@ function convertToCustomQRBs(simpleQRBs: any[]): any[] {
     if (typeof qrb === 'object' && qrb.display && qrb.payload) {
       return qrb;
     }
-    // If simple string, convert to custom
+    // If simple string, convert to custom using the centralized MAP
     if (typeof qrb === 'string') {
-      return QRB_MAP[qrb] || { display: qrb, payload: qrb };
+      return QUICK_REPLY_MAP[qrb] || { display: qrb, payload: qrb };
     }
     return qrb;
   });
@@ -59,7 +36,8 @@ export const OrchestratorService = {
     if (dfResult.quickReplies && dfResult.quickReplies.length > 0) {
       quickReplies = convertToCustomQRBs(dfResult.quickReplies);
     } else {
-      quickReplies = STANDARD_QRB;
+      // Use the centralized STANDARD list as fallback
+      quickReplies = STANDARD_QUICK_REPLIES;
     }
 
     // Return a standardized response format for the API

@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useChatStore } from '@/store/chatStore';
 import { signOut } from 'next-auth/react';
+import { STANDARD_QUICK_REPLIES } from '@/lib/chat-constants';
 
 export const useChat = () => {
   const { 
@@ -25,16 +26,8 @@ export const useChat = () => {
         text: 'Welcome to SecureBank! I can help with hours, locations, account balances, transfers, and more. What can I help you with?',
         isUser: false,
         timestamp: new Date(),
-        quickReplies: [
-          { display: 'Hours', payload: 'What are your hours?' },
-          { display: 'Locations', payload: 'Where are you located?' },
-          { display: 'Routing Number', payload: 'What is your routing number?' },
-          { display: 'Contact Support', payload: 'How do I contact support?' },
-          { display: 'Check Balance', payload: 'Check my balance' },
-          { display: 'Transfer Funds', payload: 'Transfer funds' },
-          { display: 'Transaction History', payload: 'Show my transaction history' },
-          { display: 'Talk to Agent', payload: 'Talk to agent' }
-        ]
+        // Use the centralized list so it matches the backend perfectly
+        quickReplies: STANDARD_QUICK_REPLIES
       });
       setTyping(false);
     }, 800);
