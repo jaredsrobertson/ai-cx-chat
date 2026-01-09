@@ -12,8 +12,9 @@ import AgentModal from './AgentModal';
 import CloudIcon from './CloudIcon';
 import { STANDARD_QUICK_REPLIES } from '@/lib/chat-constants';
 
-// ... (Existing Standalone Components: ChatHeader, ChatStatus, ChatMessages, ChatInput - KEPT AS IS)
-// [Assuming previous standalone components are here unchanged. If you need me to paste them all again, I can.]
+// ============================================
+// STANDALONE COMPONENTS
+// ============================================
 
 interface ChatHeaderProps {
   resetConversation: () => void;
@@ -182,17 +183,17 @@ export default function ChatWidget() {
 
   // Animation Sequence on Mount
   useEffect(() => {
-    // 1. Visible at 200ms (Matches page buttons)
-    const timer1 = setTimeout(() => setFabVisible(true), 200);
+    // 1. Visible at 1300ms (Matches page buttons appearance)
+    const timer1 = setTimeout(() => setFabVisible(true), 1300);
     
-    // 2. Flash/Ping Once at 210ms
-    const timer2 = setTimeout(() => setFabFlash(true), 210);
+    // 2. Flash/Ping Once at 2300ms (Matches "Try Chat" button flash)
+    const timer2 = setTimeout(() => setFabFlash(true), 2300);
 
-    // 3. Remove Flash class shortly after (so it can be re-triggered if needed)
-    const timer3 = setTimeout(() => setFabFlash(false), 800);
+    // 3. Remove Flash class at 3000ms
+    const timer3 = setTimeout(() => setFabFlash(false), 3000);
 
-    // 4. Start Notification Ping Loop later (e.g. 1s)
-    const timer4 = setTimeout(() => setFabPingLoop(true), 1000);
+    // 4. Start Notification Ping Loop at 3500ms
+    const timer4 = setTimeout(() => setFabPingLoop(true), 3500);
 
     return () => {
       clearTimeout(timer1);
@@ -290,7 +291,7 @@ export default function ChatWidget() {
           100% { transform: scale(1); }
         }
         .animate-fab-pop {
-          animation: fab-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          animation: fab-pop 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
       `}</style>
 
@@ -298,7 +299,7 @@ export default function ChatWidget() {
       {!isOpen && (
         <button 
           onClick={() => setIsOpen(true)} 
-          className={`fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-xl hover:bg-blue-700 hover:shadow-2xl transition-all duration-700 hover:scale-105 
+          className={`fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full p-5 shadow-xl hover:bg-blue-700 hover:shadow-2xl transition-all duration-1000 ease-out hover:scale-105 
             ${fabVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}
             ${fabFlash ? 'animate-fab-pop' : ''}
           `}

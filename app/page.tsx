@@ -6,29 +6,27 @@ import { useState, useEffect } from 'react';
 import CloudIcon from '@/components/CloudIcon';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
-// Dynamically import ChatWidget to avoid SSR issues
 const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
 
 export default function Home() {
-  // Use the custom hook to handle scroll animations for sections further down
   useScrollAnimation();
 
   // Animation Sequence State
   // 0: Initial (Hidden)
-  // 1: Hero Fade In (T+100ms)
-  // 2: Buttons & FAB Fade In (T+200ms)
-  // 3: Flash & Ping Trigger (T+210ms)
+  // 1: Hero Fade In (Starts at 300ms)
+  // 2: Buttons & FAB Fade In (Starts at 1300ms)
+  // 3: Flash & Ping Trigger (Starts at 2300ms)
   const [animStage, setAnimStage] = useState(0);
 
   useEffect(() => {
-    // Stage 1: Hero Fade In (100ms)
-    const timer1 = setTimeout(() => setAnimStage(1), 100);
+    // Stage 1: Hero Fade In - Give the browser a moment to render first
+    const timer1 = setTimeout(() => setAnimStage(1), 300);
     
-    // Stage 2: Buttons Fade In (200ms)
-    const timer2 = setTimeout(() => setAnimStage(2), 200);
+    // Stage 2: Buttons Fade In - 1 full second after Hero starts
+    const timer2 = setTimeout(() => setAnimStage(2), 1300);
 
-    // Stage 3: Flash Trigger (210ms - 10ms after buttons appear)
-    const timer3 = setTimeout(() => setAnimStage(3), 210);
+    // Stage 3: Flash Trigger - 1 full second after Buttons start
+    const timer3 = setTimeout(() => setAnimStage(3), 2300);
 
     return () => {
       clearTimeout(timer1);
@@ -48,11 +46,13 @@ export default function Home() {
     <>
       <style jsx global>{`
         @keyframes flash-highlight {
-          0%, 100% { background-color: rgb(37 99 235); transform: scale(1); }
-          50% { background-color: rgb(96 165 250); transform: scale(1.05); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+          0% { background-color: rgb(37 99 235); transform: scale(1); }
+          50% { background-color: rgb(96 165 250); transform: scale(1.05); box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+          100% { background-color: rgb(37 99 235); transform: scale(1); }
         }
+        /* Slower flash animation (0.4s -> 0.7s) to be more noticeable but less jarring */
         .animate-flash-once {
-          animation: flash-highlight 0.4s ease-out forwards;
+          animation: flash-highlight 0.7s ease-in-out forwards;
         }
       `}</style>
 
@@ -83,8 +83,8 @@ export default function Home() {
         {/* Hero Section */}
         <section className="min-h-screen flex items-center justify-center px-4">
           <div className="max-w-5xl mx-auto text-center py-20">
-            {/* Hero Text Container - Fades in at Stage 1 */}
-            <div className={`transition-opacity duration-700 ease-out ${animStage >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+            {/* Hero Text Container - Slower duration-1000 for elegance */}
+            <div className={`transition-all duration-1000 ease-out transform ${animStage >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <h1 className="text-4xl md:text-6xl font-bold text-slate-700 mb-6">
                 AI-Powered Customer Experience Demo
               </h1>
@@ -111,8 +111,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* CTA Buttons - Fades in at Stage 2 */}
-            <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 transition-opacity duration-700 ease-out ${animStage >= 2 ? 'opacity-100' : 'opacity-0'}`}>
+            {/* CTA Buttons - Slower duration-1000, delayed by state */}
+            <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 transition-all duration-1000 ease-out transform ${animStage >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <button 
                 onClick={openChatWidget}
                 // Applies 'animate-flash-once' only when Stage 3 is reached
