@@ -6,6 +6,7 @@ import { useEffect, useRef, useCallback } from 'react';
  */
 export const useChatScroll = (dependencies: any[]) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null); // NEW: Anchor ref
   const isMobileRef = useRef(false);
   const observerRef = useRef<MutationObserver | null>(null);
 
@@ -14,12 +15,19 @@ export const useChatScroll = (dependencies: any[]) => {
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    if (!scrollRef.current) return;
+    // 1. Priority: Scroll the anchor into view (Most reliable for mobile/iOS)
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      // console.log('[SCROLL] Scrolled anchor into view');
+      return;
+    }
     
-    const element = scrollRef.current;
-    element.scrollTop = element.scrollHeight;
-    
-    console.log('[SCROLL] Scrolled to:', element.scrollTop, 'of', element.scrollHeight);
+    // 2. Fallback: Scroll container (Desktop standard)
+    if (scrollRef.current) {
+      const element = scrollRef.current;
+      element.scrollTop = element.scrollHeight;
+      // console.log('[SCROLL] Scrolled scrollTop to:', element.scrollTop);
+    }
   }, []);
 
   // CRITICAL: Use MutationObserver to watch for ACTUAL content changes
@@ -37,11 +45,12 @@ export const useChatScroll = (dependencies: any[]) => {
       observerRef.current.disconnect();
     }
 
-    // Create observer that watches for child nodes being added
+    // Create observer that watches for child nodes AND text changes
     observerRef.current = new MutationObserver((mutations) => {
-      // Check if any mutations added nodes
+      // Check if any mutations added nodes OR changed text (streaming)
       const hasNewContent = mutations.some(mutation => 
-        mutation.type === 'childList' && mutation.addedNodes.length > 0
+        (mutation.type === 'childList' && mutation.addedNodes.length > 0) ||
+        (mutation.type === 'characterData') // NEW: Watch for text updates
       );
 
       if (hasNewContent) {
@@ -67,9 +76,9 @@ export const useChatScroll = (dependencies: any[]) => {
     // Start observing the scroll container
     observerRef.current.observe(element, {
       childList: true,     // Watch for child nodes being added/removed
-      subtree: true,       // Watch all descendants, not just direct children
+      subtree: true,       // Watch all descendants
       attributes: false,   // Don't watch attribute changes
-      characterData: false // Don't watch text content changes
+      characterData: true  // NEW: Watch text content changes (critical for AI streaming)
     });
 
     // Initial scroll
@@ -84,7 +93,8 @@ export const useChatScroll = (dependencies: any[]) => {
 
   // Also scroll when dependencies change (backup mechanism)
   useEffect(() => {
-    if (!scrollRef.current) return;
+    // We can rely on bottomRef here too if it exists
+    if (!scrollRef.current && !bottomRef.current) return;
     
     console.log('[SCROLL] Dependencies changed, scrolling...');
     scrollToBottom();
@@ -129,5 +139,5 @@ export const useChatScroll = (dependencies: any[]) => {
     return () => window.removeEventListener('focusin', handleFocus);
   }, [scrollToBottom]);
 
-  return { scrollRef, scrollToBottom };
+  return { scrollRef, bottomRef, scrollToBottom };
 };

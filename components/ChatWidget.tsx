@@ -77,6 +77,7 @@ interface ChatMessagesProps {
   lastBotMessage: any;
   handleSendMessage: (text: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  bottomRef: React.RefObject<HTMLDivElement | null>; // NEW: Added bottomRef prop
 }
 
 const ChatMessages = ({ 
@@ -84,7 +85,8 @@ const ChatMessages = ({
   isTyping, 
   lastBotMessage, 
   handleSendMessage, 
-  scrollRef 
+  scrollRef,
+  bottomRef 
 }: ChatMessagesProps) => {
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
@@ -112,6 +114,10 @@ const ChatMessages = ({
           disabled={isTyping} 
         />
       )}
+      
+      {/* NEW: Anchor element for scrolling */}
+      <div ref={bottomRef} className="h-px w-full" />
+      
       {/* Bottom padding */}
       <div style={{ height: '20px' }} />
     </div>
@@ -194,8 +200,8 @@ export default function ChatWidget() {
   // Get last bot message for quick replies
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
 
-  // Use the scroll hook
-  const { scrollRef, scrollToBottom } = useChatScroll([
+  // Use the scroll hook - NOW destructuring bottomRef
+  const { scrollRef, bottomRef, scrollToBottom } = useChatScroll([
     messages.length,
     isTyping,
     lastBotMessage?.quickReplies?.length || 0,
@@ -370,6 +376,7 @@ export default function ChatWidget() {
               lastBotMessage={lastBotMessage} 
               handleSendMessage={handleSendMessage} 
               scrollRef={scrollRef}
+              bottomRef={bottomRef} // Pass new prop
             />
 
             {/* Input - Fixed height */}
@@ -404,6 +411,7 @@ export default function ChatWidget() {
                 lastBotMessage={lastBotMessage} 
                 handleSendMessage={handleSendMessage} 
                 scrollRef={scrollRef}
+                bottomRef={bottomRef} // Pass new prop
               />
 
               <div className="flex-none border-t border-gray-300 p-3 bg-white">
