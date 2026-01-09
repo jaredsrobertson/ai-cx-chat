@@ -5,6 +5,7 @@ import { useEffect, useRef, useCallback } from 'react';
  */
 export const useChatScroll = (dependencies: any[]) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const isMobileRef = useRef(false);
   const isInitializedRef = useRef(false);
 
@@ -18,7 +19,16 @@ export const useChatScroll = (dependencies: any[]) => {
     }
 
     const element = scrollRef.current;
-    element.scrollTop = element.scrollHeight;
+    const performScroll = () => {
+      if (bottomRef.current) {
+        bottomRef.current.scrollIntoView({ block: 'end', inline: 'nearest' });
+      }
+      element.scrollTop = element.scrollHeight;
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(performScroll);
+    });
   }, []);
 
   // CRITICAL: Separate effect that only runs when ref becomes available
@@ -88,5 +98,5 @@ export const useChatScroll = (dependencies: any[]) => {
     return () => window.removeEventListener('focusin', handleFocus);
   }, [scrollToBottom]);
 
-  return { scrollRef, scrollToBottom };
+  return { scrollRef, bottomRef, scrollToBottom };
 };
