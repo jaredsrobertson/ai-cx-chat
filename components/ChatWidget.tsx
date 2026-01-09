@@ -91,10 +91,14 @@ const ChatMessages = ({
   return (
     <div 
       ref={scrollRef} 
-      className="flex-1 overflow-y-auto overscroll-contain p-4"
+      className="p-4"
       style={{ 
+        flex: '1 1 0%', // Explicit flex shorthand
+        overflowY: 'auto',
+        overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain'
+        overscrollBehavior: 'contain',
+        minHeight: 0 // Critical for flex child with overflow
       }}
     >
       {messages.map((message, index) => (
@@ -108,7 +112,7 @@ const ChatMessages = ({
           disabled={isTyping} 
         />
       )}
-      {/* Bottom padding to ensure last message is visible above keyboard */}
+      {/* Bottom padding */}
       <div style={{ height: '20px' }} />
     </div>
   );
@@ -190,11 +194,11 @@ export default function ChatWidget() {
   // Get last bot message for quick replies
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
 
-  // Use the simple scroll hook - it handles everything
+  // Use the scroll hook
   const { scrollRef, scrollToBottom } = useChatScroll([
     messages.length,
     isTyping,
-    lastBotMessage?.quickReplies?.length,
+    lastBotMessage?.quickReplies?.length || 0,
   ]);
 
   // Animation Sequence on Mount
@@ -256,20 +260,16 @@ export default function ChatWidget() {
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
     
-    // Clear input immediately for better UX
     setInput('');
     
-    // Focus input back
     if (inputRef.current) {
       inputRef.current.focus();
     }
 
-    // Scroll immediately when user sends
     scrollToBottom();
-
     await sendMessage(text);
     
-    // Extra scroll after send on mobile
+    // Extra scrolls on mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
       setTimeout(scrollToBottom, 200);
       setTimeout(scrollToBottom, 400);
@@ -323,7 +323,6 @@ export default function ChatWidget() {
         >
           <CloudIcon className="w-8 h-8" />
           
-          {/* Notification Ping Loop */}
           {fabPingLoop && (
             <span className="absolute top-0 right-0 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
@@ -336,20 +335,35 @@ export default function ChatWidget() {
       {/* Chat Window */}
       {isOpen && (
         <>
-          {/* MOBILE / LANDSCAPE: Fullscreen Flex Layout */}
-          <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-white" style={{ height: '100dvh', maxHeight: '-webkit-fill-available' }}>
-            
-            {/* Header */}
-            <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 flex items-center justify-between shadow-md">
+          {/* MOBILE: Fullscreen with explicit height calculations */}
+          <div 
+            className="lg:hidden fixed bg-white"
+            style={{
+              inset: 0,
+              zIndex: 50,
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100dvh',
+              maxHeight: '-webkit-fill-available'
+            }}
+          >
+            {/* Header - Fixed height */}
+            <div 
+              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 flex items-center justify-between shadow-md"
+              style={{ flexShrink: 0 }}
+            >
               <ChatHeader resetConversation={resetConversation} setIsOpen={setIsOpen} />
             </div>
 
-            {/* Status */}
-            <div className="flex-none border-b border-gray-300 px-4 py-1.5 bg-gray-50/95">
+            {/* Status - Fixed height */}
+            <div 
+              className="border-b border-gray-300 px-4 py-1.5 bg-gray-50/95"
+              style={{ flexShrink: 0 }}
+            >
               <ChatStatus isAuthenticated={isAuthenticated} />
             </div>
 
-            {/* Messages */}
+            {/* Messages - SCROLLABLE, takes remaining space */}
             <ChatMessages 
               messages={messages} 
               isTyping={isTyping} 
@@ -358,8 +372,11 @@ export default function ChatWidget() {
               scrollRef={scrollRef}
             />
 
-            {/* Input */}
-            <div className="flex-none border-t border-gray-300 p-2 bg-white safe-bottom">
+            {/* Input - Fixed height */}
+            <div 
+              className="border-t border-gray-300 p-2 bg-white safe-bottom"
+              style={{ flexShrink: 0 }}
+            >
               <ChatInput 
                 input={input} 
                 setInput={setInput} 
@@ -368,23 +385,19 @@ export default function ChatWidget() {
                 inputRef={inputRef} 
               />
             </div>
-            
           </div>
 
           {/* DESKTOP: Floating Widget */}
           <div className="hidden lg:block fixed bottom-6 right-6 z-50 w-96 h-[70vh] max-h-[600px] min-h-[400px] rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-b from-slate-200 to-blue-200 border border-gray-300/50">
             <div className="flex flex-col h-full">
-              {/* Header */}
               <div className="flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3 flex items-center justify-between shadow-lg rounded-t-2xl">
                 <ChatHeader resetConversation={resetConversation} setIsOpen={setIsOpen} />
               </div>
 
-              {/* Status */}
               <div className="flex-none border-b border-gray-300 px-4 py-1.5 bg-gray-50/95">
                 <ChatStatus isAuthenticated={isAuthenticated} />
               </div>
 
-              {/* Messages */}
               <ChatMessages 
                 messages={messages} 
                 isTyping={isTyping} 
@@ -393,7 +406,6 @@ export default function ChatWidget() {
                 scrollRef={scrollRef}
               />
 
-              {/* Input */}
               <div className="flex-none border-t border-gray-300 p-3 bg-white">
                 <ChatInput 
                   input={input} 
