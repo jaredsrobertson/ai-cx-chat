@@ -6,7 +6,7 @@ import { useEffect, useRef, useCallback } from 'react';
  */
 export const useChatScroll = (dependencies: any[]) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null); // NEW: Anchor ref
+  const bottomRef = useRef<HTMLDivElement>(null);
   const isMobileRef = useRef(false);
   const observerRef = useRef<MutationObserver | null>(null);
 
@@ -18,7 +18,6 @@ export const useChatScroll = (dependencies: any[]) => {
     // 1. Priority: Scroll the anchor into view (Most reliable for mobile/iOS)
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      // console.log('[SCROLL] Scrolled anchor into view');
       return;
     }
     
@@ -26,19 +25,16 @@ export const useChatScroll = (dependencies: any[]) => {
     if (scrollRef.current) {
       const element = scrollRef.current;
       element.scrollTop = element.scrollHeight;
-      // console.log('[SCROLL] Scrolled scrollTop to:', element.scrollTop);
     }
   }, []);
 
   // CRITICAL: Use MutationObserver to watch for ACTUAL content changes
   useEffect(() => {
     if (!scrollRef.current) {
-      console.log('[SCROLL] Ref not ready, skipping observer setup');
       return;
     }
 
     const element = scrollRef.current;
-    console.log('[SCROLL] Setting up DOM observer');
 
     // Clean up existing observer
     if (observerRef.current) {
@@ -50,25 +46,18 @@ export const useChatScroll = (dependencies: any[]) => {
       // Check if any mutations added nodes OR changed text (streaming)
       const hasNewContent = mutations.some(mutation => 
         (mutation.type === 'childList' && mutation.addedNodes.length > 0) ||
-        (mutation.type === 'characterData') // NEW: Watch for text updates
+        (mutation.type === 'characterData') // Watch for text updates
       );
 
       if (hasNewContent) {
-        console.log('[SCROLL] DOM content changed, scrolling...');
-        
         // Scroll immediately
         scrollToBottom();
         
-        // Additional scrolls for slow rendering
+        // Additional scrolls for slow rendering on mobile
         if (isMobileRef.current) {
-          setTimeout(scrollToBottom, 50);
           setTimeout(scrollToBottom, 100);
-          setTimeout(scrollToBottom, 200);
           setTimeout(scrollToBottom, 300);
           setTimeout(scrollToBottom, 500);
-        } else {
-          setTimeout(scrollToBottom, 50);
-          setTimeout(scrollToBottom, 100);
         }
       }
     });
@@ -78,7 +67,7 @@ export const useChatScroll = (dependencies: any[]) => {
       childList: true,     // Watch for child nodes being added/removed
       subtree: true,       // Watch all descendants
       attributes: false,   // Don't watch attribute changes
-      characterData: true  // NEW: Watch text content changes (critical for AI streaming)
+      characterData: true  // Critical: Watch text content changes (AI streaming)
     });
 
     // Initial scroll
@@ -93,17 +82,12 @@ export const useChatScroll = (dependencies: any[]) => {
 
   // Also scroll when dependencies change (backup mechanism)
   useEffect(() => {
-    // We can rely on bottomRef here too if it exists
-    if (!scrollRef.current && !bottomRef.current) return;
-    
-    console.log('[SCROLL] Dependencies changed, scrolling...');
     scrollToBottom();
     
     // Additional delayed scrolls for typing indicator delays
     setTimeout(scrollToBottom, 100);
     setTimeout(scrollToBottom, 300);
-    setTimeout(scrollToBottom, 600);  // After typical typing indicator
-    setTimeout(scrollToBottom, 1000); // Safety net
+    setTimeout(scrollToBottom, 600);
   }, dependencies);
 
   // Window resize (keyboard)
@@ -111,11 +95,8 @@ export const useChatScroll = (dependencies: any[]) => {
     if (!isMobileRef.current) return;
 
     const handleResize = () => {
-      if (!scrollRef.current) return;
-      console.log('[SCROLL] Window resized');
       setTimeout(scrollToBottom, 100);
       setTimeout(scrollToBottom, 300);
-      setTimeout(scrollToBottom, 500);
     };
 
     window.addEventListener('resize', handleResize);
@@ -127,12 +108,8 @@ export const useChatScroll = (dependencies: any[]) => {
     if (!isMobileRef.current) return;
 
     const handleFocus = () => {
-      if (!scrollRef.current) return;
-      console.log('[SCROLL] Input focused');
       setTimeout(scrollToBottom, 100);
       setTimeout(scrollToBottom, 300);
-      setTimeout(scrollToBottom, 600);
-      setTimeout(scrollToBottom, 900);
     };
 
     window.addEventListener('focusin', handleFocus);
