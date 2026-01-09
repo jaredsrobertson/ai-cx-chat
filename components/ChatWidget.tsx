@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useChatStore } from '@/store/chatStore';
 import { useChat } from '@/hooks/useChat';
+import { useChatScroll } from '@/hooks/useChatScroll';
 import Message from './Message';
 import QuickReplies from './QuickReplies';
 import LoginModal from './LoginModal';
@@ -75,7 +76,7 @@ interface ChatMessagesProps {
   isTyping: boolean;
   lastBotMessage: any;
   handleSendMessage: (text: string) => void;
-  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const ChatMessages = ({ 
@@ -83,12 +84,12 @@ const ChatMessages = ({
   isTyping, 
   lastBotMessage, 
   handleSendMessage, 
-  messagesEndRef 
+  scrollRef 
 }: ChatMessagesProps) => {
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
   return (
-    <>
+    <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth">
       {messages.map((message, index) => (
         <Message key={index} {...message} />
       ))}
@@ -100,8 +101,7 @@ const ChatMessages = ({
           disabled={isTyping} 
         />
       )}
-      <div ref={messagesEndRef} />
-    </>
+    </div>
   );
 };
 
@@ -127,9 +127,6 @@ const ChatInput = ({ input, setInput, handleSendMessage, isTyping, inputRef }: C
         }
       }}
       placeholder="Type your message..."
-      // UX IMPROVEMENT: Do not disable input while typing. 
-      // This prevents focus loss and allows users to queue or fix typos.
-      // disabled={isTyping} 
       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 text-gray-800 placeholder-gray-400 transition-all text-sm" 
       inputMode="text"
       autoComplete="off"
@@ -179,20 +176,14 @@ export default function ChatWidget() {
 
   const { sendMessage, triggerWelcome, resetConversation } = useChat();
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Helper function to scroll to bottom
-  const scrollToBottom = () => {
-    if (!isOpen) return;
-    
-    // Use double requestAnimationFrame to ensure DOM updates are complete
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      });
-    });
-  };
+  // Use the robust chat scroll hook
+  const { scrollRef, scrollToBottom } = useChatScroll([
+    messages.length,
+    isTyping,
+    messages[messages.length - 1]?.quickReplies,
+  ]);
 
   // Animation Sequence on Mount
   useEffect(() => {
@@ -220,20 +211,6 @@ export default function ChatWidget() {
   useEffect(() => {
     if (isOpen) triggerWelcome();
   }, [isOpen, triggerWelcome]);
-
-  // SCROLL TO BOTTOM: Triggers on messages, isTyping changes, or when quick replies appear
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping, isOpen]);
-
-  // Additional scroll trigger specifically for quick replies appearing
-  // This ensures we scroll when the typing indicator disappears and quick replies show
-  useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    if (!isTyping && lastMessage && !lastMessage.isUser && lastMessage.quickReplies) {
-      scrollToBottom();
-    }
-  }, [isTyping, messages]);
 
   useEffect(() => {
     if (authRequired.required && !showLoginModal) {
@@ -271,13 +248,12 @@ export default function ChatWidget() {
     setInput('');
     
     // UX IMPROVEMENT: Explicitly focus the input back
-    // This is crucial for "Chat" feel, so users don't have to tap again
     if (inputRef.current) {
       inputRef.current.focus();
     }
 
-    // Trigger scroll immediately for user message
-    scrollToBottom();
+    // Trigger immediate scroll for user message
+    scrollToBottom('auto');
 
     await sendMessage(text);
   };
@@ -356,16 +332,14 @@ export default function ChatWidget() {
               <ChatStatus isAuthenticated={isAuthenticated} />
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth">
-              <ChatMessages 
-                messages={messages} 
-                isTyping={isTyping} 
-                lastBotMessage={lastBotMessage} 
-                handleSendMessage={handleSendMessage} 
-                messagesEndRef={messagesEndRef} 
-              />
-            </div>
+            {/* Messages - scrollRef is now managed by useChatScroll */}
+            <ChatMessages 
+              messages={messages} 
+              isTyping={isTyping} 
+              lastBotMessage={lastBotMessage} 
+              handleSendMessage={handleSendMessage} 
+              scrollRef={scrollRef} 
+            />
 
             {/* Input */}
             <div className="flex-none border-t border-gray-300 p-2 bg-white safe-bottom">
@@ -393,16 +367,14 @@ export default function ChatWidget() {
                 <ChatStatus isAuthenticated={isAuthenticated} />
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto overscroll-contain p-4 min-h-0">
-                <ChatMessages 
-                  messages={messages} 
-                  isTyping={isTyping} 
-                  lastBotMessage={lastBotMessage} 
-                  handleSendMessage={handleSendMessage} 
-                  messagesEndRef={messagesEndRef} 
-                />
-              </div>
+              {/* Messages - scrollRef is now managed by useChatScroll */}
+              <ChatMessages 
+                messages={messages} 
+                isTyping={isTyping} 
+                lastBotMessage={lastBotMessage} 
+                handleSendMessage={handleSendMessage} 
+                scrollRef={scrollRef} 
+              />
 
               {/* Input */}
               <div className="flex-none border-t border-gray-300 p-3 bg-white">
