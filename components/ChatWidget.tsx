@@ -209,14 +209,14 @@ export default function ChatWidget() {
     if (isOpen) triggerWelcome();
   }, [isOpen, triggerWelcome]);
 
-  // SCROLL TO BOTTOM: Triggers on every message update
+  // SCROLL TO BOTTOM: Triggers on messages OR isTyping changes
   useEffect(() => {
-    if (messages.length > 0) {
+    if (isOpen) {
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }, 100);
     }
-  }, [messages]);
+  }, [messages, isTyping, isOpen]);
 
   useEffect(() => {
     if (authRequired.required && !showLoginModal) {
