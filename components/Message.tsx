@@ -55,7 +55,8 @@ function MessageComponent({ text, isUser, timestamp, isTyping, sources }: Messag
         )}
 
         {timestamp && !isTyping && (
-          <div className={`text-[10px] mt-1.5 ${isUser ? 'mr-1' : 'ml-11'} text-gray-400`}>
+          // UPDATED: Changed mr-1 to mr-11 to align under bubble (clearing the avatar space)
+          <div className={`text-[10px] mt-1.5 ${isUser ? 'mr-11' : 'ml-11'} text-gray-400`}>
             {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}

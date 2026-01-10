@@ -20,7 +20,8 @@ export default function QuickReplies({ replies, onReplyClick, disabled = false }
   };
 
   return (
-    <div className="flex flex-wrap gap-2 mt-3 justify-end px-2">
+    // UPDATED: Reduced mt-3 to mt-1 (less gap above)
+    <div className="flex flex-wrap gap-2 mt-1 justify-end px-2">
       {replies.map((reply, index) => {
         const display = typeof reply === 'string' ? reply : reply.display;
         const payload = typeof reply === 'string' ? reply : reply.payload;
@@ -31,7 +32,8 @@ export default function QuickReplies({ replies, onReplyClick, disabled = false }
             key={index}
             onClick={() => onReplyClick(payload)}
             disabled={disabled}
-            className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-full text-xs font-medium
+            // UPDATED: Reduced py-1.5 to py-1 (less tall)
+            className="px-3 py-1 bg-white border border-blue-200 text-blue-700 rounded-full text-xs font-medium
                        hover:bg-blue-50 hover:border-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow"
           >
             {cleanDisplay}

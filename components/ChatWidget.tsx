@@ -96,7 +96,7 @@ const ChatMessages = ({
   return (
     <div 
       ref={scrollRef} 
-      className="p-4 flex flex-col-reverse" 
+      className="p-4 pl-0 pr-0 flex flex-col-reverse" 
       style={{ 
         flex: '1 1 0%', 
         overflowY: 'auto',
