@@ -12,8 +12,6 @@
   },
   "dependencies": {
     "@google-cloud/dialogflow": "^7.2.0",
-    "axios": "^1.12.2",
-    "google-protobuf": "^3.21.2",
     "next": "^16.0.8",
     "next-auth": "^4.24.5",
     "react": "^19.2.1",

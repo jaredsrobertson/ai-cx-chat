@@ -2,44 +2,54 @@ import { useEffect, useRef, useCallback } from 'react';
 
 /**
  * Scroll hook optimized for flex-direction: column-reverse.
- * In column-reverse, the 'bottom' of the chat is the 'start' of the container.
- * This makes the browser natively anchor to the bottom.
+ * Fixes memory leaks and provides smooth scrolling behavior.
  */
 export const useChatScroll = (dependencies: any[]) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const isMobileRef = useRef(false);
-  const observerRef = useRef<MutationObserver | null>(null);
+  const scrollTimeoutRef = useRef<number | null>(null);
 
+  // Detect mobile once on mount
   useEffect(() => {
-    isMobileRef.current = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    isMobileRef.current = 
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+      window.innerWidth < 768;
   }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    // 1. Priority: Scroll the anchor into view
-    // In column-reverse, the anchor is at the DOM 'start' (Visual Bottom)
-    // So we scroll it into view.
+    // Clear pending scroll timeout
+    if (scrollTimeoutRef.current) {
+      window.clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+
+    // Priority: Use scroll anchor
     if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior, block: 'end' });
+      try {
+        bottomRef.current.scrollIntoView({ behavior, block: 'end' });
+      } catch (error) {
+        console.error('Scroll error:', error);
+      }
       return;
     }
     
-    // 2. Fallback: ScrollTop (Standard)
-    // Note: In some browsers, column-reverse inverts scrollTop, but scrollIntoView is safer.
+    // Fallback: Direct scrollTop manipulation
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      try {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      } catch (error) {
+        console.error('Scroll error:', error);
+      }
     }
   }, []);
 
-  // Watch for content changes (Streaming text or new nodes)
+  // Mutation observer for content changes - properly cleaned up
   useEffect(() => {
-    if (!scrollRef.current) return;
-
     const element = scrollRef.current;
+    if (!element) return;
 
-    if (observerRef.current) observerRef.current.disconnect();
-
-    observerRef.current = new MutationObserver((mutations) => {
+    const observer = new MutationObserver((mutations) => {
       const hasNewContent = mutations.some(mutation => 
         (mutation.type === 'childList' && mutation.addedNodes.length > 0) ||
         (mutation.type === 'characterData')
@@ -48,49 +58,75 @@ export const useChatScroll = (dependencies: any[]) => {
       if (hasNewContent) {
         scrollToBottom('smooth');
         
-        // Race condition fix for mobile keyboards
+        // Mobile keyboard handling with single timeout
         if (isMobileRef.current) {
-          setTimeout(() => scrollToBottom('auto'), 100);
-          setTimeout(() => scrollToBottom('auto'), 300);
-          setTimeout(() => scrollToBottom('auto'), 500);
+          scrollTimeoutRef.current = window.setTimeout(() => {
+            scrollToBottom('auto');
+            scrollTimeoutRef.current = null;
+          }, 100);
         }
       }
     });
 
-    observerRef.current.observe(element, {
+    observer.observe(element, {
       childList: true,
       subtree: true,
+      characterData: true,
       attributes: false,
-      characterData: true 
     });
 
-    scrollToBottom('auto'); // Initial load
+    // Initial scroll
+    scrollToBottom('auto');
 
-    return () => observerRef.current?.disconnect();
-  }, [scrollRef.current, scrollToBottom]);
+    // Cleanup function - guaranteed to run
+    return () => {
+      observer.disconnect();
+      
+      if (scrollTimeoutRef.current) {
+        window.clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+    };
+  }, []); // Only create observer once
 
-  // Dependency change backup
+  // Dependency-based scrolling
   useEffect(() => {
     scrollToBottom('smooth');
-    setTimeout(() => scrollToBottom('smooth'), 100);
-    setTimeout(() => scrollToBottom('auto'), 400); 
+    
+    // Single follow-up for reliability
+    const timeout = window.setTimeout(() => {
+      scrollToBottom('auto');
+    }, 100);
+    
+    return () => window.clearTimeout(timeout);
   }, dependencies);
 
-  // Mobile Keyboard handling
+  // Mobile keyboard handling
   useEffect(() => {
     if (!isMobileRef.current) return;
 
-    const handleEvent = () => {
-      setTimeout(() => scrollToBottom('auto'), 100);
-      setTimeout(() => scrollToBottom('auto'), 300);
+    const handleResize = () => {
+      if (scrollTimeoutRef.current) {
+        window.clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      scrollTimeoutRef.current = window.setTimeout(() => {
+        scrollToBottom('auto');
+        scrollTimeoutRef.current = null;
+      }, 100);
     };
 
-    window.addEventListener('resize', handleEvent);
-    window.addEventListener('focusin', handleEvent);
-    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('focusin', handleResize);
+
     return () => {
-      window.removeEventListener('resize', handleEvent);
-      window.removeEventListener('focusin', handleEvent);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('focusin', handleResize);
+      
+      if (scrollTimeoutRef.current) {
+        window.clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
     };
   }, [scrollToBottom]);
 

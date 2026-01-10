@@ -10,8 +10,8 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password", placeholder: "demo123" }
       },
       async authorize(credentials) {
-        // In a real app, you would fetch from a database here.
-        // For this portfolio demo, we validate against hardcoded values.
+        // Real app would fetch from a database here.
+        // For this portfolio demo, validate against hardcoded values.
         if (
           credentials?.email === "demo@bank.com" &&
           credentials?.password === "demo123"
@@ -26,7 +26,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   pages: {
-    signIn: '/auth/signin', // We won't use this, but good practice to define
+    signIn: '/auth/signin',
   },
-  secret: process.env.NEXTAUTH_SECRET || "development-secret-key-change-me",
+  secret: process.env.NEXTAUTH_SECRET!,
 };

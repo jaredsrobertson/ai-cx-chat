@@ -82,12 +82,10 @@ export const DialogflowFulfillment = {
     parameters: Record<string, any>, 
     contexts: DialogflowContext[]
   ) => {
-    console.log('Processing intent:', intentName);
     
     try {
       // AUTH CHECK - Protected intents require authentication
       if (PROTECTED_INTENTS.includes(intentName) && !isAuthenticated(contexts, parameters)) {
-        console.log('Auth required for:', intentName);
         return {
           fulfillmentText: 'Please authenticate to continue.',
           fulfillmentMessages: [{

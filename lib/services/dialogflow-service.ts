@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
-
 const dialogflow = require('@google-cloud/dialogflow').v2beta1;
 
 const sessionClient = new dialogflow.SessionsClient({
@@ -21,6 +19,117 @@ export interface DialogflowResult {
   sources?: { title: string; uri: string; excerpt: string }[];
 }
 
+interface DialogflowMessage {
+  text?: { text: string[] };
+  quickReplies?: { quickReplies: string[] };
+  payload?: {
+    fields: Record<string, {
+      stringValue?: string;
+      boolValue?: boolean;
+      numberValue?: number;
+    }>;
+  };
+  platform?: string;
+}
+
+interface DialogflowQueryResult {
+  fulfillmentText?: string;
+  fulfillmentMessages?: DialogflowMessage[];
+  intent?: { displayName: string };
+  intentDetectionConfidence?: number;
+  outputContexts?: Array<{
+    name: string;
+    lifespanCount?: number;
+    parameters?: { fields: Record<string, any> };
+  }>;
+  knowledgeAnswers?: {
+    answers: Array<{
+      answer: string;
+      source?: string;
+      faqQuestion?: string;
+      matchConfidence?: number;
+    }>;
+  };
+}
+
+function extractQuickReplies(messages: DialogflowMessage[]): string[] {
+  for (const msg of messages) {
+    if (msg.quickReplies?.quickReplies) {
+      return msg.quickReplies.quickReplies;
+    }
+  }
+  return [];
+}
+
+function extractResponseText(result: DialogflowQueryResult): string {
+  if (result.fulfillmentText) {
+    return result.fulfillmentText;
+  }
+  
+  if (result.fulfillmentMessages) {
+    for (const msg of result.fulfillmentMessages) {
+      if (msg.text?.text && msg.text.text.length > 0) {
+        return msg.text.text[0];
+      }
+    }
+  }
+  
+  return "I didn't catch that.";
+}
+
+function parsePayload(messages: DialogflowMessage[]): {
+  payload: Record<string, any> | null;
+  actionRequired?: string;
+  actionMessage?: string;
+} {
+  let payload: Record<string, any> | null = null;
+  let actionRequired: string | undefined;
+  let actionMessage: string | undefined;
+
+  for (const msg of messages) {
+    if (msg.payload?.fields) {
+      const fields = msg.payload.fields;
+      payload = {};
+      
+      for (const [key, value] of Object.entries(fields)) {
+        if (value.stringValue !== undefined) {
+          payload[key] = value.stringValue;
+        } else if (value.boolValue !== undefined) {
+          payload[key] = value.boolValue;
+        } else if (value.numberValue !== undefined) {
+          payload[key] = value.numberValue;
+        }
+      }
+
+      if (payload.action) {
+        actionRequired = payload.action as string;
+        actionMessage = payload.message as string;
+      }
+    }
+  }
+
+  return { payload, actionRequired, actionMessage };
+}
+
+function extractKnowledgeBaseSources(result: DialogflowQueryResult): Array<{ 
+  title: string; 
+  uri: string; 
+  excerpt: string 
+}> {
+  const sources: Array<{ title: string; uri: string; excerpt: string }> = [];
+  
+  if (result.knowledgeAnswers?.answers && result.knowledgeAnswers.answers.length > 0) {
+    const answer = result.knowledgeAnswers.answers[0];
+    sources.push({
+      title: answer.source || 'Knowledge Base',
+      uri: answer.faqQuestion || '#',
+      excerpt: answer.answer || ''
+    });
+  }
+
+  return sources;
+}
+
 export const DialogflowService = {
   detectIntent: async (
     text: string, 
@@ -28,7 +137,9 @@ export const DialogflowService = {
     isAuthenticated: boolean
   ): Promise<DialogflowResult> => {
     const projectId = process.env.DIALOGFLOW_PROJECT_ID;
-    if (!projectId) throw new Error('Dialogflow Config Missing');
+    if (!projectId) {
+      throw new Error('DIALOGFLOW_PROJECT_ID is required');
+    }
 
     const sessionPath = sessionClient.projectAgentSessionPath(projectId, sessionId);
 
@@ -43,7 +154,6 @@ export const DialogflowService = {
       queryParams: {
         knowledgeBaseNames: [`projects/${projectId}/knowledgeBases/MjA1ODA2NTU4OTk5MzIwOTg1Nw`],
         
-        // Pass auth as payload parameter (more reliable than context alone)
         payload: {
           fields: {
             isAuthenticated: { 
@@ -52,7 +162,6 @@ export const DialogflowService = {
           }
         },
         
-        // Also inject auth context for backward compatibility
         ...(isAuthenticated && {
           contexts: [{
             name: `${sessionPath}/contexts/authenticated`,
@@ -67,78 +176,20 @@ export const DialogflowService = {
       }
     };
 
-    const [response] = await sessionClient.detectIntent(request);
-    const result = response.queryResult;
+    const [dfResponse] = await sessionClient.detectIntent(request);
+    const result = dfResponse.queryResult as DialogflowQueryResult;
 
-    // Parse quick replies from fulfillment messages
-    let quickReplies: string[] = [];
-    if (result.fulfillmentMessages) {
-      result.fulfillmentMessages.forEach((msg: any) => {
-        if (msg.quickReplies?.quickReplies) {
-          quickReplies = msg.quickReplies.quickReplies;
-        }
-      });
-    }
+    const quickReplies = result.fulfillmentMessages 
+      ? extractQuickReplies(result.fulfillmentMessages)
+      : [];
 
-    // Extract text from fulfillmentText or first text message
-    let responseText = result.fulfillmentText || '';
-    if (!responseText && result.fulfillmentMessages) {
-      for (const msg of result.fulfillmentMessages) {
-        if (msg.text?.text && msg.text.text.length > 0) {
-          responseText = msg.text.text[0];
-          break;
-        }
-      }
-    }
-    if (!responseText) {
-      responseText = "I didn't catch that.";
-    }
+    const responseText = extractResponseText(result);
 
-    console.log('Dialogflow response parsing:', {
-      fulfillmentText: result.fulfillmentText?.substring(0, 50),
-      hasFulfillmentMessages: !!result.fulfillmentMessages,
-      messagesCount: result.fulfillmentMessages?.length,
-      extractedText: responseText?.substring(0, 50),
-      intent: result.intent?.displayName
-    });
+    const { payload, actionRequired, actionMessage } = result.fulfillmentMessages
+      ? parsePayload(result.fulfillmentMessages)
+      : { payload: null };
 
-    // Parse payload for special actions
-    let payload: Record<string, any> | null = null;
-    let actionRequired: string | undefined;
-    let actionMessage: string | undefined;
-
-    if (result.fulfillmentMessages) {
-      result.fulfillmentMessages.forEach((msg: any) => {
-        if (msg.payload && msg.payload.fields) {
-          const fields = msg.payload.fields;
-          payload = {};
-          
-          Object.keys(fields).forEach(key => {
-            const val = fields[key];
-            if (val.stringValue) payload![key] = val.stringValue;
-            if (val.boolValue !== undefined) payload![key] = val.boolValue;
-          });
-
-          if (payload.action) {
-            actionRequired = payload.action;
-            actionMessage = payload.message;
-          }
-        }
-      });
-    }
-
-    // Parse Knowledge Base answers (if present)
-    const sources: { title: string; uri: string; excerpt: string }[] = [];
-    if ((result as any).knowledgeAnswers?.answers) {
-      const answers = (result as any).knowledgeAnswers.answers;
-      if (answers.length > 0) {
-        sources.push({
-          title: answers[0].source || 'Knowledge Base',
-          uri: answers[0].faqQuestion || '#',
-          excerpt: answers[0].answer || ''
-        });
-      }
-    }
+    const sources = extractKnowledgeBaseSources(result);
 
     return {
       text: responseText,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useChatStore } from '@/store/chatStore';
 import { useChat } from '@/hooks/useChat';
@@ -10,7 +10,6 @@ import QuickReplies from './QuickReplies';
 import LoginModal from './LoginModal';
 import AgentModal from './AgentModal';
 import CloudIcon from './CloudIcon';
-import { STANDARD_QUICK_REPLIES } from '@/lib/chat-constants';
 
 // ============================================
 // STANDALONE COMPONENTS
@@ -37,6 +36,7 @@ const ChatHeader = ({ resetConversation, setIsOpen }: ChatHeaderProps) => (
         onClick={resetConversation} 
         className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all" 
         title="Reset Chat"
+        aria-label="Reset conversation"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -46,6 +46,7 @@ const ChatHeader = ({ resetConversation, setIsOpen }: ChatHeaderProps) => (
         onClick={() => setIsOpen(false)} 
         className="text-white/90 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all" 
         title="Close"
+        aria-label="Close chat"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -90,8 +91,11 @@ const ChatMessages = ({
 }: ChatMessagesProps) => {
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
-  // REVERSE MESSAGES for Column-Reverse Layout
-  const reversedMessages = [...messages].reverse();
+  // Memoize reversed messages to avoid recreating array on every render
+  const reversedMessages = useMemo(
+    () => [...messages].reverse(),
+    [messages]
+  );
 
   return (
     <div 
@@ -107,19 +111,17 @@ const ChatMessages = ({
         overflowAnchor: 'auto' 
       }}
     >
-      {/* 1. Anchor Div (Visual Bottom) */}
+      {/* Anchor Div (Visual Bottom) */}
       <div ref={bottomRef} className="h-px w-full flex-shrink-0" />
 
-      {/* 2. SPACER (THE FIX) */}
-      {/* Pushes content to the Top when there are few messages. */}
-      {/* Shrinks to 0 when messages fill the screen. */}
+      {/* Spacer - pushes content to top when few messages */}
       <div className="flex-1" /> 
       
-      {/* 3. Typing Indicator */}
+      {/* Typing Indicator */}
       {isTyping && <Message text="" isUser={false} isTyping={true} />}
 
-      {/* 4. Quick Replies */}
-      {shouldShowQuickReplies && lastBotMessage?.quickReplies && (
+      {/* Quick Replies */}
+      {shouldShowQuickReplies && (
         <div className="mb-2">
           <QuickReplies 
             replies={lastBotMessage.quickReplies} 
@@ -129,12 +131,12 @@ const ChatMessages = ({
         </div>
       )}
 
-      {/* 5. Message History (Visual Top) */}
+      {/* Message History (Visual Top) */}
       {reversedMessages.map((message, index) => (
         <Message key={index} {...message} />
       ))}
 
-      {/* 6. Top Padding Spacer */}
+      {/* Top Padding Spacer */}
       <div style={{ height: '20px', flexShrink: 0 }} />
     </div>
   );
@@ -167,11 +169,13 @@ const ChatInput = ({ input, setInput, handleSendMessage, isTyping, inputRef }: C
       autoComplete="off"
       autoCorrect="off"
       autoCapitalize="sentences"
+      aria-label="Message input"
     />
     <button 
       onClick={() => handleSendMessage(input)} 
       disabled={isTyping || !input.trim()} 
       className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center flex-shrink-0"
+      aria-label="Send message"
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -213,7 +217,10 @@ export default function ChatWidget() {
   
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
+  const lastBotMessage = useMemo(
+    () => [...messages].reverse().find(m => !m.isUser),
+    [messages]
+  );
 
   const { scrollRef, bottomRef, scrollToBottom } = useChatScroll([
     messages.length,
@@ -236,6 +243,7 @@ export default function ChatWidget() {
     };
   }, []);
 
+  // Sync session status
   useEffect(() => {
     if (status === 'authenticated') {
       setAuthenticated(true);
@@ -244,36 +252,42 @@ export default function ChatWidget() {
     }
   }, [status, setAuthenticated]);
 
+  // Trigger welcome message when chat opens
   useEffect(() => {
     if (isOpen) triggerWelcome();
   }, [isOpen, triggerWelcome]);
 
+  // Show login modal when auth is required
   useEffect(() => {
     if (authRequired.required && !showLoginModal) {
       setShowLoginModal(true);
     }
   }, [authRequired, showLoginModal]);
 
+  // Body scroll lock with error handling
   useEffect(() => {
-    if (isOpen) {
-      const scrollY = window.scrollY;
+    if (!isOpen) return;
+    
+    const scrollY = window.scrollY;
+    
+    try {
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
-    } else {
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
-      }
+    } catch (error) {
+      console.error('Failed to lock scroll:', error);
     }
     
     return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
+      try {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        
+        window.scrollTo(0, scrollY);
+      } catch (error) {
+        console.error('Failed to unlock scroll:', error);
+      }
     };
   }, [isOpen]);
 
@@ -289,9 +303,9 @@ export default function ChatWidget() {
     scrollToBottom('smooth');
     await sendMessage(text);
     
+    // Mobile keyboard handling
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
       setTimeout(() => scrollToBottom('auto'), 200);
-      setTimeout(() => scrollToBottom('auto'), 400);
     }
   };
 
@@ -333,6 +347,7 @@ export default function ChatWidget() {
             ${fabVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}
             ${fabFlash ? 'animate-fab-pop' : ''}
           `}
+          aria-label="Open chat assistant"
         >
           <CloudIcon className="w-8 h-8" />
           
