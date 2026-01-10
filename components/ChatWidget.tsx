@@ -77,7 +77,7 @@ interface ChatMessagesProps {
   lastBotMessage: any;
   handleSendMessage: (text: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  bottomRef: React.RefObject<HTMLDivElement | null>;
+  bottomRef: React.RefObject<HTMLDivElement | null>; // ADDED: bottomRef prop
 }
 
 const ChatMessages = ({ 
@@ -86,7 +86,7 @@ const ChatMessages = ({
   lastBotMessage, 
   handleSendMessage, 
   scrollRef,
-  bottomRef
+  bottomRef 
 }: ChatMessagesProps) => {
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
@@ -95,12 +95,12 @@ const ChatMessages = ({
       ref={scrollRef} 
       className="p-4"
       style={{ 
-        flex: '1 1 0%', // Explicit flex shorthand
+        flex: '1 1 0%', 
         overflowY: 'scroll',
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain',
-        minHeight: 0 // Critical for flex child with overflow
+        minHeight: 0 
       }}
     >
       {messages.map((message, index) => (
@@ -200,7 +200,7 @@ export default function ChatWidget() {
   // Get last bot message for quick replies
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
 
-  // Use the scroll hook
+  // Use the scroll hook - destructure bottomRef
   const { scrollRef, bottomRef, scrollToBottom } = useChatScroll([
     messages.length,
     isTyping,
@@ -275,7 +275,7 @@ export default function ChatWidget() {
     scrollToBottom('smooth');
     await sendMessage(text);
     
-    // Extra scrolls on mobile (use 'auto' for race-condition safe snapping)
+    // Extra scrolls on mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
       setTimeout(() => scrollToBottom('auto'), 200);
       setTimeout(() => scrollToBottom('auto'), 400);
@@ -289,13 +289,18 @@ export default function ChatWidget() {
   };
 
   const handleLoginSuccess = async () => {
+    console.log('Login success callback triggered');
     const messageToRetry = pendingMessage;
     
-    if (!messageToRetry) return;
+    if (!messageToRetry) {
+      console.warn('No pending message to retry');
+      return;
+    }
     
     setPendingMessage(null);
     setAuthRequired({ required: false, message: '' });
     
+    console.log('Retrying message with authenticated session:', messageToRetry.substring(0, 50));
     await sendMessage(messageToRetry, true);
   };
 
@@ -337,13 +342,12 @@ export default function ChatWidget() {
         <>
           {/* MOBILE: Fullscreen with explicit height calculations */}
           <div 
-            className="lg:hidden fixed bg-white"
+            className="lg:hidden fixed bg-white flex flex-col" // FIXED: Moved 'flex flex-col' here
             style={{
               inset: 0,
               zIndex: 50,
-              display: 'flex',
-              flexDirection: 'column',
-              // FIX #2: Use 100dvh to account for browser address bar on mobile
+              // Removed 'display: flex' and 'flexDirection' from inline styles
+              // to allow 'lg:hidden' to work correctly on desktop.
               height: '100dvh',
               maxHeight: '-webkit-fill-available'
             }}
@@ -371,7 +375,7 @@ export default function ChatWidget() {
               lastBotMessage={lastBotMessage} 
               handleSendMessage={handleSendMessage} 
               scrollRef={scrollRef}
-              bottomRef={bottomRef}
+              bottomRef={bottomRef} // Pass new prop
             />
 
             {/* Input - Fixed height */}
@@ -406,7 +410,7 @@ export default function ChatWidget() {
                 lastBotMessage={lastBotMessage} 
                 handleSendMessage={handleSendMessage} 
                 scrollRef={scrollRef}
-                bottomRef={bottomRef}
+                bottomRef={bottomRef} // Pass new prop
               />
 
               <div className="flex-none border-t border-gray-300 p-3 bg-white">
