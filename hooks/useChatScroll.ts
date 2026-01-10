@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 /**
- * Scroll hook that watches for ACTUAL DOM changes
- * This handles delays from typing indicators and async rendering
+ * Scroll hook optimized for flex-direction: column-reverse.
+ * In column-reverse, the 'bottom' of the chat is the 'start' of the container.
+ * This makes the browser natively anchor to the bottom.
  */
 export const useChatScroll = (dependencies: any[]) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -14,22 +15,23 @@ export const useChatScroll = (dependencies: any[]) => {
     isMobileRef.current = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
   }, []);
 
-  // UPDATED: Accepts 'behavior' to toggle between smooth (for messages) and auto (for keyboard fixes)
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    // 1. Priority: Scroll the anchor into view (Most reliable for mobile/iOS)
+    // 1. Priority: Scroll the anchor into view
+    // In column-reverse, the anchor is at the DOM 'start' (Visual Bottom)
+    // So we scroll it into view.
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior, block: 'end' });
       return;
     }
     
-    // 2. Fallback: Scroll container (Desktop standard)
+    // 2. Fallback: ScrollTop (Standard)
+    // Note: In some browsers, column-reverse inverts scrollTop, but scrollIntoView is safer.
     if (scrollRef.current) {
-      const element = scrollRef.current;
-      element.scrollTop = element.scrollHeight;
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, []);
 
-  // CRITICAL: Use MutationObserver to watch for ACTUAL content changes
+  // Watch for content changes (Streaming text or new nodes)
   useEffect(() => {
     if (!scrollRef.current) return;
 
@@ -44,13 +46,9 @@ export const useChatScroll = (dependencies: any[]) => {
       );
 
       if (hasNewContent) {
-        // New message arrives? SCROLL SMOOTHLY
         scrollToBottom('smooth');
         
-        // FIX #1: The "Race Condition"
-        // On mobile, force INSTANT ('auto') scrolls after short delays.
-        // This ensures if the keyboard is animating up, we snap to bottom
-        // instead of trying to animate simultaneously (which often fails).
+        // Race condition fix for mobile keyboards
         if (isMobileRef.current) {
           setTimeout(() => scrollToBottom('auto'), 100);
           setTimeout(() => scrollToBottom('auto'), 300);
@@ -66,45 +64,34 @@ export const useChatScroll = (dependencies: any[]) => {
       characterData: true 
     });
 
-    scrollToBottom('auto'); // Initial load is instant
+    scrollToBottom('auto'); // Initial load
 
     return () => observerRef.current?.disconnect();
   }, [scrollRef.current, scrollToBottom]);
 
-  // Dependency change backup (e.g. typing indicator toggles)
+  // Dependency change backup
   useEffect(() => {
     scrollToBottom('smooth');
-    
-    // Safety nets for layout shifts
     setTimeout(() => scrollToBottom('smooth'), 100);
-    setTimeout(() => scrollToBottom('smooth'), 400); 
+    setTimeout(() => scrollToBottom('auto'), 400); 
   }, dependencies);
 
-  // Window resize (Software Keyboard opening/closing)
+  // Mobile Keyboard handling
   useEffect(() => {
     if (!isMobileRef.current) return;
 
-    const handleResize = () => {
-      // Keyboard movement is jerky; use 'auto' to snap to position immediately
+    const handleEvent = () => {
       setTimeout(() => scrollToBottom('auto'), 100);
       setTimeout(() => scrollToBottom('auto'), 300);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [scrollToBottom]);
-
-  // Input Focus (Alternative keyboard trigger)
-  useEffect(() => {
-    if (!isMobileRef.current) return;
-
-    const handleFocus = () => {
-      setTimeout(() => scrollToBottom('auto'), 100);
-      setTimeout(() => scrollToBottom('auto'), 300);
+    window.addEventListener('resize', handleEvent);
+    window.addEventListener('focusin', handleEvent);
+    
+    return () => {
+      window.removeEventListener('resize', handleEvent);
+      window.removeEventListener('focusin', handleEvent);
     };
-
-    window.addEventListener('focusin', handleFocus);
-    return () => window.removeEventListener('focusin', handleFocus);
   }, [scrollToBottom]);
 
   return { scrollRef, bottomRef, scrollToBottom };

@@ -77,7 +77,7 @@ interface ChatMessagesProps {
   lastBotMessage: any;
   handleSendMessage: (text: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  bottomRef: React.RefObject<HTMLDivElement | null>; // ADDED: bottomRef prop
+  bottomRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const ChatMessages = ({ 
@@ -90,36 +90,54 @@ const ChatMessages = ({
 }: ChatMessagesProps) => {
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
+  // REVERSE MESSAGES for Column-Reverse Layout
+  // DOM Order: Newest First -> Oldest Last
+  // Visual Order (via CSS): Oldest Top -> Newest Bottom
+  const reversedMessages = [...messages].reverse();
+
   return (
     <div 
       ref={scrollRef} 
-      className="p-4"
+      className="p-4 flex flex-col-reverse" // FIXED: Column Reverse
       style={{ 
         flex: '1 1 0%', 
-        overflowY: 'scroll',
+        overflowY: 'auto', // Changed to auto for better mobile handling
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain',
-        minHeight: 0 
+        minHeight: 0,
+        // Critical for column-reverse anchoring on some browsers:
+        overflowAnchor: 'auto' 
       }}
     >
-      {messages.map((message, index) => (
+      {/* === VISUAL BOTTOM (DOM START) === */}
+      
+      {/* 1. Anchor Div (Always at visual bottom) */}
+      <div ref={bottomRef} className="h-px w-full flex-shrink-0" />
+      
+      {/* 2. Typing Indicator (Appears at bottom when active) */}
+      {isTyping && <Message text="" isUser={false} isTyping={true} />}
+
+      {/* 3. Quick Replies (Appears above typing/bottom) */}
+      {shouldShowQuickReplies && lastBotMessage?.quickReplies && (
+        <div className="mb-2">
+          <QuickReplies 
+            replies={lastBotMessage.quickReplies} 
+            onReplyClick={handleSendMessage} 
+            disabled={isTyping} 
+          />
+        </div>
+      )}
+
+      {/* 4. Message History (Newest first in DOM -> Visually at Bottom) */}
+      {reversedMessages.map((message, index) => (
         <Message key={index} {...message} />
       ))}
-      {isTyping && <Message text="" isUser={false} isTyping={true} />}
-      {shouldShowQuickReplies && lastBotMessage?.quickReplies && (
-        <QuickReplies 
-          replies={lastBotMessage.quickReplies} 
-          onReplyClick={handleSendMessage} 
-          disabled={isTyping} 
-        />
-      )}
+
+      {/* 5. Spacer (Visually at Top) */}
+      <div style={{ height: '20px', flexShrink: 0 }} />
       
-      {/* ANCHOR DIV FOR SCROLLING */}
-      <div ref={bottomRef} className="h-px w-full" />
-      
-      {/* Bottom padding */}
-      <div style={{ height: '20px' }} />
+      {/* === VISUAL TOP (DOM END) === */}
     </div>
   );
 };
@@ -197,10 +215,9 @@ export default function ChatWidget() {
   
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Get last bot message for quick replies
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
 
-  // Use the scroll hook - destructure bottomRef
+  // Re-enable bottomRef
   const { scrollRef, bottomRef, scrollToBottom } = useChatScroll([
     messages.length,
     isTyping,
@@ -275,7 +292,6 @@ export default function ChatWidget() {
     scrollToBottom('smooth');
     await sendMessage(text);
     
-    // Extra scrolls on mobile
     if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
       setTimeout(() => scrollToBottom('auto'), 200);
       setTimeout(() => scrollToBottom('auto'), 400);
@@ -289,18 +305,13 @@ export default function ChatWidget() {
   };
 
   const handleLoginSuccess = async () => {
-    console.log('Login success callback triggered');
     const messageToRetry = pendingMessage;
     
-    if (!messageToRetry) {
-      console.warn('No pending message to retry');
-      return;
-    }
+    if (!messageToRetry) return;
     
     setPendingMessage(null);
     setAuthRequired({ required: false, message: '' });
     
-    console.log('Retrying message with authenticated session:', messageToRetry.substring(0, 50));
     await sendMessage(messageToRetry, true);
   };
 
@@ -340,19 +351,17 @@ export default function ChatWidget() {
       {/* Chat Window */}
       {isOpen && (
         <>
-          {/* MOBILE: Fullscreen with explicit height calculations */}
+          {/* MOBILE: Fullscreen */}
           <div 
-            className="lg:hidden fixed bg-white flex flex-col" // FIXED: Moved 'flex flex-col' here
+            className="lg:hidden fixed bg-white flex flex-col"
             style={{
               inset: 0,
               zIndex: 50,
-              // Removed 'display: flex' and 'flexDirection' from inline styles
-              // to allow 'lg:hidden' to work correctly on desktop.
               height: '100dvh',
               maxHeight: '-webkit-fill-available'
             }}
           >
-            {/* Header - Fixed height */}
+            {/* Header */}
             <div 
               className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 flex items-center justify-between shadow-md"
               style={{ flexShrink: 0 }}
@@ -360,7 +369,7 @@ export default function ChatWidget() {
               <ChatHeader resetConversation={resetConversation} setIsOpen={setIsOpen} />
             </div>
 
-            {/* Status - Fixed height */}
+            {/* Status */}
             <div 
               className="border-b border-gray-300 px-4 py-1.5 bg-gray-50/95"
               style={{ flexShrink: 0 }}
@@ -368,17 +377,17 @@ export default function ChatWidget() {
               <ChatStatus isAuthenticated={isAuthenticated} />
             </div>
 
-            {/* Messages - SCROLLABLE, takes remaining space */}
+            {/* Messages - SCROLLABLE */}
             <ChatMessages 
               messages={messages} 
               isTyping={isTyping} 
               lastBotMessage={lastBotMessage} 
               handleSendMessage={handleSendMessage} 
               scrollRef={scrollRef}
-              bottomRef={bottomRef} // Pass new prop
+              bottomRef={bottomRef} // Pass bottomRef
             />
 
-            {/* Input - Fixed height */}
+            {/* Input */}
             <div 
               className="border-t border-gray-300 p-2 bg-white safe-bottom"
               style={{ flexShrink: 0 }}
@@ -410,7 +419,7 @@ export default function ChatWidget() {
                 lastBotMessage={lastBotMessage} 
                 handleSendMessage={handleSendMessage} 
                 scrollRef={scrollRef}
-                bottomRef={bottomRef} // Pass new prop
+                bottomRef={bottomRef}
               />
 
               <div className="flex-none border-t border-gray-300 p-3 bg-white">
