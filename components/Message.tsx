@@ -13,7 +13,7 @@ interface MessageProps {
 function MessageComponent({ text, isUser, timestamp, isTyping, sources }: MessageProps) {
   const SHOW_SOURCES = false;
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 animate-fade-in-up px-2`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-2 animate-fade-in-up px-2`}>
       <div className={`flex flex-col ${isUser ? 'max-w-[82%]' : 'max-w-[88%]'} ${isUser ? 'items-end' : 'items-start'}`}>
         
         <div className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
