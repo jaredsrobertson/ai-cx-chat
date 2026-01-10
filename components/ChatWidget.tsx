@@ -91,34 +91,34 @@ const ChatMessages = ({
   const shouldShowQuickReplies = !isTyping && lastBotMessage?.quickReplies && lastBotMessage.quickReplies.length > 0;
 
   // REVERSE MESSAGES for Column-Reverse Layout
-  // DOM Order: Newest First -> Oldest Last
-  // Visual Order (via CSS): Oldest Top -> Newest Bottom
   const reversedMessages = [...messages].reverse();
 
   return (
     <div 
       ref={scrollRef} 
-      className="p-4 flex flex-col-reverse" // FIXED: Column Reverse
+      className="p-4 flex flex-col-reverse" 
       style={{ 
         flex: '1 1 0%', 
-        overflowY: 'auto', // Changed to auto for better mobile handling
+        overflowY: 'auto',
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain',
         minHeight: 0,
-        // Critical for column-reverse anchoring on some browsers:
         overflowAnchor: 'auto' 
       }}
     >
-      {/* === VISUAL BOTTOM (DOM START) === */}
-      
-      {/* 1. Anchor Div (Always at visual bottom) */}
+      {/* 1. Anchor Div (Visual Bottom) */}
       <div ref={bottomRef} className="h-px w-full flex-shrink-0" />
+
+      {/* 2. SPACER (THE FIX) */}
+      {/* Pushes content to the Top when there are few messages. */}
+      {/* Shrinks to 0 when messages fill the screen. */}
+      <div className="flex-1" /> 
       
-      {/* 2. Typing Indicator (Appears at bottom when active) */}
+      {/* 3. Typing Indicator */}
       {isTyping && <Message text="" isUser={false} isTyping={true} />}
 
-      {/* 3. Quick Replies (Appears above typing/bottom) */}
+      {/* 4. Quick Replies */}
       {shouldShowQuickReplies && lastBotMessage?.quickReplies && (
         <div className="mb-2">
           <QuickReplies 
@@ -129,15 +129,13 @@ const ChatMessages = ({
         </div>
       )}
 
-      {/* 4. Message History (Newest first in DOM -> Visually at Bottom) */}
+      {/* 5. Message History (Visual Top) */}
       {reversedMessages.map((message, index) => (
         <Message key={index} {...message} />
       ))}
 
-      {/* 5. Spacer (Visually at Top) */}
+      {/* 6. Top Padding Spacer */}
       <div style={{ height: '20px', flexShrink: 0 }} />
-      
-      {/* === VISUAL TOP (DOM END) === */}
     </div>
   );
 };
@@ -217,7 +215,6 @@ export default function ChatWidget() {
 
   const lastBotMessage = [...messages].reverse().find(m => !m.isUser);
 
-  // Re-enable bottomRef
   const { scrollRef, bottomRef, scrollToBottom } = useChatScroll([
     messages.length,
     isTyping,
@@ -353,7 +350,7 @@ export default function ChatWidget() {
         <>
           {/* MOBILE: Fullscreen */}
           <div 
-            className="lg:hidden fixed bg-white flex flex-col"
+            className="lg:hidden fixed bg-gradient-to-b from-slate-200 to-blue-200 flex flex-col"
             style={{
               inset: 0,
               zIndex: 50,
@@ -384,7 +381,7 @@ export default function ChatWidget() {
               lastBotMessage={lastBotMessage} 
               handleSendMessage={handleSendMessage} 
               scrollRef={scrollRef}
-              bottomRef={bottomRef} // Pass bottomRef
+              bottomRef={bottomRef}
             />
 
             {/* Input */}
