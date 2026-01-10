@@ -4,7 +4,29 @@ import { signOut } from 'next-auth/react';
 import { STANDARD_QUICK_REPLIES } from '@/lib/chat-constants';
 
 const MAX_RETRIES = 3;
-const RETRY_DELAYS = [1000, 2000, 3000]; // Exponential backoff
+const RETRY_DELAYS = [1000, 2000, 3000];
+
+// Custom error classes for better error handling
+class NetworkError extends Error {
+  constructor(message: string = 'Network error occurred') {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
+
+class AuthError extends Error {
+  constructor(message: string = 'Authentication error') {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+class APIError extends Error {
+  constructor(message: string, public statusCode?: number) {
+    super(message);
+    this.name = 'APIError';
+  }
+}
 
 export const useChat = () => {
   const { 
@@ -43,17 +65,13 @@ export const useChat = () => {
   ) => {
     const currentAuth = useChatStore.getState().isAuthenticated;
 
-    // Handle authentication requirement
     if (data.actionRequired === 'REQUIRE_AUTH') {
-      // If authenticated on client but server still doesn't see it, retry with backoff
       if (currentAuth && isAuthRetry && retryCount < MAX_RETRIES) {
         const delay = RETRY_DELAYS[retryCount] || 3000;
-        
         await new Promise(resolve => setTimeout(resolve, delay));
         return sendMessage(originalText, true, retryCount + 1);
       }
       
-      // User not authenticated - show login modal
       if (!currentAuth) {
         setPendingMessage(originalText);
         setAuthRequired({ 
@@ -63,7 +81,6 @@ export const useChat = () => {
         return;
       }
       
-      // Retry limit exceeded
       addMessage({ 
         text: "I'm having trouble verifying your authentication. Please try your request again.", 
         isUser: false, 
@@ -72,7 +89,6 @@ export const useChat = () => {
       return;
     }
 
-    // Handle agent transfer
     if (data.actionRequired === 'TRANSFER_AGENT') {
       setAgentModalOpen(true);
       addMessage({
@@ -84,7 +100,6 @@ export const useChat = () => {
       return;
     }
 
-    // Normal response
     const responseText = data.text || "I processed your request.";
     
     addMessage({
@@ -102,27 +117,23 @@ export const useChat = () => {
     isAuthRetry = false, 
     retryCount = 0
   ): Promise<void> => {
-    if (!text?.trim()) {
-      return;
-    }
+    if (!text?.trim()) return;
     
-    // Cancel previous request if still in flight
+    // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     
     // Wait for previous request to complete
     if (pendingRequestRef.current) {
-      await pendingRequestRef.current.catch(() => {}); // Ignore aborted errors
+      await pendingRequestRef.current.catch(() => {});
     }
     
     const controller = new AbortController();
     abortControllerRef.current = controller;
     
-    // Create promise for this request
     const requestPromise = (async () => {
       try {
-        // Add user message only if not retrying after auth
         if (!isAuthRetry) {
           addMessage({ text, isUser: true, timestamp: new Date() });
         }
@@ -137,21 +148,33 @@ export const useChat = () => {
           body: JSON.stringify({ text, sessionId }),
         });
 
-        // Check if request was aborted
-        if (controller.signal.aborted) {
-          return;
-        }
+        // Check if aborted
+        if (controller.signal.aborted) return;
 
+        // Handle non-OK responses with proper error types
         if (!response.ok) {
-          const json = await response.json();
-          throw new Error(json.error || 'API Error');
+          if (response.status === 401) {
+            throw new AuthError('Authentication required');
+          }
+          
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch {
+            throw new APIError(`Server error: ${response.status}`, response.status);
+          }
+          
+          throw new APIError(errorData.error || 'API Error', response.status);
         }
 
         const json = await response.json();
-        const data = json.data;
         
-        // Handle response
-        await handleChatResponse(data, text, isAuthRetry, retryCount);
+        // Validate response structure
+        if (!json.data) {
+          throw new APIError('Invalid response from server');
+        }
+
+        await handleChatResponse(json.data, text, isAuthRetry, retryCount);
         
       } catch (error) {
         // Ignore abort errors
@@ -159,10 +182,38 @@ export const useChat = () => {
           return;
         }
         
-        console.error('Send message error:', error);
+        // Enhanced error logging with proper serialization
+        if (error instanceof Error) {
+          console.error('Chat error:', {
+            type: error.name,
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+          });
+        } else {
+          console.error('Unknown chat error:', error);
+        }
+        
+        // User-friendly error messages
+        let errorMessage = "I'm having trouble connecting. Please try again.";
+        
+        if (error instanceof AuthError) {
+          errorMessage = "Your session has expired. Please log in again.";
+          setAuthRequired({ required: true, message: errorMessage });
+          return;
+        } else if (error instanceof NetworkError || (error instanceof TypeError && error.message.includes('fetch'))) {
+          errorMessage = "Cannot connect to server. Please check your internet connection.";
+        } else if (error instanceof APIError) {
+          if (error.statusCode === 500) {
+            errorMessage = "Server error. Our team has been notified. Please try again later.";
+          } else if (error.statusCode === 404) {
+            errorMessage = "Service temporarily unavailable. Please try again.";
+          } else if (error.message && error.message !== 'API Error') {
+            errorMessage = error.message;
+          }
+        }
         
         addMessage({ 
-          text: "I'm having trouble connecting. Please try again.", 
+          text: errorMessage, 
           isUser: false, 
           timestamp: new Date() 
         });
@@ -170,7 +221,6 @@ export const useChat = () => {
       } finally {
         setTyping(false);
         
-        // Clear refs only if this is still the current controller
         if (abortControllerRef.current === controller) {
           abortControllerRef.current = null;
           pendingRequestRef.current = null;
@@ -181,10 +231,9 @@ export const useChat = () => {
     pendingRequestRef.current = requestPromise;
     return requestPromise;
     
-  }, [addMessage, setTyping, sessionId, handleChatResponse]);
+  }, [addMessage, setTyping, sessionId, handleChatResponse, setAuthRequired]);
 
   const resetConversation = useCallback(async () => {
-    // Cancel any pending requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
